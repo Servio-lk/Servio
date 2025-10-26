@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { apiService } from "@/services/api";
 import LogoImage from "@/assets/images/Logo.svg";
 import GarageImage from "@/assets/images/Garage image.png";
 
@@ -110,13 +111,14 @@ function PasswordInput({
   );
 }
 
-function SignupButton({ onClick }: { onClick: () => void }) {
+function SignupButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <Button
       onClick={onClick}
-      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)]"
+      disabled={disabled}
+      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      Sign Up
+      {disabled ? "Signing up..." : "Sign Up"}
     </Button>
   );
 }
@@ -248,23 +250,64 @@ function SignupForm() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleSignup = () => {
-    if (password !== confirmPassword) {
-      console.error("Passwords don't match");
+  const handleSignup = async () => {
+    // Validation
+    if (!name || !email || !password || !confirmPassword) {
+      setError("Please fill in all required fields");
       return;
     }
-    console.log("Signup with:", { name, email, phone, password });
-    // Add your signup logic here
+
+    if (password !== confirmPassword) {
+      setError("Passwords don't match");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiService.signup({
+        fullName: name,
+        email,
+        phone,
+        password,
+      });
+      
+      if (response.success) {
+        console.log("Signup successful:", response.data);
+        alert("Account created successfully! Welcome to Servio.");
+        navigate('/login');
+      }
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      if (err.errors && err.errors.length > 0) {
+        setError(err.errors.map((e: any) => e.message).join(", "));
+      } else {
+        setError(err.message || "Failed to create account. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleSignup = () => {
     console.log("Signup with Google");
+    alert("Google signup coming soon!");
     // Add your Google signup logic here
   };
 
   const handleFacebookSignup = () => {
     console.log("Signup with Facebook");
+    alert("Facebook signup coming soon!");
     // Add your Facebook signup logic here
   };
 
@@ -272,6 +315,12 @@ function SignupForm() {
     <div className="w-full max-w-md px-4 sm:px-6 md:px-8">
       <div className="flex flex-col gap-2.5 md:gap-3 lg:gap-4">
         <SignupHeader />
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
         
         <div className="flex flex-col gap-2.5 md:gap-3 lg:gap-4 mt-3 md:mt-4 lg:mt-6">
           <NameInput value={name} onChange={(e) => setName(e.target.value)} />
@@ -281,7 +330,7 @@ function SignupForm() {
           <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" />
         </div>
 
-        <SignupButton onClick={handleSignup} />
+        <SignupButton onClick={handleSignup} disabled={loading} />
         <TermsText />
         
         <OrDivider />

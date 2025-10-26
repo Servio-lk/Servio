@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { apiService } from "@/services/api";
 import LogoImage from "@/assets/images/Logo.svg";
 import GarageImage from "@/assets/images/Garage image.png";
 
@@ -68,13 +69,14 @@ function PasswordInput({
   );
 }
 
-function LoginButton({ onClick }: { onClick: () => void }) {
+function LoginButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (
     <Button
       onClick={onClick}
-      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)]"
+      disabled={disabled}
+      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      Log In
+      {disabled ? "Logging in..." : "Log In"}
     </Button>
   );
 }
@@ -200,19 +202,45 @@ function LanguageSelector() {
 function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const handleLogin = () => {
-    console.log("Login with:", { email, password });
-    // Add your login logic here
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError("Please fill in all fields");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiService.login({ email, password });
+      
+      if (response.success) {
+        console.log("Login successful:", response.data);
+        // Navigate to dashboard or home page
+        // navigate('/dashboard');
+        alert("Login successful! Welcome back.");
+      }
+    } catch (err: any) {
+      console.error("Login error:", err);
+      setError(err.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
     console.log("Login with Google");
+    alert("Google login coming soon!");
     // Add your Google login logic here
   };
 
   const handleFacebookLogin = () => {
     console.log("Login with Facebook");
+    alert("Facebook login coming soon!");
     // Add your Facebook login logic here
   };
 
@@ -221,12 +249,18 @@ function LoginForm() {
       <div className="flex flex-col gap-3 md:gap-4 lg:gap-6">
         <LoginHeader />
         
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+        
         <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8">
           <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} />
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
         </div>
 
-        <LoginButton onClick={handleLogin} />
+        <LoginButton onClick={handleLogin} disabled={loading} />
         <ForgotPassword />
         
         <OrDivider />
