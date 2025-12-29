@@ -1,0 +1,16 @@
+.git
+.gitignore
+.DS_Store
+.vscode
+.idea
+*.log
+README.md
+SETUP_GUIDE.md
+docs/
+mobile/
+node_modules
+*/node_modules
+.env
+*/.env
+.env.local
+*/.env.local
