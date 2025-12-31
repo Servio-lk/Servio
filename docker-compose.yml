@@ -42,7 +42,7 @@ services:
       DB_NAME: servio_db
       JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please-use-a-strong-secret}
       JWT_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:3000
+      FRONTEND_URL: http://localhost:5173
     depends_on:
       postgres:
         condition: service_healthy
