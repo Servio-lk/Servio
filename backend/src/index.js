@@ -12,6 +12,7 @@ const PORT = process.env.PORT || 3001;
 // Allowed origins for CORS
 const allowedOrigins = [
   'http://localhost:5173',  // Vite dev server
+  'http://localhost:5174',  // Vite dev server (alternate port)
   'http://localhost:3000',  // Docker frontend
   process.env.FRONTEND_URL
 ].filter(Boolean);

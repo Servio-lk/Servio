@@ -221,7 +221,7 @@ function LoginForm() {
       
       if (response.success) {
         toast.success("Login successful! Welcome back.");
-        navigate('/mobile/home');
+        navigate('/home');
       }
     } catch (err: any) {
       console.error("Login error:", err);
