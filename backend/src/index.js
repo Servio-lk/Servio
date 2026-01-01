@@ -14,6 +14,7 @@ const allowedOrigins = [
   'http://localhost:5173',  // Vite dev server
   'http://localhost:5174',  // Vite dev server (alternate port)
   'http://localhost:3000',  // Docker frontend
+  'http://192.168.1.2:3000', // Local network access
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
