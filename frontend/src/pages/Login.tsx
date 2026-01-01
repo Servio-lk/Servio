@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -200,6 +201,7 @@ function LanguageSelector() {
 }
 
 function LoginForm() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -207,7 +209,7 @@ function LoginForm() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError("Please fill in all fields");
+      toast.error("Please fill in all fields");
       return;
     }
 
@@ -218,29 +220,25 @@ function LoginForm() {
       const response = await apiService.login({ email, password });
       
       if (response.success) {
-        console.log("Login successful:", response.data);
-        // Navigate to dashboard or home page
-        // navigate('/dashboard');
-        alert("Login successful! Welcome back.");
+        toast.success("Login successful! Welcome back.");
+        navigate('/home');
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      setError(err.message || "Invalid email or password");
+      const errorMessage = err.message || "Invalid email or password";
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    console.log("Login with Google");
-    alert("Google login coming soon!");
-    // Add your Google login logic here
+    toast.info("Google login coming soon!");
   };
 
   const handleFacebookLogin = () => {
-    console.log("Login with Facebook");
-    alert("Facebook login coming soon!");
-    // Add your Facebook login logic here
+    toast.info("Facebook login coming soon!");
   };
 
   return (
