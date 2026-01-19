@@ -1,4 +1,16 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// Dynamically determine API URL based on current host
+const getApiBaseUrl = () => {
+  // If environment variable is set, use it
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // For local development and mobile access, use the same host but different port
+  const host = window.location.hostname;
+  return `http://${host}:3001/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 interface ApiResponse<T = any> {
   success: boolean;
