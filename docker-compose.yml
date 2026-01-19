@@ -20,6 +20,45 @@ services:
       timeout: 5s
       retries: 5
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: servio-backend
+    restart: always
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/servio_db
+      - SPRING_DATASOURCE_USERNAME=servio_user
+      - SPRING_DATASOURCE_PASSWORD=servio_password
+      - JWT_SECRET=3q4w5e6r7t8y9u0i1o2p3a4s5d6f7g8h9j0k1l2z3x4c5v6b7n8m9QWERTYUIOP
+      - JWT_EXPIRATION=604800000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - servio-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: servio-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8080
+    networks:
+      - servio-network
+
 volumes:
   postgres_data:
     driver: local
+
+networks:
+  servio-network:
+    driver: bridge
