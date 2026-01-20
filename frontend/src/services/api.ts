@@ -94,6 +94,47 @@ interface Offer {
   validUntil: string;
 }
 
+interface AppointmentRequest {
+  userId: number;
+  vehicleId?: number | null;
+  serviceType: string;
+  appointmentDate: string; // ISO datetime string
+  location?: string;
+  notes?: string;
+  estimatedCost?: number;
+}
+
+interface VehicleDto {
+  id: number;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  vin: string | null;
+}
+
+interface AppointmentDto {
+  id: number;
+  userId: number;
+  vehicleId: number | null;
+  serviceType: string;
+  appointmentDate: string;
+  status: 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  location: string | null;
+  notes: string | null;
+  estimatedCost: number | null;
+  actualCost: number | null;
+  createdAt: string;
+  updatedAt: string;
+  user?: {
+    id: number;
+    fullName: string;
+    email: string;
+    phone: string;
+  };
+  vehicle?: VehicleDto;
+}
+
 class ApiService {
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
@@ -234,6 +275,53 @@ class ApiService {
     });
     return this.handleResponse<Offer[]>(response);
   }
+
+  // Appointment endpoints
+  async createAppointment(appointmentData: AppointmentRequest): Promise<ApiResponse<AppointmentDto>> {
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(appointmentData),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  async getAppointmentById(id: number): Promise<ApiResponse<AppointmentDto>> {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  async getUserAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
+    const user = this.getCurrentUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+    
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    
+    const data = await this.handleResponse<AppointmentDto[]>(response);
+    
+    // Filter appointments by current user (backend returns all, so we filter client-side)
+    if (data.success && data.data) {
+      data.data = data.data.filter(apt => apt.userId === user.id);
+    }
+    
+    return data;
+  }
+
+  async updateAppointmentStatus(id: number, status: string): Promise<ApiResponse<AppointmentDto>> {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status?status=${encodeURIComponent(status)}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
 }
 
 export const apiService = new ApiService();
@@ -247,5 +335,8 @@ export type {
   ServiceItem,
   ServiceOption,
   ServiceProvider,
-  Offer
+  Offer,
+  AppointmentRequest,
+  AppointmentDto,
+  VehicleDto
 };

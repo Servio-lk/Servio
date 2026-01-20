@@ -4,6 +4,7 @@ import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock } from 'luc
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/services/api';
 
 export default function BookingPage() {
   const { id: _serviceId } = useParams();
@@ -66,14 +67,88 @@ export default function BookingPage() {
   };
 
   const handleBook = async () => {
+    if (!user) {
+      toast.error('Please login to book a service');
+      navigate('/login');
+      return;
+    }
+
     setIsBooking(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      // Convert selected date and time to ISO datetime
+      const appointmentDateTime = convertToDateTime(selectedDate, selectedTime);
+      
+      // Create appointment request
+      const appointmentRequest = {
+        userId: user.id,
+        vehicleId: null, // For now, no vehicle selection (will add later)
+        serviceType: orderDetails.service,
+        appointmentDate: appointmentDateTime,
+        location: 'Colombo Service Center', // Default location
+        notes: specialInstructions || `${orderDetails.oilType} - ${selectedTime}`,
+        estimatedCost: orderDetails.total,
+      };
+
+      const response = await apiService.createAppointment(appointmentRequest);
+      
+      if (response.success && response.data) {
+        toast.success('Appointment booked successfully!');
+        navigate(`/confirmed/${response.data.id}`);
+      } else {
+        toast.error(response.message || 'Failed to book appointment');
+      }
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      toast.error(error.message || 'Failed to book appointment. Please try again.');
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
+  // Helper function to convert date and time to ISO datetime string
+  const convertToDateTime = (dateLabel: string, timeSlot: string): string => {
+    const today = new Date();
     
-    toast.success('Appointment booked successfully!');
-    navigate('/confirmed/new');
-    setIsBooking(false);
+    // Extract time from slot (e.g., "9:00 AM - 9:30 AM" -> "9:00 AM")
+    const startTime = timeSlot.split(' - ')[0];
+    
+    // Parse the date (simplified - in production, use proper date handling)
+    let appointmentDate = new Date(today);
+    
+    if (dateLabel === 'Tomorrow') {
+      appointmentDate.setDate(today.getDate() + 1);
+    } else {
+      // For other days, calculate based on day of week
+      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const targetDayIndex = daysOfWeek.indexOf(dateLabel);
+      
+      if (targetDayIndex !== -1) {
+        const currentDayIndex = today.getDay();
+        let daysToAdd = targetDayIndex - currentDayIndex;
+        
+        if (daysToAdd <= 0) {
+          daysToAdd += 7;
+        }
+        
+        appointmentDate.setDate(today.getDate() + daysToAdd);
+      }
+    }
+    
+    // Parse time
+    const [time, period] = startTime.split(' ');
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    let hour24 = hours;
+    if (period === 'PM' && hours !== 12) {
+      hour24 = hours + 12;
+    } else if (period === 'AM' && hours === 12) {
+      hour24 = 0;
+    }
+    
+    appointmentDate.setHours(hour24, minutes, 0, 0);
+    
+    return appointmentDate.toISOString();
   };
 
   const selectedDateObj = dates.find(d => d.label === selectedDate);
