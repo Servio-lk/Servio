@@ -32,7 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-      } catch (error) {
+      } catch (_error) {
         // Clear invalid data
         localStorage.removeItem('token');
         localStorage.removeItem('user');
@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isAuthenticated: !!token,
+        isAdmin: user?.role === 'ADMIN',
         isLoading,
         login,
         logout,

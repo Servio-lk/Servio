@@ -1,5 +1,6 @@
 package com.servio.util;
 
+import com.servio.entity.Role;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -17,11 +18,12 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration:86400000}") // Default 24 hours in milliseconds
     private long jwtExpirationMs;
 
-    public String generateToken(Long userId) {
+    public String generateToken(Long userId, Role role) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
 
         return Jwts.builder()
                 .subject(userId.toString())
+                .claim("role", role.name())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key)
@@ -31,6 +33,11 @@ public class JwtTokenProvider {
     public Long getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
         return Long.parseLong(claims.getSubject());
+    }
+
+    public String getRoleFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token);
+        return claims.get("role", String.class);
     }
 
     public boolean validateToken(String token) {
