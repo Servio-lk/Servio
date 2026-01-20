@@ -5,12 +5,14 @@ interface User {
   fullName: string;
   email: string;
   phone: string | null;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
@@ -61,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         token,
         isAuthenticated: !!token,
-        isAdmin: user?.role === 'ADMIN',
+        isAdmin: user?.role === 'ROLE_ADMIN',
         isLoading,
         login,
         logout,

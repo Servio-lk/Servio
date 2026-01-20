@@ -94,6 +94,30 @@ interface Offer {
   validUntil: string;
 }
 
+// Service Record Interfaces
+interface ServiceRecord {
+  id: number;
+  vehicleId: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceType: string;
+  description: string;
+  serviceDate: string;
+  mileage: number;
+  cost: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface ServiceRecordRequest {
+  vehicleId: number;
+  serviceType: string;
+  description: string;
+  serviceDate: string;
+  mileage: number;
+  cost: number;
+}
+
 class ApiService {
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
@@ -234,6 +258,41 @@ class ApiService {
     });
     return this.handleResponse<Offer[]>(response);
   }
+
+  // Service Record Management Endpoints
+  async createServiceRecord(recordData: ServiceRecordRequest): Promise<ApiResponse<ServiceRecord>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords`, {
+      method: 'POST',
+      headers: this.getHeaders(true), // Requires Auth
+      body: JSON.stringify(recordData),
+    });
+    return this.handleResponse<ServiceRecord>(response);
+  }
+
+  async getServiceRecordsByVehicle(vehicleId: number): Promise<ApiResponse<ServiceRecord[]>> {
+    const response = await fetch(`${API_BASE_URL}/vehicles/${vehicleId}/servicerecords`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<ServiceRecord[]>(response);
+  }
+
+  async updateServiceRecord(id: number, recordData: Partial<ServiceRecordRequest>): Promise<ApiResponse<ServiceRecord>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(recordData),
+    });
+    return this.handleResponse<ServiceRecord>(response);
+  }
+
+  async deleteServiceRecord(id: number): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<void>(response);
+  }
 }
 
 export const apiService = new ApiService();
@@ -247,5 +306,7 @@ export type {
   ServiceItem,
   ServiceOption,
   ServiceProvider,
-  Offer
+  Offer,
+  ServiceRecord,
+  ServiceRecordRequest
 };

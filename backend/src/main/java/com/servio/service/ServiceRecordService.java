@@ -9,6 +9,9 @@ import com.servio.entity.Vehicle;
 import com.servio.repository.ServiceRecordRepository;
 import com.servio.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +34,9 @@ public class ServiceRecordService {
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
             .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + request.getVehicleId()));
         
+        // Security Check: Verify ownership
+        validateOwnership(vehicle);
+
         ServiceRecord record = ServiceRecord.builder()
             .vehicle(vehicle)
             .serviceType(request.getServiceType())
@@ -45,12 +51,19 @@ public class ServiceRecordService {
     }
     
     public List<ServiceRecordDto> getAllServiceRecords() {
+        // Typically Admin only - accessible via logic or endpoint security
         return serviceRecordRepository.findAll().stream()
             .map(this::convertToDto)
             .collect(Collectors.toList());
     }
     
     public List<ServiceRecordDto> getServiceRecordsByVehicleId(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+             .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + vehicleId));
+        
+        // Security Check: Verify ownership
+        validateOwnership(vehicle);
+
         return serviceRecordRepository.findAll().stream()
             .filter(r -> r.getVehicle().getId().equals(vehicleId))
             .sorted((a, b) -> b.getServiceDate().compareTo(a.getServiceDate()))
@@ -61,10 +74,17 @@ public class ServiceRecordService {
     public ServiceRecordDto getServiceRecordById(Long id) {
         ServiceRecord record = serviceRecordRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Service record not found with id: " + id));
+        
+        // Security Check: Verify ownership of the vehicle associated with this record
+        validateOwnership(record.getVehicle());
+
         return convertToDto(record);
     }
     
     public List<ServiceRecordDto> getRecentServiceRecords(int limit) {
+        // This might need filtering by user if not admin. 
+        // Assuming this is used for a dashboard where backend filters by current user are applied elsewhere
+        // or this returns global records for admin.
         return serviceRecordRepository.findAll().stream()
             .sorted((a, b) -> b.getServiceDate().compareTo(a.getServiceDate()))
             .limit(limit)
@@ -76,6 +96,9 @@ public class ServiceRecordService {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
             .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + vehicleId));
         
+        // Security Check: Verify ownership
+        validateOwnership(vehicle);
+
         List<ServiceRecord> records = serviceRecordRepository.findAll().stream()
             .filter(r -> r.getVehicle().getId().equals(vehicleId))
             .sorted((a, b) -> b.getServiceDate().compareTo(a.getServiceDate()))
@@ -105,6 +128,12 @@ public class ServiceRecordService {
     }
     
     public List<MaintenanceReminderDto> getMaintenanceReminders(Long vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+             .orElseThrow(() -> new RuntimeException("Vehicle not found with id: " + vehicleId));
+        
+        // Security Check: Verify ownership
+        validateOwnership(vehicle);
+
         List<MaintenanceReminderDto> reminders = new ArrayList<>();
         
         List<ServiceRecord> records = serviceRecordRepository.findAll().stream()
@@ -156,6 +185,9 @@ public class ServiceRecordService {
         ServiceRecord record = serviceRecordRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Service record not found with id: " + id));
         
+        // Security Check: Verify ownership
+        validateOwnership(record.getVehicle());
+
         if (request.getServiceType() != null) record.setServiceType(request.getServiceType());
         if (request.getDescription() != null) record.setDescription(request.getDescription());
         if (request.getServiceDate() != null) record.setServiceDate(request.getServiceDate());
@@ -168,9 +200,12 @@ public class ServiceRecordService {
     
     @Transactional
     public void deleteServiceRecord(Long id) {
-        if (!serviceRecordRepository.existsById(id)) {
-            throw new RuntimeException("Service record not found with id: " + id);
-        }
+        ServiceRecord record = serviceRecordRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Service record not found with id: " + id));
+        
+        // Security Check: Verify ownership
+        validateOwnership(record.getVehicle());
+
         serviceRecordRepository.deleteById(id);
     }
     
@@ -188,5 +223,36 @@ public class ServiceRecordService {
             .createdAt(record.getCreatedAt())
             .updatedAt(record.getUpdatedAt())
             .build();
+    }
+
+    /**
+     * Checks if the currently authenticated user is the owner of the vehicle.
+     * Throws AccessDeniedException if not.
+     */
+    private void validateOwnership(Vehicle vehicle) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        
+        if (auth != null && auth.isAuthenticated() && !auth.getName().equals("anonymousUser")) {
+            // Check if user is Admin - Admins can access everything
+            boolean isAdmin = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+            
+            if (isAdmin) return;
+
+            try {
+                // Assuming the Principal (auth.getName()) is the userId as set in JwtTokenProvider
+                Long currentUserId = Long.parseLong(auth.getName());
+                
+                // Assuming Vehicle has a user relationship: vehicle.getUser().getId()
+                if (!vehicle.getUser().getId().equals(currentUserId)) {
+                    throw new AccessDeniedException("You are not authorized to manage records for this vehicle");
+                }
+            } catch (NumberFormatException e) {
+                // Fallback if principal is not an ID (e.g. username/email) - Deny access or implement lookup
+                throw new AccessDeniedException("Invalid authentication principal");
+            }
+        } else {
+             throw new AccessDeniedException("User not authenticated");
+        }
     }
 }

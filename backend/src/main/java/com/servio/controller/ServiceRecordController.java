@@ -10,14 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/service-records")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class ServiceRecordController {
     
     private final ServiceRecordService serviceRecordService;
     
-    @PostMapping
+    @PostMapping("/servicerecords")
     public ResponseEntity<ApiResponse<ServiceRecordDto>> createServiceRecord(
         @RequestBody ServiceRecordRequest request
     ) {
@@ -30,7 +30,8 @@ public class ServiceRecordController {
                 .build());
     }
     
-    @GetMapping
+    // Note: Kept as admin-likely endpoint or general list, adjusted path for consistency
+    @GetMapping("/servicerecords")
     public ResponseEntity<ApiResponse<List<ServiceRecordDto>>> getAllServiceRecords() {
         List<ServiceRecordDto> records = serviceRecordService.getAllServiceRecords();
         return ResponseEntity.ok(ApiResponse.<List<ServiceRecordDto>>builder()
@@ -40,7 +41,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @GetMapping("/vehicle/{vehicleId}")
+    @GetMapping("/vehicles/{vehicleId}/servicerecords")
     public ResponseEntity<ApiResponse<List<ServiceRecordDto>>> getServiceRecordsByVehicleId(
         @PathVariable Long vehicleId
     ) {
@@ -52,7 +53,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @GetMapping("/recent")
+    @GetMapping("/servicerecords/recent")
     public ResponseEntity<ApiResponse<List<ServiceRecordDto>>> getRecentServiceRecords(
         @RequestParam(defaultValue = "10") int limit
     ) {
@@ -64,7 +65,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @GetMapping("/{id}")
+    @GetMapping("/servicerecords/{id}")
     public ResponseEntity<ApiResponse<ServiceRecordDto>> getServiceRecordById(@PathVariable Long id) {
         ServiceRecordDto record = serviceRecordService.getServiceRecordById(id);
         return ResponseEntity.ok(ApiResponse.<ServiceRecordDto>builder()
@@ -74,7 +75,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @GetMapping("/vehicle/{vehicleId}/history")
+    @GetMapping("/vehicles/{vehicleId}/history")
     public ResponseEntity<ApiResponse<ServiceHistoryDto>> getVehicleServiceHistory(
         @PathVariable Long vehicleId
     ) {
@@ -86,7 +87,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @GetMapping("/vehicle/{vehicleId}/reminders")
+    @GetMapping("/vehicles/{vehicleId}/reminders")
     public ResponseEntity<ApiResponse<List<MaintenanceReminderDto>>> getMaintenanceReminders(
         @PathVariable Long vehicleId
     ) {
@@ -98,7 +99,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @PutMapping("/{id}")
+    @PutMapping("/servicerecords/{id}")
     public ResponseEntity<ApiResponse<ServiceRecordDto>> updateServiceRecord(
         @PathVariable Long id,
         @RequestBody ServiceRecordRequest request
@@ -111,7 +112,7 @@ public class ServiceRecordController {
             .build());
     }
     
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/servicerecords/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteServiceRecord(@PathVariable Long id) {
         serviceRecordService.deleteServiceRecord(id);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
