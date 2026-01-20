@@ -63,148 +63,124 @@ CREATE TRIGGER update_vehicles_updated_at BEFORE UPDATE ON vehicles
 CREATE TRIGGER update_service_records_updated_at BEFORE UPDATE ON service_records
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Service Categories Table
-CREATE TABLE IF NOT EXISTS service_categories (
+-- Create appointments/bookings table
+CREATE TABLE IF NOT EXISTS appointments (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    display_order INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL,
+    service_type VARCHAR(100) NOT NULL,
+    appointment_date TIMESTAMP NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING', -- PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+    location VARCHAR(255),
+    notes TEXT,
+    estimated_cost DECIMAL(10, 2),
+    actual_cost DECIMAL(10, 2),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Services Table
-CREATE TABLE IF NOT EXISTS services (
+-- Create index on appointments
+CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON appointments(user_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_vehicle_id ON appointments(vehicle_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_status ON appointments(status);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date);
+
+-- Create trigger for appointments
+CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create payments table
+CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
-    category_id INTEGER NOT NULL REFERENCES service_categories(id) ON DELETE CASCADE,
-    name VARCHAR(200) NOT NULL,
-    description TEXT,
-    base_price DECIMAL(10, 2),
-    price_range VARCHAR(50),
-    duration_minutes INTEGER,
-    image_url VARCHAR(500),
-    is_featured BOOLEAN DEFAULT FALSE,
-    is_active BOOLEAN DEFAULT TRUE,
+    appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL, -- CREDIT_CARD, DEBIT_CARD, CASH, UPI, WALLET
+    payment_status VARCHAR(50) NOT NULL DEFAULT 'PENDING', -- PENDING, COMPLETED, FAILED, REFUNDED
+    transaction_id VARCHAR(255) UNIQUE,
+    payment_date TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_services_category_id ON services(category_id);
-CREATE INDEX IF NOT EXISTS idx_services_featured ON services(is_featured);
+-- Create index on payments
+CREATE INDEX IF NOT EXISTS idx_payments_user_id ON payments(user_id);
+CREATE INDEX IF NOT EXISTS idx_payments_appointment_id ON payments(appointment_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(payment_status);
 
--- Service Options Table
-CREATE TABLE IF NOT EXISTS service_options (
+-- Create trigger for payments
+CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create reviews/ratings table
+CREATE TABLE IF NOT EXISTS reviews (
     id SERIAL PRIMARY KEY,
-    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    name VARCHAR(200) NOT NULL,
-    description TEXT,
-    price_adjustment DECIMAL(10, 2) DEFAULT 0,
-    is_default BOOLEAN DEFAULT FALSE,
-    display_order INTEGER DEFAULT 0,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_service_options_service ON service_options(service_id);
+-- Create index on reviews
+CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON reviews(user_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_appointment_id ON reviews(appointment_id);
 
--- Service Providers Table
-CREATE TABLE IF NOT EXISTS service_providers (
+-- Create trigger for reviews
+CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    address TEXT NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    phone VARCHAR(20),
-    email VARCHAR(255),
-    rating DECIMAL(3, 2) DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL, -- APPOINTMENT, PAYMENT, REMINDER, PROMOTIONAL
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Offers Table
-CREATE TABLE IF NOT EXISTS offers (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
-    subtitle VARCHAR(200),
-    description TEXT,
-    discount_type VARCHAR(20) CHECK (discount_type IN ('percentage', 'fixed')),
-    discount_value DECIMAL(10, 2),
-    image_url VARCHAR(500),
-    valid_from TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    valid_until TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- Create index on notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
--- Add triggers for new tables
-CREATE TRIGGER update_service_categories_updated_at BEFORE UPDATE ON service_categories
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Insert sample data for dashboard testing
+INSERT INTO users (full_name, email, phone, password_hash) VALUES
+    ('John Doe', 'john@example.com', '1234567890', '$2a$10$dummyhash1'),
+    ('Jane Smith', 'jane@example.com', '0987654321', '$2a$10$dummyhash2'),
+    ('Bob Johnson', 'bob@example.com', '5555555555', '$2a$10$dummyhash3')
+ON CONFLICT (email) DO NOTHING;
 
-CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+INSERT INTO vehicles (user_id, make, model, year, license_plate, vin) VALUES
+    (1, 'Toyota', 'Camry', 2020, 'ABC123', '1HGBH41JXMN109186'),
+    (1, 'Honda', 'Civic', 2021, 'XYZ789', '2HGBH41JXMN109187'),
+    (2, 'Ford', 'Mustang', 2019, 'DEF456', '3HGBH41JXMN109188')
+ON CONFLICT DO NOTHING;
 
-CREATE TRIGGER update_service_options_updated_at BEFORE UPDATE ON service_options
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+INSERT INTO appointments (user_id, vehicle_id, service_type, appointment_date, status, location, estimated_cost, actual_cost) VALUES
+    (1, 1, 'Oil Change', CURRENT_TIMESTAMP + INTERVAL '2 days', 'CONFIRMED', 'Service Center A', 50.00, NULL),
+    (1, 2, 'Brake Inspection', CURRENT_TIMESTAMP + INTERVAL '5 days', 'PENDING', 'Service Center B', 100.00, NULL),
+    (2, 3, 'Full Service', CURRENT_TIMESTAMP - INTERVAL '2 days', 'COMPLETED', 'Service Center A', 200.00, 195.00),
+    (1, 1, 'Tire Rotation', CURRENT_TIMESTAMP - INTERVAL '10 days', 'COMPLETED', 'Service Center C', 75.00, 75.00),
+    (2, 3, 'Engine Diagnostic', CURRENT_TIMESTAMP - INTERVAL '15 days', 'COMPLETED', 'Service Center B', 150.00, 145.00)
+ON CONFLICT DO NOTHING;
 
-CREATE TRIGGER update_service_providers_updated_at BEFORE UPDATE ON service_providers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+INSERT INTO payments (appointment_id, user_id, amount, payment_method, payment_status, transaction_id, payment_date) VALUES
+    (3, 2, 195.00, 'CREDIT_CARD', 'COMPLETED', 'TXN123456', CURRENT_TIMESTAMP - INTERVAL '2 days'),
+    (4, 1, 75.00, 'DEBIT_CARD', 'COMPLETED', 'TXN123457', CURRENT_TIMESTAMP - INTERVAL '10 days'),
+    (5, 2, 145.00, 'UPI', 'COMPLETED', 'TXN123458', CURRENT_TIMESTAMP - INTERVAL '15 days')
+ON CONFLICT DO NOTHING;
 
-CREATE TRIGGER update_offers_updated_at BEFORE UPDATE ON offers
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+INSERT INTO reviews (user_id, appointment_id, rating, comment) VALUES
+    (2, 3, 5, 'Excellent service! Very professional.'),
+    (1, 4, 4, 'Good service, but took a bit longer than expected.'),
+    (2, 5, 5, 'Highly recommend! Great experience.')
+ON CONFLICT DO NOTHING;
 
--- Insert seed data for service categories
-INSERT INTO service_categories (name, description, display_order) VALUES
-('Periodic Maintenance', 'Regular vehicle maintenance services', 1),
-('Nano Coating', 'Advanced paint protection services', 2),
-('Detailing', 'Professional vehicle detailing services', 3),
-('Tyre & Battery', 'Tyre and battery related services', 4),
-('Diagnostics', 'Vehicle diagnostics and inspection', 5);
-
--- Insert seed data for services
-INSERT INTO services (category_id, name, description, base_price, price_range, duration_minutes, is_featured) VALUES
--- Periodic Maintenance
-(1, 'Full Service (Free Pickup & Drop)', 'Comprehensive vehicle service including engine oil change, filter replacements, and multi-point inspection', 8500.00, 'LKR 8,500 - 15,000', 180, TRUE),
-(1, 'Lube Service (Free Pickup & Drop)', 'Engine oil and filter change service', 4500.00, 'LKR 4,500 - 8,000', 60, TRUE),
-(1, 'Hybrid Battery Inspection', 'Specialized inspection and diagnostics for hybrid vehicle batteries', 3500.00, 'LKR 3,500', 90, FALSE),
-
--- Nano Coating
-(2, 'Graphene Nano Coating', 'Advanced graphene-based protective coating', 45000.00, 'LKR 45,000 - 85,000', 360, TRUE),
-(2, 'Ceramic Coating (9H)', 'Premium ceramic coating with 9H hardness', 35000.00, 'LKR 35,000 - 65,000', 300, FALSE),
-(2, 'Glass Coating', 'Specialized glass protection coating', 12000.00, 'LKR 12,000 - 18,000', 120, FALSE),
-
--- Detailing
-(3, 'Interior Detailing', 'Deep cleaning and restoration of vehicle interior', 8500.00, 'LKR 8,500 - 15,000', 180, FALSE),
-(3, 'Exterior Detailing', 'Professional exterior cleaning and polishing', 6500.00, 'LKR 6,500 - 12,000', 150, FALSE),
-(3, 'Full Detailing Package', 'Complete interior and exterior detailing', 15000.00, 'LKR 15,000 - 25,000', 300, TRUE),
-(3, 'Engine Bay Cleaning', 'Professional engine compartment cleaning', 3500.00, 'LKR 3,500 - 5,000', 90, FALSE),
-
--- Tyre & Battery
-(4, 'Wheel Alignment', 'Professional wheel alignment service', 2500.00, 'LKR 2,500 - 4,000', 60, FALSE),
-(4, 'Wheel Balancing', 'Precise wheel balancing', 1500.00, 'LKR 1,500 - 2,500', 45, FALSE),
-(4, 'Tyre Rotation', 'Regular tyre rotation service', 1000.00, 'LKR 1,000', 30, FALSE),
-(4, 'Battery Health Check', 'Comprehensive battery diagnostics', 500.00, 'Free - LKR 500', 15, TRUE),
-
--- Diagnostics
-(5, 'Computer Diagnostics', 'Full vehicle computer system diagnostics', 2500.00, 'LKR 2,500 - 5,000', 45, FALSE),
-(5, 'Pre-Purchase Inspection', 'Comprehensive vehicle inspection before purchase', 7500.00, 'LKR 7,500 - 12,000', 120, TRUE),
-(5, 'Emission Testing', 'Vehicle emission testing and certification', 1500.00, 'LKR 1,500', 30, FALSE);
-
--- Insert service options for Lube Service
-INSERT INTO service_options (service_id, name, description, price_adjustment, is_default, display_order) VALUES
-(2, 'Mineral Oil', 'Standard mineral-based engine oil', 0.00, TRUE, 1),
-(2, 'Semi-Synthetic Oil', 'Semi-synthetic engine oil for better performance', 1500.00, FALSE, 2),
-(2, 'Full Synthetic Oil', 'Premium full synthetic engine oil', 3500.00, FALSE, 3);
-
--- Insert service providers
-INSERT INTO service_providers (name, address, city, phone, rating) VALUES
-('Auto Miraj Battaramulla', '1043 Pannipitiya Rd, Pelawatta', 'Battaramulla', '+94 77 123 4567', 4.80),
-('Auto Miraj Nugegoda', '123 High Level Rd', 'Nugegoda', '+94 77 234 5678', 4.75),
-('Auto Miraj Rajagiriya', '456 Kotte Rd', 'Rajagiriya', '+94 77 345 6789', 4.85);
-
--- Insert offers
-INSERT INTO offers (title, subtitle, description, discount_type, discount_value, valid_until) VALUES
-('Get 20% off', 'on your first full service', 'New customer offer - save 20% on comprehensive full service package', 'percentage', 20.00, CURRENT_TIMESTAMP + INTERVAL '30 days'),
-('Free battery check', 'with any service', 'Complimentary battery health check with any paid service', 'fixed', 500.00, CURRENT_TIMESTAMP + INTERVAL '60 days'),
-('Detailing Special', 'Full detailing at 15% off', 'Limited time offer on complete interior and exterior detailing', 'percentage', 15.00, CURRENT_TIMESTAMP + INTERVAL '45 days');
+INSERT INTO service_records (vehicle_id, service_type, description, service_date, mileage, cost) VALUES
+    (1, 'Oil Change', 'Regular oil change with synthetic oil', CURRENT_DATE - INTERVAL '30 days', 15000, 50.00),
+    (2, 'Brake Service', 'Replaced front brake pads', CURRENT_DATE - INTERVAL '60 days', 20000, 150.00),
+    (3, 'Full Service', 'Complete vehicle inspection and service', CURRENT_DATE - INTERVAL '90 days', 25000, 300.00)
+ON CONFLICT DO NOTHING;
