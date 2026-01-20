@@ -1,38 +1,27 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM maven:3.9-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+COPY pom.xml .
+RUN mvn dependency:go-offline
 
-# Install dependencies
-RUN npm ci --only=production
+COPY src ./src
+RUN mvn clean package -DskipTests
 
 # Production stage
-FROM node:20-alpine
+FROM eclipse-temurin:17-jre
 
 WORKDIR /app
+RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+COPY --from=builder /app/target/*.jar app.jar
 
-# Copy dependencies from builder
-COPY --from=builder /app/node_modules ./node_modules
+# Create non-root user/group with predictable ids (Debian syntax)
+RUN addgroup --system --gid 1001 appuser \
+  && adduser --system --uid 1001 --ingroup appuser --home /nonexistent --disabled-password appuser
+USER appuser
 
-# Copy source code
-COPY --chown=nodejs:nodejs . .
+EXPOSE 8080
 
-# Switch to non-root user
-USER nodejs
-
-# Expose port
-EXPOSE 3001
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
-
-# Start the application
-CMD ["node", "src/index.js"]
+ENTRYPOINT ["dumb-init", "--", "java", "-jar", "app.jar"]

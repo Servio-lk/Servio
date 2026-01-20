@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { apiService } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "@/assets/images/Logo.svg";
 import GarageImage from "@/assets/images/Garage image.png";
 
@@ -202,6 +203,7 @@ function LanguageSelector() {
 
 function LoginForm() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -219,8 +221,9 @@ function LoginForm() {
     try {
       const response = await apiService.login({ email, password });
       
-      if (response.success) {
-        toast.success("Login successful! Welcome back.");
+      if (response.success && response.data) {
+        login(response.data.user, response.data.token);
+        toast.success("Welcome back!");
         navigate('/home');
       }
     } catch (err: any) {

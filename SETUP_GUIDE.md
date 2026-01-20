@@ -15,10 +15,13 @@ Tables created:
 - **vehicles**: Stores vehicle information (linked to users)
 - **service_records**: Stores service history (linked to vehicles)
 
-### 3. **Backend API (Node.js + Express)**
-- Running on: `http://localhost:3001`
-- CORS enabled for frontend at `http://localhost:5173`
-- JWT authentication implemented
+### 3. **Backend API (Java Spring Boot 3)**
+- **Framework**: Spring Boot 3.1.5 with Maven
+- **Runtime**: Java 17
+- **Running on**: `http://localhost:3001`
+- **CORS enabled** for frontend at `http://localhost:5173`
+- **JWT authentication** implemented with Spring Security
+- **Database**: PostgreSQL with Spring Data JPA/Hibernate
 
 ### 4. **API Endpoints**
 
@@ -36,12 +39,44 @@ Tables created:
 
 ## 🚀 How to Use
 
-### Start the Backend (Already Running)
-The backend is currently running in the background. If you need to restart it:
+### Prerequisites
+- Java 17 or higher
+- Maven 3.8.1 or higher
+- PostgreSQL 12+ (or Docker)
 
+### Start the Backend
+
+#### Option 1: Using Docker Compose (Recommended)
+```bash
+# From the root directory
+docker-compose up --build
+
+# This will start:
+# - PostgreSQL on port 5433
+# - Backend API on port 3001
+# - Frontend on port 80
+```
+
+#### Option 2: Local Development
 ```bash
 cd backend
-npm run dev
+
+# Set environment variables
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=servio_db
+export DB_USER=servio_user
+export DB_PASSWORD=servio_password
+export JWT_SECRET=your-secret-key-change-in-production-at-least-32-characters-long
+export FRONTEND_URL=http://localhost:5173
+
+# Run with Maven
+mvn clean install
+mvn spring-boot:run
+
+# Or build and run JAR
+mvn clean package
+java -jar target/servio-backend-1.0.0.jar
 ```
 
 ### Start the Frontend
