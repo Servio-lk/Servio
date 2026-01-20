@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   # PostgreSQL Database
@@ -23,39 +22,27 @@ services:
     networks:
       - servio-network
 
-  # Backend API
+  # Backend API (Spring Boot)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: servio-backend
     restart: always
-    ports:
-      - "3001:3001"
     environment:
-      PORT: 3001
-      NODE_ENV: production
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: servio_user
-      DB_PASSWORD: servio_password
-      DB_NAME: servio_db
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-please-use-a-strong-secret}
-      JWT_EXPIRES_IN: 7d
-      FRONTEND_URL: http://localhost:3000
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/servio_db
+      - SPRING_DATASOURCE_USERNAME=servio_user
+      - SPRING_DATASOURCE_PASSWORD=servio_password
+      - JWT_SECRET=3q4w5e6r7t8y9u0i1o2p3a4s5d6f7g8h9j0k1l2z3x4c5v6b7n8m9QWERTYUIOP
+      - JWT_EXPIRATION=604800000
+    ports:
+      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - servio-network
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
-  # Frontend Web Application
   frontend:
     build:
       context: ./frontend
@@ -63,17 +50,13 @@ services:
     container_name: servio-frontend
     restart: always
     ports:
-      - "3000:80"
+      - "80:80"
     depends_on:
       - backend
+    environment:
+      - VITE_API_URL=http://localhost:8080
     networks:
       - servio-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
 
 volumes:
   postgres_data:
