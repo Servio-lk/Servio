@@ -36,12 +36,62 @@ interface User {
   fullName: string;
   email: string;
   phone: string | null;
+  role: string;
   createdAt: string;
 }
 
 interface AuthResponse {
   user: User;
   token: string;
+}
+
+interface ServiceCategory {
+  id: number;
+  name: string;
+  description: string;
+  services: ServiceItem[];
+}
+
+interface ServiceItem {
+  id: number;
+  categoryId: number;
+  categoryName: string;
+  name: string;
+  description: string;
+  basePrice: number | null;
+  priceRange: string;
+  durationMinutes: number | null;
+  imageUrl: string | null;
+  isFeatured: boolean;
+  options?: ServiceOption[];
+}
+
+interface ServiceOption {
+  id: number;
+  name: string;
+  description: string;
+  priceAdjustment: number;
+  isDefault: boolean;
+}
+
+interface ServiceProvider {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  phone: string;
+  rating: number;
+}
+
+interface Offer {
+  id: number;
+  title: string;
+  subtitle: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+  imageUrl: string | null;
+  validUntil: string;
 }
 
 class ApiService {
@@ -127,7 +177,75 @@ class ApiService {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
   }
+
+  // Service endpoints
+  async getServiceCategories(): Promise<ApiResponse<ServiceCategory[]>> {
+    const response = await fetch(`${API_BASE_URL}/services/categories`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceCategory[]>(response);
+  }
+
+  async getAllServices(): Promise<ApiResponse<ServiceItem[]>> {
+    const response = await fetch(`${API_BASE_URL}/services`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceItem[]>(response);
+  }
+
+  async getFeaturedServices(): Promise<ApiResponse<ServiceItem[]>> {
+    const response = await fetch(`${API_BASE_URL}/services/featured`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceItem[]>(response);
+  }
+
+  async getServiceById(id: number): Promise<ApiResponse<ServiceItem>> {
+    const response = await fetch(`${API_BASE_URL}/services/${id}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceItem>(response);
+  }
+
+  async searchServices(query: string): Promise<ApiResponse<ServiceItem[]>> {
+    const response = await fetch(`${API_BASE_URL}/services/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceItem[]>(response);
+  }
+
+  async getServiceProviders(): Promise<ApiResponse<ServiceProvider[]>> {
+    const response = await fetch(`${API_BASE_URL}/services/providers`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ServiceProvider[]>(response);
+  }
+
+  async getActiveOffers(): Promise<ApiResponse<Offer[]>> {
+    const response = await fetch(`${API_BASE_URL}/services/offers`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<Offer[]>(response);
+  }
 }
 
 export const apiService = new ApiService();
-export type { User, SignupData, LoginData, AuthResponse, ApiResponse };
+export type { 
+  User, 
+  SignupData, 
+  LoginData, 
+  AuthResponse, 
+  ApiResponse,
+  ServiceCategory,
+  ServiceItem,
+  ServiceOption,
+  ServiceProvider,
+  Offer
+};
