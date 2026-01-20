@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -257,17 +258,23 @@ function SignupForm() {
   const handleSignup = async () => {
     // Validation
     if (!name || !email || !password || !confirmPassword) {
-      setError("Please fill in all required fields");
+      const errorMsg = "Please fill in all required fields";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Passwords don't match");
+      const errorMsg = "Passwords don't match";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
+      const errorMsg = "Password must be at least 6 characters long";
+      setError(errorMsg);
+      toast.error(errorMsg);
       return;
     }
 
@@ -283,32 +290,30 @@ function SignupForm() {
       });
       
       if (response.success) {
-        console.log("Signup successful:", response.data);
-        alert("Account created successfully! Welcome to Servio.");
+        toast.success("Account created successfully! Welcome to Servio.");
         navigate('/login');
       }
     } catch (err: any) {
       console.error("Signup error:", err);
+      let errorMsg = "";
       if (err.errors && err.errors.length > 0) {
-        setError(err.errors.map((e: any) => e.message).join(", "));
+        errorMsg = err.errors.map((e: any) => e.message).join(", ");
       } else {
-        setError(err.message || "Failed to create account. Please try again.");
+        errorMsg = err.message || "Failed to create account. Please try again.";
       }
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleSignup = () => {
-    console.log("Signup with Google");
-    alert("Google signup coming soon!");
-    // Add your Google signup logic here
+    toast.info("Google signup coming soon!");
   };
 
   const handleFacebookSignup = () => {
-    console.log("Signup with Facebook");
-    alert("Facebook signup coming soon!");
-    // Add your Facebook signup logic here
+    toast.info("Facebook signup coming soon!");
   };
 
   return (

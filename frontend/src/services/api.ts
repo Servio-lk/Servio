@@ -7,7 +7,7 @@ const getApiBaseUrl = () => {
   
   // For local development and mobile access, use the same host but different port
   const host = window.location.hostname;
-  return `http://${host}:3001/api`;
+  return `http://${host}:8080/api`;
 };
 
 const API_BASE_URL = getApiBaseUrl();
