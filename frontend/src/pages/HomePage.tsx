@@ -45,7 +45,7 @@ export default function HomePage() {
         </div>
 
         {/* Search Bar */}
-        <div className="bg-[#ffe7df] border border-white rounded-2xl p-2 lg:p-3 flex items-center gap-2 lg:gap-3 cursor-pointer hover:bg-[#ffd9cc] transition-colors">
+        <div className="bg-[#ffe7df] mx-auto w-full lg:w-1/2 border border-white rounded-2xl p-2 lg:p-3 flex items-center gap-2 lg:gap-3 cursor-pointer hover:bg-[#ffd9cc] transition-colors">
           <Search className="w-6 h-6" />
           <p className="flex-1 text-base font-semibold text-black">
             Search services
