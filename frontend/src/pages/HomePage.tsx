@@ -1,28 +1,72 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Calendar, Warehouse, ChevronRight, Clock, Star, TrendingUp } from 'lucide-react';
+import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { ServiceCard } from '@/components/ServiceCard';
+import { OfferCard } from '@/components/OfferCard';
+import type { ServiceItem, Offer, ServiceProvider } from '@/services/api';
+import { apiService } from '@/services/api';
 
 export default function HomePage() {
   const { user } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
 
-  const suggestions = [
-    { id: 1, name: 'Lube Services', image: null },
-    { id: 2, name: 'Washing Packages', image: null },
-    { id: 3, name: 'Exterior & Interior Detailing', image: null },
-    { id: 4, name: 'Engine Tune ups', image: null },
-  ];
+  const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [lastServiceProvider, setLastServiceProvider] = useState<ServiceProvider | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const offers = [
-    { id: 1, title: 'Enjoy 10% off on', subtitle: 'Mechanical Repair', discount: '10%' },
-    { id: 2, title: 'Free inspection with', subtitle: 'Any Lube Service', discount: 'FREE' },
-  ];
+  useEffect(() => {
+    loadHomeData();
+  }, []);
 
+  const loadHomeData = async () => {
+    try {
+      setLoading(true);
+
+      // Load featured services (for popular services section)
+      const servicesResponse = await apiService.getFeaturedServices();
+      if (servicesResponse.success && servicesResponse.data) {
+        setFeaturedServices(servicesResponse.data.slice(0, 4)); // Show top 4
+      }
+
+      // Load active offers
+      const offersResponse = await apiService.getActiveOffers();
+      if (offersResponse.success && offersResponse.data) {
+        setOffers(offersResponse.data);
+      }
+
+      // Load service providers (use first one as last service location)
+      const providersResponse = await apiService.getServiceProviders();
+      if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
+        setLastServiceProvider(providersResponse.data[0]);
+      }
+    } catch (error) {
+      console.error('Error loading home page data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sample recent services - TODO: Replace with actual user's service history from API
   const recentServices = [
     { id: 1, name: 'Lubricant Service', date: 'Oct 15, 2025', vehicle: 'Toyota Premio' },
     { id: 2, name: 'Washing Package', date: 'Sep 28, 2025', vehicle: 'Toyota Premio' },
   ];
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff5d2e] mx-auto"></div>
+            <p className="mt-4 text-black/70">Loading...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -57,23 +101,28 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Last Service */}
-        <div className="bg-white border border-[#ffe7df] rounded-lg p-3 lg:p-4 flex items-center gap-3">
-          <div className="bg-[#ffeae3] p-2 lg:p-3 rounded">
-            <Warehouse className="w-6 h-6" />
+        {/* Last Service Location */}
+        {lastServiceProvider && (
+          <div className="bg-white border border-[#ffe7df] rounded-lg p-3 lg:p-4 flex items-center gap-3">
+            <div className="bg-[#ffeae3] p-2 lg:p-3 rounded">
+              <Warehouse className="w-6 h-6" />
+            </div>
+            <div className="flex-1 flex flex-col gap-1">
+              <p className="text-xs font-semibold text-black/70">Last service location</p>
+              <p className="text-base font-medium text-black">{lastServiceProvider.name}</p>
+              {lastServiceProvider.city && (
+                <p className="text-xs text-black/50">{lastServiceProvider.city}</p>
+              )}
+            </div>
+            <ChevronRight className="w-5 h-5 text-black/50" />
           </div>
-          <div className="flex-1 flex flex-col gap-1">
-            <p className="text-xs font-semibold text-black/70">Last service location</p>
-            <p className="text-base font-medium text-black">Auto Miraj-Panadura</p>
-          </div>
-          <ChevronRight className="w-5 h-5 text-black/50" />
-        </div>
+        )}
 
         {/* Main content grid - responsive */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left column - Suggestions */}
+          {/* Left column - Popular Services */}
           <div className="lg:col-span-2 flex flex-col gap-4">
-            {/* Suggestions Header */}
+            {/* Popular Services Header */}
             <div className="flex items-center justify-between">
               <p className="text-base lg:text-lg font-semibold text-black">Popular Services</p>
               <Link to="/services" className="text-sm font-semibold text-[#ff5d2e] hover:underline">
@@ -81,22 +130,26 @@ export default function HomePage() {
               </Link>
             </div>
 
-            {/* Suggestions Grid - responsive */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {suggestions.map((service) => (
-                <Link
-                  key={service.id}
-                  to={`/services/${service.id}`}
-                  className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-3 hover:shadow-md transition-shadow"
-                >
-                  <div className="w-12 h-12 rounded bg-[#ffe7df] flex items-center justify-center">
-                    <Warehouse className="w-6 h-6 text-[#ff5d2e]" />
-                  </div>
-                  <p className="flex-1 text-base font-medium text-black">{service.name}</p>
-                  <ChevronRight className="w-5 h-5 text-black/50" />
+            {/* Popular Services Grid */}
+            {featuredServices.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {featuredServices.map((service) => (
+                  <ServiceCard
+                    key={service.id}
+                    id={service.id}
+                    name={service.name}
+                    imageUrl={service.imageUrl}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg p-8 text-center">
+                <p className="text-black/50">No featured services available at the moment.</p>
+                <Link to="/services" className="text-[#ff5d2e] hover:underline mt-2 inline-block">
+                  Browse all services
                 </Link>
-              ))}
-            </div>
+              </div>
+            )}
 
             {/* Recent Services - Desktop only */}
             <div className="hidden lg:flex flex-col gap-4 mt-4">
@@ -153,33 +206,28 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Offers */}
+            {/* Special Offers */}
             <div className="flex flex-col gap-3">
               <p className="text-base lg:text-lg font-semibold text-black">Special Offers</p>
-              <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
-                {offers.map((offer) => (
-                  <div
-                    key={offer.id}
-                    className="bg-white rounded-2xl shadow-md p-4 min-w-[280px] lg:min-w-0 flex flex-col gap-3 relative overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="bg-[#ff5d2e] text-white text-xs font-bold px-2 py-1 rounded">
-                        {offer.discount}
-                      </span>
-                    </div>
-                    <div className="text-base font-medium text-black">
-                      <p>{offer.title}</p>
-                      <p className="font-semibold">{offer.subtitle}</p>
-                    </div>
-                    <button className="bg-[#ff5d2e] text-white py-2 px-4 rounded-lg font-semibold text-sm shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] hover:bg-[#e54d1e] transition-colors self-start">
-                      Book now
-                    </button>
-                    <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-10">
-                      <div className="w-full h-full rounded-full bg-[#ff5d2e]" />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              {offers.length > 0 ? (
+                <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0">
+                  {offers.map((offer) => (
+                    <OfferCard
+                      key={offer.id}
+                      id={offer.id}
+                      title={offer.title}
+                      subtitle={offer.subtitle}
+                      discountType={offer.discountType}
+                      discountValue={offer.discountValue}
+                      imageUrl={offer.imageUrl}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-white rounded-lg p-6 text-center">
+                  <p className="text-black/50">No active offers at the moment.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
