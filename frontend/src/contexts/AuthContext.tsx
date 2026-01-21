@@ -5,12 +5,14 @@ interface User {
   fullName: string;
   email: string;
   phone: string | null;
+  role?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   login: (user: User, token: string) => void;
   logout: () => void;
