@@ -9,21 +9,251 @@ export default function ServiceDetailPage() {
   const [selectedOil, setSelectedOil] = useState('standard');
   const [specialInstructions, setSpecialInstructions] = useState('');
 
-  const service = {
-    id: id,
-    name: 'Lubricant Service',
-    basePrice: 1500,
-    description: 'Protect your engine and maintain peak performance with our professional oil change service. We only use high-quality lubricants and filters, ensuring your vehicle runs smoothly and efficiently.',
-    duration: '30-45 min',
-    rating: 4.8,
-    reviews: 234,
-    features: [
-      'Premium quality oil',
-      'Oil filter replacement',
-      'Multi-point inspection',
-      'Fluid level check',
-    ],
+  // Service catalog with all services
+  const servicesCatalog: { [key: string]: any } = {
+    '1': {
+      id: '1',
+      name: 'Washing Packages',
+      basePrice: 500,
+      description: 'Professional car washing service to keep your vehicle looking pristine. We use eco-friendly products and techniques to ensure the best results.',
+      duration: '20-30 min',
+      rating: 4.9,
+      reviews: 432,
+      features: [
+        'Exterior wash',
+        'Interior vacuuming',
+        'Windscreen cleaning',
+        'Door jamb cleaning',
+      ],
+    },
+    '2': {
+      id: '2',
+      name: 'Lube Services',
+      basePrice: 1500,
+      description: 'Professional oil change with premium lubricants to protect your engine. Our certified technicians use only high-quality filters.',
+      duration: '30-45 min',
+      rating: 4.8,
+      reviews: 234,
+      features: [
+        'Premium quality oil',
+        'Oil filter replacement',
+        'Multi-point inspection',
+        'Fluid level check',
+      ],
+    },
+    '3': {
+      id: '3',
+      name: 'Exterior & Interior Detailing',
+      basePrice: 3000,
+      description: 'Complete detailing service for your vehicle\'s exterior and interior. Our experts use professional-grade products for a showroom finish.',
+      duration: '2-3 hours',
+      rating: 4.9,
+      reviews: 567,
+      features: [
+        'Full exterior detail',
+        'Interior deep clean',
+        'Leather conditioning',
+        'Dashboard treatment',
+      ],
+    },
+    '4': {
+      id: '4',
+      name: 'Engine Tune ups',
+      basePrice: 2500,
+      description: 'Keep your engine running at peak performance with our professional tune-up service. We inspect and adjust all critical components.',
+      duration: '1-2 hours',
+      rating: 4.7,
+      reviews: 189,
+      features: [
+        'Spark plug check',
+        'Air filter replacement',
+        'Fuel injector cleaning',
+        'Performance diagnostics',
+      ],
+    },
+    '5': {
+      id: '5',
+      name: 'Inspection Reports',
+      basePrice: 1000,
+      description: 'Comprehensive vehicle inspection with detailed report. Perfect before buying or for regular maintenance tracking.',
+      duration: '45-60 min',
+      rating: 4.8,
+      reviews: 145,
+      features: [
+        'Full system check',
+        'Detailed report',
+        'Photo documentation',
+        'Recommendations included',
+      ],
+    },
+    '6': {
+      id: '6',
+      name: 'Tyre Services',
+      basePrice: 800,
+      description: 'Professional tyre maintenance and replacement services. We offer balancing, rotation, and puncture repair.',
+      duration: '30-45 min',
+      rating: 4.9,
+      reviews: 356,
+      features: [
+        'Tyre rotation',
+        'Balancing',
+        'Pressure check',
+        'Puncture repair',
+      ],
+    },
+    '7': {
+      id: '7',
+      name: 'Waxing',
+      basePrice: 1200,
+      description: 'Premium waxing service to protect and enhance your vehicle\'s paint finish. UV protection included.',
+      duration: '45-60 min',
+      rating: 4.8,
+      reviews: 234,
+      features: [
+        'Clay bar treatment',
+        'Premium wax application',
+        'UV protection',
+        '3-month warranty',
+      ],
+    },
+    '8': {
+      id: '8',
+      name: 'Undercarriage Degreasing',
+      basePrice: 2000,
+      description: 'Deep cleaning of your vehicle\'s undercarriage to remove dirt, salt, and debris. Rust prevention treatment included.',
+      duration: '1-1.5 hours',
+      rating: 4.7,
+      reviews: 123,
+      features: [
+        'High-pressure wash',
+        'Rust prevention',
+        'Anti-corrosion spray',
+        'Oil-based sealant',
+      ],
+    },
+    '9': {
+      id: '9',
+      name: 'Windscreen Treatments',
+      basePrice: 1500,
+      description: 'Professional windscreen treatment for water resistance and enhanced visibility. Protects against weather and UV damage.',
+      duration: '20-30 min',
+      rating: 4.9,
+      reviews: 201,
+      features: [
+        'Water repellent coating',
+        'UV protection',
+        'Scratch resistance',
+        '6-month durability',
+      ],
+    },
+    '10': {
+      id: '10',
+      name: 'Battery Services',
+      basePrice: 500,
+      description: 'Battery testing, charging, and replacement services. Reliable power for your vehicle guaranteed.',
+      duration: '15-20 min',
+      rating: 4.8,
+      reviews: 278,
+      features: [
+        'Battery testing',
+        'Terminal cleaning',
+        'Safe disposal',
+        'Installation included',
+      ],
+    },
+    '11': {
+      id: '11',
+      name: 'Nano Coating Packages',
+      basePrice: 15000,
+      description: 'Premium nano coating for ultimate paint protection. Provides long-lasting gloss and protection against environmental elements.',
+      duration: '3-4 hours',
+      rating: 4.9,
+      reviews: 89,
+      features: [
+        'Surface preparation',
+        'Nano coating application',
+        'Curing process',
+        '2-year warranty',
+      ],
+    },
+    '12': {
+      id: '12',
+      name: 'Nano Coating Treatments',
+      basePrice: 8000,
+      description: 'Professional nano treatment for enhanced protection and stunning gloss. Quick application with long-lasting results.',
+      duration: '2-3 hours',
+      rating: 4.8,
+      reviews: 67,
+      features: [
+        'Paint protection',
+        'Hydrophobic properties',
+        'High gloss finish',
+        '1-year warranty',
+      ],
+    },
+    '13': {
+      id: '13',
+      name: 'Insurance Claims',
+      basePrice: 0,
+      description: 'Expert handling of insurance claims for collision damage. We work directly with insurance companies for hassle-free service.',
+      duration: 'Varies',
+      rating: 4.7,
+      reviews: 156,
+      features: [
+        'Claim assessment',
+        'Documentation support',
+        'Direct insurance billing',
+        'Quality repairs',
+      ],
+    },
+    '14': {
+      id: '14',
+      name: 'Wheel Alignment',
+      basePrice: 2000,
+      description: 'Professional wheel alignment service to ensure proper handling and tire wear. State-of-the-art alignment equipment used.',
+      duration: '45-60 min',
+      rating: 4.8,
+      reviews: 234,
+      features: [
+        'Computer alignment',
+        'All wheels checked',
+        'Performance verification',
+        'Warranty included',
+      ],
+    },
+    '15': {
+      id: '15',
+      name: 'Full Paints',
+      basePrice: 50000,
+      description: 'Complete vehicle repaint service with premium quality paint. Perfect for collision damage or aesthetic upgrades.',
+      duration: '2-3 days',
+      rating: 4.9,
+      reviews: 112,
+      features: [
+        'Professional prep',
+        'Multi-coat application',
+        'Premium paint',
+        '2-year warranty',
+      ],
+    },
+    '16': {
+      id: '16',
+      name: 'Part Replacements',
+      basePrice: 0,
+      description: 'Expert part replacement for all vehicle components. We use OEM and quality aftermarket parts.',
+      duration: 'Varies',
+      rating: 4.8,
+      reviews: 189,
+      features: [
+        'Quality parts',
+        'Professional installation',
+        'Warranty coverage',
+        'Competitive pricing',
+      ],
+    },
   };
+
+  const service = servicesCatalog[id || '1'] || servicesCatalog['1'];
 
   const oilOptions = [
     { id: 'standard', name: 'Standard/Conventional Oil', price: 4000, description: 'Basic protection for everyday driving' },
@@ -104,7 +334,7 @@ export default function ServiceDetailPage() {
               <div className="hidden lg:block">
                 <h3 className="text-lg font-semibold text-black mb-3">What's Included</h3>
                 <div className="grid grid-cols-2 gap-3">
-                  {service.features.map((feature, idx) => (
+                  {service.features.map((feature: string, idx: number) => (
                     <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg">
                       <Check className="w-5 h-5 text-green-500" />
                       <span className="text-sm font-medium text-black">{feature}</span>
@@ -116,40 +346,42 @@ export default function ServiceDetailPage() {
               {/* Divider */}
               <div className="h-px bg-black/10" />
 
-              {/* Oil Selection */}
-              <div className="flex flex-col gap-4">
-                <h3 className="text-base lg:text-lg font-semibold text-black">
-                  Pricing and Oil Selection
-                </h3>
-                <div className="flex flex-col gap-2">
-                  {oilOptions.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => setSelectedOil(option.id)}
-                      className={`w-full text-left p-4 rounded-lg transition-all ${
-                        selectedOil === option.id
-                          ? 'bg-[#ffe7df] border-2 border-[#ff5d2e]'
-                          : 'bg-white border border-black/10 hover:border-[#ff5d2e]/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          selectedOil === option.id ? 'border-[#ff5d2e]' : 'border-black/30'
-                        }`}>
-                          {selectedOil === option.id && (
-                            <div className="w-3 h-3 rounded-full bg-[#ff5d2e]" />
-                          )}
+              {/* Oil Selection - Only for Lube Services (ID 2) */}
+              {id === '2' && (
+                <div className="flex flex-col gap-4">
+                  <h3 className="text-base lg:text-lg font-semibold text-black">
+                    Pricing and Oil Selection
+                  </h3>
+                  <div className="flex flex-col gap-2">
+                    {oilOptions.map((option) => (
+                      <button
+                        key={option.id}
+                        onClick={() => setSelectedOil(option.id)}
+                        className={`w-full text-left p-4 rounded-lg transition-all ${
+                          selectedOil === option.id
+                            ? 'bg-[#ffe7df] border-2 border-[#ff5d2e]'
+                            : 'bg-white border border-black/10 hover:border-[#ff5d2e]/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                            selectedOil === option.id ? 'border-[#ff5d2e]' : 'border-black/30'
+                          }`}>
+                            {selectedOil === option.id && (
+                              <div className="w-3 h-3 rounded-full bg-[#ff5d2e]" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-black">{option.name}</p>
+                            <p className="text-sm text-black/50 hidden lg:block">{option.description}</p>
+                          </div>
+                          <p className="font-semibold text-black">+LKR {option.price.toLocaleString()}</p>
                         </div>
-                        <div className="flex-1">
-                          <p className="font-medium text-black">{option.name}</p>
-                          <p className="text-sm text-black/50 hidden lg:block">{option.description}</p>
-                        </div>
-                        <p className="font-semibold text-black">+LKR {option.price.toLocaleString()}</p>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Divider */}
               <div className="h-px bg-black/10" />
@@ -179,10 +411,12 @@ export default function ServiceDetailPage() {
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {service.basePrice.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-black/70">{selectedOilOption?.name}</span>
-                    <span className="font-medium text-black">LKR {selectedOilOption?.price.toLocaleString()}</span>
-                  </div>
+                  {id === '2' && selectedOilOption && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-black/70">{selectedOilOption.name}</span>
+                      <span className="font-medium text-black">LKR {selectedOilOption.price.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="h-px bg-black/10" />
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-black">Total</span>

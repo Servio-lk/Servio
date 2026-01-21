@@ -55,7 +55,7 @@ services:
     depends_on:
       - backend
     environment:
-      - VITE_API_URL=http://localhost:8080
+      - VITE_API_URL=http://localhost:3001/api
     networks:
       - servio-network
 
