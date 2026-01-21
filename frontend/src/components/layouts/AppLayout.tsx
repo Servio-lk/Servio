@@ -106,14 +106,6 @@ function DesktopHeader() {
     <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
       {/* Search */}
       <div className="flex-1 max-w-md">
-        <div className="bg-[#fff7f5] rounded-lg px-4 py-2 flex items-center gap-2">
-          <List className="w-5 h-5 text-black/50" />
-          <input
-            type="text"
-            placeholder="Search services..."
-            className="flex-1 bg-transparent text-sm outline-none placeholder:text-black/50"
-          />
-        </div>
       </div>
 
       {/* Actions */}
@@ -122,7 +114,7 @@ function DesktopHeader() {
           <Bell className="w-5 h-5 text-black/70" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-[#ff5d2e] rounded-full" />
         </button>
-        <div className="flex items-center gap-2 px-3 py-2 bg-[#fff7f5] rounded-lg">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
           <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-[#ff5d2e]" />
           </div>

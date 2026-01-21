@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthGuard, GuestGuard } from '@/components/AuthGuard'
+import { AdminGuard } from '@/components/AdminGuard'
 
 // Auth pages
 import Login from './pages/Login'
@@ -14,6 +15,14 @@ import ServiceDetailPage from './pages/ServiceDetailPage'
 import ActivityPage from './pages/ActivityPage'
 import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
+
+// Admin pages
+import { AdminLayout } from './components/layouts/AdminLayout'
+import { AdminDashboard } from './pages/admin/Dashboard'
+import { AdminServices } from './pages/admin/Services'
+import { AdminOffers } from './pages/admin/Offers'
+import { AdminAppointments } from './pages/admin/Appointments'
+import { AdminCustomers } from './pages/admin/Customers'
 
 import './App.css'
 
@@ -100,6 +109,22 @@ function App() {
               </AuthGuard>
             }
           />
+
+          {/* Admin routes - protected by AdminGuard */}
+          <Route
+            path="/admin"
+            element={
+              <AdminGuard>
+                <AdminLayout />
+              </AdminGuard>
+            }
+          >
+            <Route index element={<AdminDashboard />} />
+            <Route path="services" element={<AdminServices />} />
+            <Route path="offers" element={<AdminOffers />} />
+            <Route path="appointments" element={<AdminAppointments />} />
+            <Route path="customers" element={<AdminCustomers />} />
+          </Route>
 
           {/* Redirect old mobile routes to new unified routes */}
           <Route path="/mobile/home" element={<Navigate to="/home" replace />} />
