@@ -1,4 +1,4 @@
-import { ServiceRecord } from '@/services/api';
+import type { ServiceRecord } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, Wrench, Trash2, Edit2 } from 'lucide-react';
 

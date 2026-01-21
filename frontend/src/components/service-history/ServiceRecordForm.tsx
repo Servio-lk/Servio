@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ServiceRecordRequest, ServiceRecord } from '@/services/api';
+import type { ServiceRecordRequest, ServiceRecord } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,7 +60,7 @@ export function ServiceRecordForm({
             id="serviceType"
             placeholder="e.g. Oil Change, Brake Repair"
             value={formData.serviceType}
-            onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, serviceType: e.target.value })}
             required
           />
         </div>
@@ -71,7 +71,7 @@ export function ServiceRecordForm({
             id="serviceDate"
             type="date"
             value={formData.serviceDate}
-            onChange={(e) => setFormData({ ...formData, serviceDate: e.target.value })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, serviceDate: e.target.value })}
             required
           />
         </div>
@@ -83,7 +83,7 @@ export function ServiceRecordForm({
             type="number"
             min="0"
             value={formData.mileage}
-            onChange={(e) => setFormData({ ...formData, mileage: parseInt(e.target.value) || 0 })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, mileage: parseInt(e.target.value) || 0 })}
             required
           />
         </div>
@@ -96,7 +96,7 @@ export function ServiceRecordForm({
             min="0"
             step="0.01"
             value={formData.cost}
-            onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
             required
           />
         </div>
@@ -108,7 +108,7 @@ export function ServiceRecordForm({
           id="description"
           placeholder="Details about the service performed..."
           value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({ ...formData, description: e.target.value })}
           rows={3}
         />
       </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { apiService, ServiceRecord, ServiceRecordRequest } from '@/services/api';
+import { apiService } from '@/services/api';
+import type { ServiceRecord, ServiceRecordRequest } from '@/services/api';
 import { ServiceRecordCard } from '@/components/service-history/ServiceRecordCard';
 import { ServiceRecordForm } from '@/components/service-history/ServiceRecordForm';
 import { Button } from '@/components/ui/button';
