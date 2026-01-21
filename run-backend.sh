@@ -16,13 +16,11 @@ if [ -x "/usr/libexec/java_home" ]; then
     fi
 fi
 
-# Ensure we are using the local configuration
-export DB_HOST=localhost
-export DB_PORT=5433
-export DB_NAME=servio_db
-export DB_USER=servio_user
-export DB_PASSWORD=servio_password
-export PORT=3001
+# Load environment variables from .env if present
+if [ -f .env ]; then
+  export $(grep -v '^#' .env | xargs)
+  echo "✅ Loaded environment variables from .env"
+fi
 
 # Run with Maven
 mvn spring-boot:run
