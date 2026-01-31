@@ -42,15 +42,29 @@ export default function BookingPage() {
   // Get current service details
   const currentService = servicesCatalog[serviceId || '2'] || servicesCatalog['2'];
 
-  const dates = [
-    { label: 'Tomorrow', date: 'Oct 26' },
-    { label: 'Mon', date: 'Oct 27' },
-    { label: 'Tue', date: 'Oct 28' },
-    { label: 'Wed', date: 'Oct 29' },
-    { label: 'Thu', date: 'Oct 30' },
-    { label: 'Fri', date: 'Oct 31' },
-    { label: 'Sat', date: 'Nov 1' },
-  ];
+  // Generate real dates for the next 7 days
+  const generateDates = () => {
+    const today = new Date();
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i + 1); // Start from tomorrow
+      
+      const dayName = daysOfWeek[date.getDay()];
+      const monthName = months[date.getMonth()];
+      const dayNum = date.getDate();
+      
+      return {
+        label: i === 0 ? 'Tomorrow' : dayName,
+        date: `${monthName} ${dayNum}`,
+        fullDate: date
+      };
+    });
+  };
+
+  const dates = generateDates();
 
   const timeSlots = [
     '9:00 AM - 9:30 AM',
@@ -150,32 +164,21 @@ export default function BookingPage() {
 
   // Helper function to convert date and time to ISO datetime string
   const convertToDateTime = (dateLabel: string, timeSlot: string): string => {
-    const today = new Date();
+    // Find the selected date from our generated dates array
+    const selectedDateObj = dates.find(d => d.label === dateLabel);
+    
+    if (!selectedDateObj) {
+      // Fallback to tomorrow if date not found
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString();
+    }
+    
+    // Use the actual date from the calendar
+    const appointmentDate = new Date(selectedDateObj.fullDate);
     
     // Extract time from slot (e.g., "9:00 AM - 9:30 AM" -> "9:00 AM")
     const startTime = timeSlot.split(' - ')[0];
-    
-    // Parse the date (simplified - in production, use proper date handling)
-    let appointmentDate = new Date(today);
-    
-    if (dateLabel === 'Tomorrow') {
-      appointmentDate.setDate(today.getDate() + 1);
-    } else {
-      // For other days, calculate based on day of week
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const targetDayIndex = daysOfWeek.indexOf(dateLabel);
-      
-      if (targetDayIndex !== -1) {
-        const currentDayIndex = today.getDay();
-        let daysToAdd = targetDayIndex - currentDayIndex;
-        
-        if (daysToAdd <= 0) {
-          daysToAdd += 7;
-        }
-        
-        appointmentDate.setDate(today.getDate() + daysToAdd);
-      }
-    }
     
     // Parse time
     const [time, period] = startTime.split(' ');
