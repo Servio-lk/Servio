@@ -18,7 +18,6 @@ public class ServiceService {
     
     private final ServiceCategoryRepository categoryRepository;
     private final ServiceRepository serviceRepository;
-    private final ServiceOptionRepository optionRepository;
     private final ServiceProviderRepository providerRepository;
     private final OfferRepository offerRepository;
 

@@ -27,6 +27,17 @@ public class AppointmentService {
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found"));
         
+        // Check if the time slot is already booked
+        List<Appointment> existingAppointments = appointmentRepository
+            .findByAppointmentDateAndStatusNotIn(
+                request.getAppointmentDate(), 
+                List.of("CANCELLED")
+            );
+        
+        if (!existingAppointments.isEmpty()) {
+            throw new RuntimeException("This time slot is already booked. Please choose another time.");
+        }
+        
         Vehicle vehicle = null;
         if (request.getVehicleId() != null) {
             vehicle = vehicleRepository.findById(request.getVehicleId())

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
-import { Calendar, Filter } from 'lucide-react';
+import { Calendar, Filter, Clock, CreditCard, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AdminAppointments() {
@@ -27,13 +27,13 @@ export function AdminAppointments() {
 
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
-      PENDING: 'bg-yellow-100 text-yellow-800',
-      CONFIRMED: 'bg-blue-100 text-blue-800',
-      IN_PROGRESS: 'bg-purple-100 text-purple-800',
-      COMPLETED: 'bg-green-100 text-green-800',
-      CANCELLED: 'bg-red-100 text-red-800',
+      PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      CONFIRMED: 'bg-blue-50 text-blue-700 border-blue-200',
+      IN_PROGRESS: 'bg-purple-50 text-purple-700 border-purple-200',
+      COMPLETED: 'bg-green-50 text-green-700 border-green-200',
+      CANCELLED: 'bg-red-50 text-red-700 border-red-200',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const formatDateTime = (dateString: string) => {
@@ -50,111 +50,121 @@ export function AdminAppointments() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff5d2e] mx-auto"></div>
+          <p className="mt-4 text-black/70">Loading appointments...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Appointments Management</h1>
-        <p className="text-gray-600 mt-2">Manage customer appointments</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-black">Appointments Management</h1>
+          <p className="text-black/70 mt-1">Track and manage customer bookings</p>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="p-4 border-b">
-          <div className="flex items-center space-x-4">
-            <Filter className="h-5 w-5 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="CONFIRMED">Confirmed</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Completed</option>
-              <option value="CANCELLED">Cancelled</option>
-            </select>
+      <div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
+        {/* Toolbar */}
+        <div className="p-4 border-b border-black/5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-gray-50 border-transparent focus:bg-white focus:border-[#ff5d2e] focus:ring-0 rounded-lg transition-all text-sm appearance-none cursor-pointer"
+              >
+                <option value="">All Status</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div className="text-sm text-gray-500">
+            <span className="font-medium text-black">{appointments.length}</span> appointments found
           </div>
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Service
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date & Time
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cost
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-50/50 border-b border-black/5">
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date & Time</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-gray-100">
               {appointments.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    <Calendar className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                    <p>No appointments found</p>
+                    <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <Calendar className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-lg font-medium text-black">No appointments found</p>
+                    <p className="text-sm text-gray-500">Try changing the filter or wait for new bookings.</p>
                   </td>
                 </tr>
               ) : (
                 appointments.map((appointment) => (
-                  <tr key={appointment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                  <tr key={appointment.id} className="hover:bg-gray-50/50 transition-colors group">
+                    <td className="px-6 py-4 text-sm font-mono text-gray-400">
                       #{appointment.id}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm">
-                        <div className="font-medium text-gray-900">
-                          {appointment.user?.fullName || 'N/A'}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-[#ff5d2e] font-bold text-xs">
+                          {(appointment.user?.fullName || 'U').charAt(0).toUpperCase()}
                         </div>
-                        <div className="text-gray-500">{appointment.user?.email}</div>
+                        <div>
+                          <p className="text-sm font-medium text-black">{appointment.user?.fullName || 'Unknown User'}</p>
+                          <p className="text-xs text-gray-500">{appointment.user?.email}</p>
+                        </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-black font-medium">
                       {appointment.serviceType}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {formatDateTime(appointment.appointmentDate)}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        {formatDateTime(appointment.appointmentDate)}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
                           appointment.status
                         )}`}
                       >
                         {appointment.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
-                      {appointment.actualCost
-                        ? `$${appointment.actualCost}`
-                        : appointment.estimatedCost
-                        ? `~$${appointment.estimatedCost}`
-                        : 'TBD'}
+                    <td className="px-6 py-4 text-sm font-medium text-black">
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="w-3 h-3 text-gray-400" />
+                        {appointment.actualCost
+                          ? `Rs. ${appointment.actualCost.toLocaleString()}`
+                          : appointment.estimatedCost
+                            ? `~Rs. ${appointment.estimatedCost.toLocaleString()}`
+                            : 'TBD'}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 text-sm">
-                      <button className="text-blue-600 hover:text-blue-900 font-medium">
-                        View Details
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-gray-400 hover:text-black transition-colors p-1 rounded-full hover:bg-gray-100">
+                        <MoreVertical className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -162,6 +172,15 @@ export function AdminAppointments() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Footer / Pagination Placeholder */}
+        <div className="p-4 border-t border-black/5 bg-gray-50/50 flex items-center justify-between text-xs text-gray-500">
+          <span>Showing {appointments.length} results</span>
+          <div className="flex gap-2">
+            <button className="px-3 py-1 border rounded hover:bg-white disabled:opacity-50" disabled>Previous</button>
+            <button className="px-3 py-1 border rounded hover:bg-white disabled:opacity-50" disabled>Next</button>
+          </div>
         </div>
       </div>
     </div>

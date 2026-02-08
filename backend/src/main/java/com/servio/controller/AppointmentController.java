@@ -12,7 +12,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/appointments")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class AppointmentController {
     
     private final AppointmentService appointmentService;
@@ -21,13 +20,24 @@ public class AppointmentController {
     public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(
         @RequestBody AppointmentRequest request
     ) {
-        AppointmentDto appointment = appointmentService.createAppointment(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.<AppointmentDto>builder()
-                .success(true)
-                .message("Appointment created successfully")
-                .data(appointment)
-                .build());
+        try {
+            AppointmentDto appointment = appointmentService.createAppointment(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.<AppointmentDto>builder()
+                    .success(true)
+                    .message("Appointment created successfully")
+                    .data(appointment)
+                    .build());
+        } catch (RuntimeException e) {
+            if (e.getMessage().contains("already booked")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.<AppointmentDto>builder()
+                        .success(false)
+                        .message(e.getMessage())
+                        .build());
+            }
+            throw e;
+        }
     }
     
     @GetMapping

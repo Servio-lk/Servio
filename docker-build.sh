@@ -58,21 +58,60 @@ pull_with_retry "nginx:alpine"
 pull_with_retry "maven:3.9-eclipse-temurin-17"
 pull_with_retry "eclipse-temurin:17-jre"
 
-# Build and start services
+# Clean up any corrupted Maven cache in containers
 echo ""
-echo -e "${YELLOW}🔨 Building and starting services...${NC}"
-docker-compose up -d --build
+echo -e "${YELLOW}🧹 Cleaning up...${NC}"
+docker-compose down -v 2>/dev/null || true
+
+# Build with retry logic
+echo ""
+echo -e "${YELLOW}🔨 Building services...${NC}"
+max_build_attempts=3
+build_attempt=1
+
+while [ $build_attempt -le $max_build_attempts ]; do
+    echo -e "${YELLOW}Building (attempt $build_attempt/$max_build_attempts)...${NC}"
+
+    if docker-compose build --no-cache; then
+        echo -e "${GREEN}✅ Build successful!${NC}"
+        break
+    else
+        echo -e "${RED}❌ Build failed (attempt $build_attempt/$max_build_attempts)${NC}"
+        build_attempt=$((build_attempt + 1))
+
+        if [ $build_attempt -le $max_build_attempts ]; then
+            echo "Cleaning and retrying in 10 seconds..."
+            docker system prune -f
+            sleep 10
+        else
+            echo -e "${RED}❌ Build failed after $max_build_attempts attempts${NC}"
+            echo ""
+            echo "💡 Try manually:"
+            echo "  1. docker-compose down -v"
+            echo "  2. docker system prune -af"
+            echo "  3. docker-compose build --no-cache backend"
+            exit 1
+        fi
+    fi
+done
+
+# Start services
+echo ""
+echo -e "${YELLOW}🚀 Starting services...${NC}"
+docker-compose up -d
 
 # Show status
 echo ""
-echo -e "${GREEN}✅ Build complete!${NC}"
+echo -e "${GREEN}✅ All services started!${NC}"
 echo ""
 echo "📊 Container Status:"
 docker-compose ps
 
 echo ""
 echo -e "${YELLOW}💡 Useful commands:${NC}"
-echo "  View logs: docker-compose logs -f"
+echo "  View logs: docker-compose logs -f [service]"
+echo "  Backend logs: docker-compose logs -f backend"
+echo "  Frontend logs: docker-compose logs -f frontend"
 echo "  Stop all: docker-compose down"
-echo "  Restart: docker-compose restart"
+echo "  Restart: docker-compose restart [service]"
 echo ""
