@@ -18,12 +18,13 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration:86400000}") // Default 24 hours in milliseconds
     private long jwtExpirationMs;
 
+    // Updated to include Role in the token generation
     public String generateToken(Long userId, Role role) {
         SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
 
         return Jwts.builder()
                 .subject(userId.toString())
-                .claim("role", role.name())
+                .claim("role", role.name()) // Add role to claims
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key)
