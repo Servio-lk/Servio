@@ -15,6 +15,7 @@ import ServiceDetailPage from './pages/ServiceDetailPage'
 import ActivityPage from './pages/ActivityPage'
 import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
+import AppointmentStatusPage from './pages/AppointmentStatusPage'
 
 // Admin pages
 import { AdminLayout } from './components/layouts/AdminLayout'
@@ -49,6 +50,9 @@ function App() {
               </GuestGuard>
             }
           />
+
+          {/* Public appointment status page - accessible via QR code */}
+          <Route path="/appointment/:id" element={<AppointmentStatusPage />} />
 
           {/* Protected routes - redirect to login if not authenticated */}
           <Route

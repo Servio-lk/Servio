@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
@@ -14,6 +15,50 @@ export default function ConfirmationPage() {
   
   const [appointment, setAppointment] = useState<AppointmentDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const downloadQRCode = () => {
+    const svg = document.getElementById('appointment-qr-code');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+      
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `appointment-${id}-qr.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  };
+
+  const shareAppointment = async () => {
+    const url = `${window.location.origin}/appointment/${id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Servio Appointment',
+          text: `Check out my appointment - ${appointmentDisplay.service}`,
+          url: url,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    }
+  };
 
   useEffect(() => {
     const fetchAppointment = async () => {
@@ -144,27 +189,33 @@ export default function ConfirmationPage() {
               </div>
 
               {/* QR Code */}
-              <div className="w-64 h-64 bg-white border-2 border-black/20 rounded-lg flex items-center justify-center shadow-lg">
-                {/* QR Code placeholder - In production, use a QR library */}
-                <div className="w-56 h-56 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center">
-                  <div className="grid grid-cols-5 gap-1">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-sm ${Math.random() > 0.5 ? 'bg-black' : 'bg-transparent'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <div className="w-64 h-64 bg-white border-2 border-black/20 rounded-lg flex items-center justify-center shadow-lg p-4">
+                <QRCodeSVG
+                  id="appointment-qr-code"
+                  value={`${window.location.origin}/appointment/${appointment.id}`}
+                  size={224}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
+
+              <p className="text-xs text-center text-black/50 max-w-[250px]">
+                Scan this QR code to view your appointment status anytime
+              </p>
 
               {/* Action buttons - Desktop */}
               <div className="hidden lg:flex gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors">
+                <button 
+                  onClick={downloadQRCode}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors"
+                >
                   <Download className="w-4 h-4" />
-                  <span className="text-sm font-medium">Download</span>
+                  <span className="text-sm font-medium">Download QR</span>
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors">
+                <button 
+                  onClick={shareAppointment}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors"
+                >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Share</span>
                 </button>

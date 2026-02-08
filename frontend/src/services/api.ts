@@ -2,10 +2,12 @@
 const getApiBaseUrl = () => {
   // If environment variable is set, use it
   if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+    const url = import.meta.env.VITE_API_URL;
+    // Ensure we have /api at the end
+    return url.endsWith('/api') ? url : `${url}/api`;
   }
   
-  // For local development and mobile access, use the same host but different port
+  // For local development and mobile access, use the same host but port 3001
   const host = window.location.hostname;
   return `http://${host}:3001/api`;
 };

@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 
 export default function BookingPage() {
-  const { id: _serviceId } = useParams();
+  const { id: serviceId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -21,15 +21,50 @@ export default function BookingPage() {
   const selectedOil = searchParams.get('oil') || 'standard';
   const specialInstructions = searchParams.get('notes') || '';
 
-  const dates = [
-    { label: 'Tomorrow', date: 'Oct 26' },
-    { label: 'Mon', date: 'Oct 27' },
-    { label: 'Tue', date: 'Oct 28' },
-    { label: 'Wed', date: 'Oct 29' },
-    { label: 'Thu', date: 'Oct 30' },
-    { label: 'Fri', date: 'Oct 31' },
-    { label: 'Sat', date: 'Nov 1' },
-  ];
+  // Service catalog - same as ServiceDetailPage
+  const servicesCatalog: { [key: string]: any } = {
+    '1': { id: '1', name: 'Washing Packages', basePrice: 500 },
+    '2': { id: '2', name: 'Lube Services', basePrice: 1500 },
+    '3': { id: '3', name: 'Exterior & Interior Detailing', basePrice: 3000 },
+    '4': { id: '4', name: 'Engine Tune ups', basePrice: 2500 },
+    '5': { id: '5', name: 'Inspection Reports', basePrice: 1000 },
+    '6': { id: '6', name: 'AC Services', basePrice: 1200 },
+    '7': { id: '7', name: 'Tire Services', basePrice: 800 },
+    '8': { id: '8', name: 'Wheel Alignment', basePrice: 1500 },
+    '9': { id: '9', name: 'Repair & Modifications', basePrice: 2000 },
+    '10': { id: '10', name: 'Battery Services', basePrice: 500 },
+    '11': { id: '11', name: 'Nano Coating Packages', basePrice: 15000 },
+    '12': { id: '12', name: 'Nano Coating Treatments', basePrice: 8000 },
+    '13': { id: '13', name: 'Insurance Claims', basePrice: 0 },
+    '14': { id: '14', name: 'Hybrid Services', basePrice: 3500 },
+  };
+
+  // Get current service details
+  const currentService = servicesCatalog[serviceId || '2'] || servicesCatalog['2'];
+
+  // Generate real dates for the next 7 days
+  const generateDates = () => {
+    const today = new Date();
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i + 1); // Start from tomorrow
+      
+      const dayName = daysOfWeek[date.getDay()];
+      const monthName = months[date.getMonth()];
+      const dayNum = date.getDate();
+      
+      return {
+        label: i === 0 ? 'Tomorrow' : dayName,
+        date: `${monthName} ${dayNum}`,
+        fullDate: date
+      };
+    });
+  };
+
+  const dates = generateDates();
 
   const timeSlots = [
     '9:00 AM - 9:30 AM',
@@ -58,12 +93,14 @@ export default function BookingPage() {
     'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
   };
 
+  // Calculate order details based on service type
+  const isLubeService = serviceId === '2';
   const orderDetails = {
-    service: 'Lubricant Service',
-    serviceFee: 1500,
-    oilType: oilOptions[selectedOil]?.name || 'Standard Oil',
-    oilPrice: oilOptions[selectedOil]?.price || 4000,
-    total: 1500 + (oilOptions[selectedOil]?.price || 4000),
+    service: currentService.name,
+    serviceFee: currentService.basePrice,
+    oilType: isLubeService ? (oilOptions[selectedOil]?.name || 'Standard Oil') : null,
+    oilPrice: isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0,
+    total: currentService.basePrice + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
   };
 
   const handleBook = async () => {
@@ -79,6 +116,12 @@ export default function BookingPage() {
       // Convert selected date and time to ISO datetime
       const appointmentDateTime = convertToDateTime(selectedDate, selectedTime);
       
+      console.log('Booking appointment:', {
+        serviceType: orderDetails.service,
+        appointmentDate: appointmentDateTime,
+        estimatedCost: orderDetails.total
+      });
+      
       // Create appointment request
       const appointmentRequest = {
         userId: user.id,
@@ -86,11 +129,13 @@ export default function BookingPage() {
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
         location: 'Colombo Service Center', // Default location
-        notes: specialInstructions || `${orderDetails.oilType} - ${selectedTime}`,
+        notes: specialInstructions || (isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`),
         estimatedCost: orderDetails.total,
       };
 
       const response = await apiService.createAppointment(appointmentRequest);
+      
+      console.log('Appointment response:', response);
       
       if (response.success && response.data) {
         toast.success('Appointment booked successfully!');
@@ -100,7 +145,18 @@ export default function BookingPage() {
       }
     } catch (error: any) {
       console.error('Booking error:', error);
-      toast.error(error.message || 'Failed to book appointment. Please try again.');
+      
+      // More detailed error message
+      let errorMessage = 'Failed to book appointment. ';
+      if (error.message) {
+        errorMessage += error.message;
+      } else if (error.error) {
+        errorMessage += error.error;
+      } else {
+        errorMessage += 'Please check your connection and try again.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsBooking(false);
     }
@@ -108,32 +164,21 @@ export default function BookingPage() {
 
   // Helper function to convert date and time to ISO datetime string
   const convertToDateTime = (dateLabel: string, timeSlot: string): string => {
-    const today = new Date();
+    // Find the selected date from our generated dates array
+    const selectedDateObj = dates.find(d => d.label === dateLabel);
+    
+    if (!selectedDateObj) {
+      // Fallback to tomorrow if date not found
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      return tomorrow.toISOString();
+    }
+    
+    // Use the actual date from the calendar
+    const appointmentDate = new Date(selectedDateObj.fullDate);
     
     // Extract time from slot (e.g., "9:00 AM - 9:30 AM" -> "9:00 AM")
     const startTime = timeSlot.split(' - ')[0];
-    
-    // Parse the date (simplified - in production, use proper date handling)
-    let appointmentDate = new Date(today);
-    
-    if (dateLabel === 'Tomorrow') {
-      appointmentDate.setDate(today.getDate() + 1);
-    } else {
-      // For other days, calculate based on day of week
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const targetDayIndex = daysOfWeek.indexOf(dateLabel);
-      
-      if (targetDayIndex !== -1) {
-        const currentDayIndex = today.getDay();
-        let daysToAdd = targetDayIndex - currentDayIndex;
-        
-        if (daysToAdd <= 0) {
-          daysToAdd += 7;
-        }
-        
-        appointmentDate.setDate(today.getDate() + daysToAdd);
-      }
-    }
     
     // Parse time
     const [time, period] = startTime.split(' ');
@@ -234,10 +279,12 @@ export default function BookingPage() {
             <span className="text-black/70">Service Fee</span>
             <span className="font-medium text-black">+LKR {orderDetails.serviceFee.toLocaleString()}</span>
           </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-black/70">{orderDetails.oilType}</span>
-            <span className="font-medium text-black">+LKR {orderDetails.oilPrice.toLocaleString()}</span>
-          </div>
+          {isLubeService && orderDetails.oilType && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-black/70">{orderDetails.oilType}</span>
+              <span className="font-medium text-black">+LKR {orderDetails.oilPrice.toLocaleString()}</span>
+            </div>
+          )}
           <div className="h-px bg-black/10 my-2" />
           <div className="flex items-center justify-between">
             <span className="font-bold text-black">Total</span>
@@ -389,10 +436,12 @@ export default function BookingPage() {
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {orderDetails.serviceFee.toLocaleString()}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-black/70">{orderDetails.oilType}</span>
-                    <span className="font-medium text-black">LKR {orderDetails.oilPrice.toLocaleString()}</span>
-                  </div>
+                  {isLubeService && orderDetails.oilType && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-black/70">{orderDetails.oilType}</span>
+                      <span className="font-medium text-black">LKR {orderDetails.oilPrice.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="h-px bg-black/10" />
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-black">Total</span>
