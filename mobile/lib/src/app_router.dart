@@ -7,6 +7,7 @@ import 'features/auth/welcome_screen.dart';
 import 'features/auth/signin_screen.dart';
 import 'features/auth/signup_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/services/services_screen.dart';
 import 'features/bookings/activity_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'shared/scaffold_with_navbar.dart';
