@@ -61,8 +61,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             ),
             const SizedBox(width: 16),
             _TabBarItem(
-              icon: PhosphorIconsFill.dotsNine,
-              inactiveIcon: PhosphorIconsBold.dotsNine,
+              icon: PhosphorIconsBold.dotsNine,
+              inactiveIcon: PhosphorIconsRegular.dotsNine,
               label: 'Services',
               isSelected: _selectedIndex == 1,
               onTap: () => setState(() => _selectedIndex = 1),
