@@ -20,8 +20,11 @@ class ServioApp extends ConsumerWidget {
           primary: const Color(0xFFFF5D2E),
           surface: const Color(0xFFFFF7F5),
         ),
-        textTheme: GoogleFonts.interTextTheme(),
-        scaffoldBackgroundColor: const Color(0xFFFFF7F5),
+        // Set Instrument Sans as the default font for all text
+        textTheme: GoogleFonts.instrumentSansTextTheme(),
+        scaffoldBackgroundColor: const Color(0xFFFBFBFB),
+        // Override specific text styles to use Instrument Sans
+        fontFamily: GoogleFonts.instrumentSans().fontFamily,
       ),
       routerConfig: router,
     );

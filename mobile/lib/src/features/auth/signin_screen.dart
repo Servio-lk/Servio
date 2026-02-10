@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../core/services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -12,7 +14,9 @@ class _SignInScreenState extends State<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _supabaseService = SupabaseService();
   bool _isPasswordVisible = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -21,25 +25,134 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  void _handleSignIn() {
+  Future<void> _handleSignIn() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // TODO: Implement sign in logic
-      context.go('/home');
+      FocusScope.of(context).unfocus();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+
+      if (email.isEmpty || password.isEmpty) {
+        _showSnackBar('Please enter your email and password.');
+        return;
+      }
+
+      setState(() => _isLoading = true);
+
+      try {
+        print('Attempting to sign in with email: $email');
+        final response = await _supabaseService.signInWithEmail(
+          email: email,
+          password: password,
+        );
+
+        print('Sign in response: ${response.user?.id}');
+
+        if (response.user != null && mounted) {
+          print('Sign in successful!');
+          _showSnackBar('Welcome back!', isError: false);
+          context.go('/home');
+        } else if (mounted) {
+          print('Sign in failed: No user returned');
+          _showSnackBar('Login failed. Please check your credentials.');
+        }
+      } catch (e) {
+        print('Sign in error: $e');
+        if (mounted) {
+          String errorMessage = 'Invalid email or password. Please try again.';
+
+          // Check for specific error types
+          if (e.toString().contains('Invalid login credentials')) {
+            errorMessage = 'Invalid email or password.';
+          } else if (e.toString().contains('Email not confirmed')) {
+            errorMessage = 'Please verify your email address first.';
+          } else if (e.toString().contains('Network')) {
+            errorMessage = 'Network error. Please check your connection.';
+          }
+
+          _showSnackBar(errorMessage);
+        }
+      } finally {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
     }
   }
 
-  void _handleGoogleSignIn() {
-    // TODO: Implement Google sign in
-    context.go('/home');
+  Future<void> _handleGoogleSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final success = await _supabaseService.signInWithGoogle();
+      if (success && mounted) {
+        _showSnackBar('Signed in with Google!', isError: false);
+        context.go('/home');
+      } else if (mounted) {
+        _showSnackBar('Google sign-in cancelled or failed.');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Failed to sign in with Google.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _handleFacebookSignIn() {
-    // TODO: Implement Facebook sign in
-    context.go('/home');
+  Future<void> _handleFacebookSignIn() async {
+    setState(() => _isLoading = true);
+
+    try {
+      final success = await _supabaseService.signInWithFacebook();
+      if (success && mounted) {
+        _showSnackBar('Signed in with Facebook!', isError: false);
+        context.go('/home');
+      } else if (mounted) {
+        _showSnackBar('Facebook sign-in cancelled or failed.');
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Failed to sign in with Facebook.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
-  void _handleForgotPassword() {
-    // TODO: Implement forgot password
+  Future<void> _handleForgotPassword() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      _showSnackBar('Please enter a valid email address first.');
+      return;
+    }
+
+    try {
+      await _supabaseService.resetPasswordForEmail(email);
+      if (mounted) {
+        _showSnackBar(
+          'Password reset email sent! Check your inbox.',
+          isError: false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Failed to send password reset email.');
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -117,23 +230,21 @@ class _SignInScreenState extends State<SignInScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               'Welcome Back to Servio',
-                              style: TextStyle(
+                              style: GoogleFonts.instrumentSans(
                                 fontSize: 28,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black,
-                                fontFamily: 'Instrument Sans',
                               ),
                             ),
                             const SizedBox(height: 16),
-                            const Text(
+                            Text(
                               "Log in to manage your vehicle's service.",
-                              style: TextStyle(
+                              style: GoogleFonts.instrumentSans(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w400,
                                 color: Colors.black,
-                                fontFamily: 'Instrument Sans',
                                 height: 22 / 16,
                               ),
                             ),
@@ -175,36 +286,48 @@ class _SignInScreenState extends State<SignInScreen> {
                               width: double.infinity,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFF5D2E),
+                                  color: _isLoading
+                                      ? const Color(0xFFFF5D2E).withOpacity(0.6)
+                                      : const Color(0xFFFF5D2E),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
                                     color: Colors.white.withOpacity(0.2),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFFFF5D2E).withOpacity(0.5),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
+                                  boxShadow: _isLoading
+                                      ? []
+                                      : [
+                                          BoxShadow(
+                                            color: const Color(0xFFFF5D2E).withOpacity(0.5),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
                                 ),
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(8),
-                                    onTap: _handleSignIn,
-                                    child: const Padding(
+                                    onTap: _isLoading ? null : _handleSignIn,
+                                    child: Padding(
                                       padding: EdgeInsets.all(12),
                                       child: Center(
-                                        child: Text(
-                                          'Log In',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                            fontFamily: 'Instrument Sans',
-                                          ),
-                                        ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                ),
+                                              )
+                                            : Text(
+                                                'Log In',
+                                                style: GoogleFonts.instrumentSans(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
                                       ),
                                     ),
                                   ),
@@ -220,11 +343,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                   onTap: _handleForgotPassword,
                                   child: Text(
                                     'Forgot Password?',
-                                    style: TextStyle(
+                                    style: GoogleFonts.instrumentSans(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
                                       color: Colors.black.withOpacity(0.7),
-                                      fontFamily: 'Instrument Sans',
                                       decoration: TextDecoration.underline,
                                       height: 22 / 14,
                                     ),
@@ -241,11 +363,10 @@ class _SignInScreenState extends State<SignInScreen> {
                                   onTap: () => context.go('/signup'),
                                   child: Text(
                                     "Don't have an account? Sign Up",
-                                    style: TextStyle(
+                                    style: GoogleFonts.instrumentSans(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                       color: Colors.black.withOpacity(0.7),
-                                      fontFamily: 'Instrument Sans',
                                       height: 22 / 14,
                                     ),
                                   ),
@@ -348,19 +469,17 @@ class _SignInScreenState extends State<SignInScreen> {
                   controller: controller,
                   keyboardType: keyboardType,
                   obscureText: isPassword && !_isPasswordVisible,
-                  style: const TextStyle(
+                  style: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     color: Colors.black,
-                    fontFamily: 'Instrument Sans',
                   ),
                   decoration: InputDecoration(
                     hintText: label,
-                    hintStyle: TextStyle(
+                    hintStyle: GoogleFonts.instrumentSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Colors.black.withOpacity(0.5),
-                      fontFamily: 'Instrument Sans',
                     ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
@@ -418,11 +537,10 @@ class _SignInScreenState extends State<SignInScreen> {
                   const SizedBox(width: 8),
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: GoogleFonts.instrumentSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
-                      fontFamily: 'Instrument Sans',
                     ),
                   ),
                 ],
