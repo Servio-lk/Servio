@@ -18,7 +18,7 @@ import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 
 // Admin pages
-import { AdminLayout } from './components/layouts/AdminLayout'
+import { AdminAppLayout } from './components/layouts/AdminAppLayout'
 import { AdminDashboard } from './pages/admin/Dashboard'
 import { AdminServices } from './pages/admin/Services'
 import { AdminOffers } from './pages/admin/Offers'
@@ -119,7 +119,7 @@ function App() {
             path="/admin"
             element={
               <AdminGuard>
-                <AdminLayout />
+                <AdminAppLayout />
               </AdminGuard>
             }
           >
