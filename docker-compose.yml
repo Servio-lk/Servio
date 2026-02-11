@@ -31,7 +31,7 @@ services:
     restart: always
     environment:
       # Supabase Database Configuration
-      - DB_HOST=aws-0-ap-south-1.pooler.supabase.com
+      - DB_HOST=aws-1-ap-south-1.pooler.supabase.com
       - DB_PORT=6543
       - DB_USER=postgres.szgvnurzdglflmdabjol
       - DB_PASSWORD=EG/2022/5006/15/19/83
