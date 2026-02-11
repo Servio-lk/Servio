@@ -124,8 +124,6 @@ export default function BookingPage() {
       
       // Create appointment request
       const appointmentRequest = {
-        userId: user.id,
-        vehicleId: null, // For now, no vehicle selection (will add later)
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
         location: 'Colombo Service Center', // Default location

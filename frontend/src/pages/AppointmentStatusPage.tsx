@@ -196,9 +196,9 @@ export default function AppointmentStatusPage() {
             {/* Customer Info */}
             <div className="bg-[#fff7f5] rounded-lg p-4">
               <p className="text-sm text-black/60 mb-2">Customer</p>
-              <p className="font-semibold text-black">{appointment.user?.fullName || 'Customer'}</p>
-              {appointment.user?.phone && (
-                <p className="text-sm text-black/70 mt-1">{appointment.user.phone}</p>
+              <p className="font-semibold text-black">{appointment.userName || 'Customer'}</p>
+              {appointment.userEmail && (
+                <p className="text-sm text-black/70 mt-1">{appointment.userEmail}</p>
               )}
             </div>
 

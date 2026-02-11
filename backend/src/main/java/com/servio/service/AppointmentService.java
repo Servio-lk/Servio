@@ -78,6 +78,12 @@ public class AppointmentService {
             .collect(Collectors.toList());
     }
     
+    public List<AppointmentDto> getUserAppointments(Long userId) {
+        return appointmentRepository.findUserAppointmentsOrderByDate(userId).stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+    }
+
     public AppointmentDto getAppointmentById(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Appointment not found"));
