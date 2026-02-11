@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { apiService } from "@/services/api";
+import { supabaseAuth } from "@/services/supabaseAuth";
 import LogoImage from "@/assets/images/Logo.svg";
 import GarageImage from "@/assets/images/Garage image.png";
 
@@ -282,25 +282,24 @@ function SignupForm() {
     setError("");
 
     try {
-      const response = await apiService.signup({
-        fullName: name,
+      const { user, error } = await supabaseAuth.signUp({
         email,
-        phone,
         password,
+        fullName: name,
+        phone: phone || undefined,
       });
       
-      if (response.success) {
-        toast.success("Account created successfully! Welcome to Servio.");
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (user) {
+        toast.success("Account created successfully! Please check your email to verify your account.");
         navigate('/login');
       }
     } catch (err: any) {
       console.error("Signup error:", err);
-      let errorMsg = "";
-      if (err.errors && err.errors.length > 0) {
-        errorMsg = err.errors.map((e: any) => e.message).join(", ");
-      } else {
-        errorMsg = err.message || "Failed to create account. Please try again.";
-      }
+      const errorMsg = err.message || "Failed to create account. Please try again.";
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {

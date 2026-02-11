@@ -126,8 +126,8 @@ export default function ActivityPage() {
                         <div className="flex items-center gap-1 text-sm font-medium mt-1">
                           <span className="text-black/50">For:</span>
                           <span className="text-black">
-                            {nextUpcoming.vehicle 
-                              ? `${nextUpcoming.vehicle.make} ${nextUpcoming.vehicle.model}` 
+                            {nextUpcoming.vehicleMake && nextUpcoming.vehicleModel
+                              ? `${nextUpcoming.vehicleMake} ${nextUpcoming.vehicleModel}`
                               : 'No vehicle specified'}
                           </span>
                         </div>

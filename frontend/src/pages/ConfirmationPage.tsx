@@ -133,12 +133,12 @@ export default function ConfirmationPage() {
   const { date, time } = formatDateTime(appointment.appointmentDate);
   const appointmentDisplay = {
     id: `#APT-${appointment.id.toString().padStart(6, '0')}`,
-    customerName: user?.fullName || appointment.user?.fullName || 'Customer',
+    customerName: user?.fullName || appointment.userName || 'Customer',
     service: appointment.serviceType,
     date: date,
     time: time,
-    vehicle: appointment.vehicle ? `${appointment.vehicle.make} ${appointment.vehicle.model}` : 'No vehicle specified',
-    phone: user?.phone || appointment.user?.phone || 'N/A',
+    vehicle: appointment.vehicleMake && appointment.vehicleModel ? `${appointment.vehicleMake} ${appointment.vehicleModel}` : 'No vehicle specified',
+    phone: user?.phone || appointment.userEmail || 'N/A',
     paymentMethod: 'Cash', // Default for now
     total: appointment.estimatedCost || 0,
     status: appointment.status,

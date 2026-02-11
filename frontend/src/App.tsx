@@ -7,6 +7,7 @@ import { AdminGuard } from '@/components/AdminGuard'
 // Auth pages
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import AuthCallback from './pages/AuthCallback'
 
 // Main app pages (responsive - works on both mobile and desktop)
 import HomePage from './pages/HomePage'
@@ -50,6 +51,9 @@ function App() {
               </GuestGuard>
             }
           />
+
+          {/* OAuth callback route */}
+          <Route path="/auth/callback" element={<AuthCallback />} />
 
           {/* Public appointment status page - accessible via QR code */}
           <Route path="/appointment/:id" element={<AppointmentStatusPage />} />
