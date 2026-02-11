@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { apiService } from "@/services/api";
+import { supabaseAuth } from "@/services/supabaseAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "@/assets/images/Logo.svg";
 import GarageImage from "@/assets/images/Garage image.png";
@@ -219,10 +219,23 @@ function LoginForm() {
     setError("");
 
     try {
-      const response = await apiService.login({ email, password });
-      
-      if (response.success && response.data) {
-        login(response.data.user, response.data.token);
+      const { user, session, error } = await supabaseAuth.signIn({ email, password });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (user && session) {
+        // Map Supabase user to our User interface
+        const userData = {
+          id: user.id,
+          fullName: user.user_metadata?.full_name || email.split('@')[0],
+          email: user.email || email,
+          phone: user.user_metadata?.phone || null,
+          role: user.user_metadata?.role || 'USER',
+        };
+
+        login(userData, session);
         toast.success("Welcome back!");
         navigate('/home');
       }
@@ -236,12 +249,30 @@ function LoginForm() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    toast.info("Google login coming soon!");
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabaseAuth.signInWithGoogle();
+      if (error) {
+        toast.error(error.message);
+      }
+      // User will be redirected to Google OAuth flow
+    } catch (err: any) {
+      toast.error("Failed to sign in with Google");
+      console.error("Google login error:", err);
+    }
   };
 
-  const handleFacebookLogin = () => {
-    toast.info("Facebook login coming soon!");
+  const handleFacebookLogin = async () => {
+    try {
+      const { error } = await supabaseAuth.signInWithFacebook();
+      if (error) {
+        toast.error(error.message);
+      }
+      // User will be redirected to Facebook OAuth flow
+    } catch (err: any) {
+      toast.error("Failed to sign in with Facebook");
+      console.error("Facebook login error:", err);
+    }
   };
 
   return (
