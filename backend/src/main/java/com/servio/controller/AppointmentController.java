@@ -72,6 +72,18 @@ public class AppointmentController {
             .build());
     }
     
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<List<AppointmentDto>>> getUserAppointments(
+        @PathVariable Long userId
+    ) {
+        List<AppointmentDto> appointments = appointmentService.getUserAppointments(userId);
+        return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
+            .success(true)
+            .message("User appointments retrieved successfully")
+            .data(appointments)
+            .build());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(
         @PathVariable Long id
