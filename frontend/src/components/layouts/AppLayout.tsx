@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, List, FileText, User, LogOut, Menu, X, Bell, Car, Settings } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoImage from '/ServioLogo.png';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -25,7 +26,7 @@ function DesktopSidebar() {
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
       {/* Logo */}
       <div className="p-6 border-b border-black/10">
-        <h1 className="text-2xl font-bold text-[#ff5d2e]">Servio</h1>
+        <img src={LogoImage} alt="Servio" className="h-10 w-auto" />
       </div>
 
       {/* User info */}
@@ -137,7 +138,7 @@ function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
       >
         <Menu className="w-6 h-6" />
       </button>
-      <h1 className="text-xl font-bold text-[#ff5d2e]">Servio</h1>
+      <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
       <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
         <User className="w-4 h-4 text-[#ff5d2e]" />
       </div>
@@ -199,7 +200,7 @@ function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
       <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-black/10">
-          <h1 className="text-xl font-bold text-[#ff5d2e]">Servio</h1>
+          <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
           <button
             onClick={onClose}
             className="p-2 hover:bg-[#fff7f5] rounded-lg transition-colors"

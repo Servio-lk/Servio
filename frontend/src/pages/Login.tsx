@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { supabaseAuth } from "@/services/supabaseAuth";
 import { useAuth } from "@/contexts/AuthContext";
-import LogoImage from "@/assets/images/Logo.svg";
+import LogoImage from "/ServioLogo.png";
 import GarageImage from "@/assets/images/Garage image.png";
 
 function LoginLogo() {
@@ -19,11 +19,8 @@ function LoginLogo() {
 
 function LoginHeader() {
   return (
-    <div className="flex flex-col gap-2 md:gap-3 items-center text-center w-full">
+    <div className="flex flex-col items-center text-center w-full">
       <LoginLogo />
-      <h1 className="font-semibold text-xl md:text-2xl lg:text-3xl text-black">
-        Welcome Back to Servio
-      </h1>
       <p className="text-sm md:text-base text-gray-700">
         Log in to manage your vehicle's service.
       </p>
@@ -45,7 +42,7 @@ function EmailInput({
         value={value}
         onChange={onChange}
         placeholder="Email"
-        className="h-11 md:h-12 lg:h-[59px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
       />
     </div>
   );
@@ -65,7 +62,7 @@ function PasswordInput({
         value={value}
         onChange={onChange}
         placeholder="Password"
-        className="h-11 md:h-12 lg:h-[59px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
       />
     </div>
   );
@@ -310,10 +307,10 @@ function LoginForm() {
 
 export default function Login() {
   return (
-    <div className="flex h-screen w-screen bg-white overflow-hidden">
+    <div className="flex h-screen w-full bg-white overflow-hidden fixed inset-0">
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center max-h-screen py-4">
+        <div className="w-full h-full flex items-center justify-center py-4 ">
           <LoginForm />
         </div>
       </div>
