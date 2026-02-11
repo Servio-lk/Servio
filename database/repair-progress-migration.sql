@@ -51,6 +51,40 @@ CREATE INDEX IF NOT EXISTS idx_progress_updates_repair_job ON repair_progress_up
 CREATE INDEX IF NOT EXISTS idx_progress_updates_status ON repair_progress_updates(status);
 CREATE INDEX IF NOT EXISTS idx_progress_updates_created_at ON repair_progress_updates(created_at);
 
+-- Create repair_progress table (current progress snapshot)
+CREATE TABLE IF NOT EXISTS repair_progress (
+    id SERIAL PRIMARY KEY,
+    repair_job_id INTEGER NOT NULL UNIQUE REFERENCES repair_jobs(id) ON DELETE CASCADE,
+    current_status VARCHAR(50) NOT NULL, -- Mirrors latest status
+    progress_percentage INTEGER DEFAULT 0 CHECK (progress_percentage >= 0 AND progress_percentage <= 100),
+    estimated_completion_time TIMESTAMP,
+    actual_completion_time TIMESTAMP,
+    last_updated_at TIMESTAMP,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for repair_progress
+CREATE INDEX IF NOT EXISTS idx_repair_progress_repair_job ON repair_progress(repair_job_id);
+CREATE INDEX IF NOT EXISTS idx_repair_progress_status ON repair_progress(current_status);
+
+-- Create repair_activities table (activity log)
+CREATE TABLE IF NOT EXISTS repair_activities (
+    id SERIAL PRIMARY KEY,
+    repair_job_id INTEGER NOT NULL REFERENCES repair_jobs(id) ON DELETE CASCADE,
+    activity_type VARCHAR(50) NOT NULL, -- STATUS_CHANGE, NOTE, PARTS_UPDATE, ESTIMATE, ASSIGNMENT, SYSTEM
+    description TEXT NOT NULL,
+    performed_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for repair_activities
+CREATE INDEX IF NOT EXISTS idx_repair_activities_repair_job ON repair_activities(repair_job_id);
+CREATE INDEX IF NOT EXISTS idx_repair_activities_type ON repair_activities(activity_type);
+CREATE INDEX IF NOT EXISTS idx_repair_activities_created_at ON repair_activities(created_at);
+
 -- Create repair_parts table (parts used in repairs)
 CREATE TABLE IF NOT EXISTS repair_parts (
     id SERIAL PRIMARY KEY,
@@ -140,6 +174,12 @@ CREATE TRIGGER update_repair_jobs_updated_at BEFORE UPDATE ON repair_jobs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_repair_progress_updates_updated_at BEFORE UPDATE ON repair_progress_updates
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_repair_progress_updated_at BEFORE UPDATE ON repair_progress
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_repair_activities_updated_at BEFORE UPDATE ON repair_activities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_repair_parts_updated_at BEFORE UPDATE ON repair_parts

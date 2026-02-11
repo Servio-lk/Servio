@@ -75,6 +75,12 @@ public class RepairJob {
     @OneToMany(mappedBy = "repairJob", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RepairProgressUpdate> progressUpdates;
 
+    @OneToOne(mappedBy = "repairJob", cascade = CascadeType.ALL, orphanRemoval = true)
+    private RepairProgress progress;
+
+    @OneToMany(mappedBy = "repairJob", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<RepairActivity> activities;
+
     @OneToMany(mappedBy = "repairJob", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<RepairPart> parts;
 
