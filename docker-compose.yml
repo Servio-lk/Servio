@@ -29,13 +29,16 @@ services:
       dockerfile: Dockerfile
     container_name: servio-backend
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      # Supabase Database Configuration
-      - DB_HOST=aws-1-ap-south-1.pooler.supabase.com
-      - DB_PORT=6543
-      - DB_USER=postgres.szgvnurzdglflmdabjol
-      - DB_PASSWORD=EG/2022/5006/15/19/83
-      - DB_NAME=postgres
+      # Local Database Configuration
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=servio_user
+      - DB_PASSWORD=servio_password
+      - DB_NAME=servio_db
       # JWT Configuration
       - JWT_SECRET=3q4w5e6r7t8y9u0i1o2p3a4s5d6f7g8h9j0k1l2z3x4c5v6b7n8m9QWERTYUIOP
       - JWT_EXPIRATION=604800000
