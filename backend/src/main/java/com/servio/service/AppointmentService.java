@@ -27,6 +27,17 @@ public class AppointmentService {
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found"));
         
+        // Check if the time slot is already booked
+        List<Appointment> existingAppointments = appointmentRepository
+            .findByAppointmentDateAndStatusNotIn(
+                request.getAppointmentDate(), 
+                List.of("CANCELLED")
+            );
+        
+        if (!existingAppointments.isEmpty()) {
+            throw new RuntimeException("This time slot is already booked. Please choose another time.");
+        }
+        
         Vehicle vehicle = null;
         if (request.getVehicleId() != null) {
             vehicle = vehicleRepository.findById(request.getVehicleId())
@@ -67,6 +78,12 @@ public class AppointmentService {
             .collect(Collectors.toList());
     }
     
+    public List<AppointmentDto> getUserAppointments(Long userId) {
+        return appointmentRepository.findUserAppointmentsOrderByDate(userId).stream()
+            .map(this::convertToDto)
+            .collect(Collectors.toList());
+    }
+
     public AppointmentDto getAppointmentById(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Appointment not found"));

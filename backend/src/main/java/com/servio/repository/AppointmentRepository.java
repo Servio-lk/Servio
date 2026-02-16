@@ -32,4 +32,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     
     @Query("SELECT a FROM Appointment a WHERE a.user.id = :userId ORDER BY a.appointmentDate DESC")
     List<Appointment> findUserAppointmentsOrderByDate(@Param("userId") Long userId);
+    
+    @Query("SELECT a FROM Appointment a WHERE a.appointmentDate = :appointmentDate AND a.status NOT IN :excludeStatuses")
+    List<Appointment> findByAppointmentDateAndStatusNotIn(
+        @Param("appointmentDate") LocalDateTime appointmentDate,
+        @Param("excludeStatuses") List<String> excludeStatuses
+    );
 }

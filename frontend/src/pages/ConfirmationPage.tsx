@@ -1,23 +1,149 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/services/api';
+import type { AppointmentDto } from '@/services/api';
+import { toast } from 'sonner';
 
 export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { id } = useParams<{ id: string }>();
+  
+  const [appointment, setAppointment] = useState<AppointmentDto | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const appointment = {
-    id: '#SL-GOV-2025-00483',
-    customerName: user?.fullName || 'Chamal Dissanayake',
-    service: 'Lubricant Service',
-    oilType: 'Standard/Conventional Oil',
-    date: 'Oct 26',
-    time: '9:00 AM - 9:30 AM',
-    vehicle: 'Toyota Premio',
-    phone: user?.phone || '+94 72 4523 299',
-    paymentMethod: 'Cash',
-    total: 5500,
+  const downloadQRCode = () => {
+    const svg = document.getElementById('appointment-qr-code');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+      
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `appointment-${id}-qr.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  };
+
+  const shareAppointment = async () => {
+    const url = `${window.location.origin}/appointment/${id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Servio Appointment',
+          text: `Check out my appointment - ${appointmentDisplay.service}`,
+          url: url,
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      // Fallback: copy to clipboard
+      navigator.clipboard.writeText(url);
+      toast.success('Link copied to clipboard!');
+    }
+  };
+
+  useEffect(() => {
+    const fetchAppointment = async () => {
+      if (!id) {
+        toast.error('Invalid appointment ID');
+        navigate('/home');
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const response = await apiService.getAppointmentById(parseInt(id));
+        
+        if (response.success && response.data) {
+          setAppointment(response.data);
+        } else {
+          toast.error('Failed to load appointment details');
+          navigate('/home');
+        }
+      } catch (error: any) {
+        console.error('Error fetching appointment:', error);
+        toast.error('Failed to load appointment details');
+        navigate('/home');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAppointment();
+  }, [id, navigate]);
+
+  // Format date and time from ISO string
+  const formatDateTime = (isoDate: string) => {
+    const date = new Date(isoDate);
+    const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const timeStr = date.toLocaleTimeString('en-US', { 
+      hour: 'numeric', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    return { date: dateStr, time: timeStr };
+  };
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff5d2e] mx-auto mb-4"></div>
+            <p className="text-black/50">Loading appointment details...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // Show error if no appointment
+  if (!appointment) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <AlertTriangle className="w-12 h-12 text-[#ff5d2e] mx-auto mb-4" />
+            <p className="text-black/70">Appointment not found</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const { date, time } = formatDateTime(appointment.appointmentDate);
+  const appointmentDisplay = {
+    id: `#APT-${appointment.id.toString().padStart(6, '0')}`,
+    customerName: user?.fullName || appointment.userName || 'Customer',
+    service: appointment.serviceType,
+    date: date,
+    time: time,
+    vehicle: appointment.vehicleMake && appointment.vehicleModel ? `${appointment.vehicleMake} ${appointment.vehicleModel}` : 'No vehicle specified',
+    phone: user?.phone || appointment.userEmail || 'N/A',
+    paymentMethod: 'Cash', // Default for now
+    total: appointment.estimatedCost || 0,
+    status: appointment.status,
+    location: appointment.location || 'Service Center',
+    notes: appointment.notes,
   };
 
   return (
@@ -43,37 +169,53 @@ export default function ConfirmationPage() {
             <div className="flex flex-col items-center gap-6">
               {/* Customer name */}
               <div className="text-center">
-                <p className="text-lg font-bold text-black">{appointment.customerName}</p>
+                <p className="text-lg font-bold text-black">{appointmentDisplay.customerName}</p>
                 <div className="flex items-center justify-center gap-2 mt-2">
                   <span className="text-xs text-black/50">Appointment ID:</span>
                   <span className="text-xs font-medium text-black bg-[#fff7f5] px-2 py-1 rounded-full border border-[#ffe7df]">
-                    {appointment.id}
+                    {appointmentDisplay.id}
+                  </span>
+                </div>
+                <div className="mt-2">
+                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                    appointmentDisplay.status === 'CONFIRMED' ? 'bg-green-100 text-green-700' :
+                    appointmentDisplay.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                    appointmentDisplay.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {appointmentDisplay.status}
                   </span>
                 </div>
               </div>
 
               {/* QR Code */}
-              <div className="w-64 h-64 bg-white border-2 border-black/20 rounded-lg flex items-center justify-center shadow-lg">
-                {/* QR Code placeholder - In production, use a QR library */}
-                <div className="w-56 h-56 bg-gradient-to-br from-gray-100 to-gray-200 rounded flex items-center justify-center">
-                  <div className="grid grid-cols-5 gap-1">
-                    {Array.from({ length: 25 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-4 h-4 rounded-sm ${Math.random() > 0.5 ? 'bg-black' : 'bg-transparent'}`}
-                      />
-                    ))}
-                  </div>
-                </div>
+              <div className="w-64 h-64 bg-white border-2 border-black/20 rounded-lg flex items-center justify-center shadow-lg p-4">
+                <QRCodeSVG
+                  id="appointment-qr-code"
+                  value={`${window.location.origin}/appointment/${appointment.id}`}
+                  size={224}
+                  level="H"
+                  includeMargin={false}
+                />
               </div>
+
+              <p className="text-xs text-center text-black/50 max-w-[250px]">
+                Scan this QR code to view your appointment status anytime
+              </p>
 
               {/* Action buttons - Desktop */}
               <div className="hidden lg:flex gap-3">
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors">
+                <button 
+                  onClick={downloadQRCode}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors"
+                >
                   <Download className="w-4 h-4" />
-                  <span className="text-sm font-medium">Download</span>
+                  <span className="text-sm font-medium">Download QR</span>
                 </button>
-                <button className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors">
+                <button 
+                  onClick={shareAppointment}
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-[#ffe7df] rounded-lg hover:bg-[#fff7f5] transition-colors"
+                >
                   <Share2 className="w-4 h-4" />
                   <span className="text-sm font-medium">Share</span>
                 </button>
@@ -87,8 +229,10 @@ export default function ConfirmationPage() {
                 <div className="flex items-start gap-3">
                   <span className="text-sm font-bold text-black/70 w-20">Service:</span>
                   <div className="flex-1">
-                    <p className="font-medium text-black">{appointment.service}</p>
-                    <p className="text-sm text-black/50">{appointment.oilType}</p>
+                    <p className="font-medium text-black">{appointmentDisplay.service}</p>
+                    {appointmentDisplay.notes && (
+                      <p className="text-sm text-black/50">{appointmentDisplay.notes}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -101,7 +245,7 @@ export default function ConfirmationPage() {
                 <div className="flex-1">
                   <p className="text-xs text-black/70 font-medium">DATE & TIME</p>
                   <p className="text-base font-semibold text-black mt-1">
-                    {appointment.date} · {appointment.time}
+                    {appointmentDisplay.date} · {appointmentDisplay.time}
                   </p>
                 </div>
               </div>
@@ -110,22 +254,22 @@ export default function ConfirmationPage() {
               <div className="flex flex-col gap-2 bg-white rounded-lg overflow-hidden">
                 <div className="flex items-center gap-3 p-4 border-b border-black/5">
                   <Car className="w-5 h-5 text-black/70" />
-                  <span className="flex-1 text-sm font-medium text-black/70">{appointment.vehicle}</span>
+                  <span className="flex-1 text-sm font-medium text-black/70">{appointmentDisplay.vehicle}</span>
                 </div>
                 <div className="flex items-center gap-3 p-4 border-b border-black/5">
                   <Phone className="w-5 h-5 text-black/70" />
-                  <span className="flex-1 text-sm font-medium text-black/70">{appointment.phone}</span>
+                  <span className="flex-1 text-sm font-medium text-black/70">{appointmentDisplay.phone}</span>
                 </div>
                 <div className="flex items-center gap-3 p-4">
                   <Coins className="w-5 h-5 text-black/70" />
-                  <span className="flex-1 text-sm font-medium text-black/70">Pay by {appointment.paymentMethod}</span>
+                  <span className="flex-1 text-sm font-medium text-black/70">Pay by {appointmentDisplay.paymentMethod}</span>
                 </div>
               </div>
 
               {/* Total */}
               <div className="flex items-center justify-between p-4 bg-[#fff7f5] rounded-lg">
                 <span className="font-semibold text-black">Total Amount</span>
-                <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointment.total.toLocaleString()}</span>
+                <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointmentDisplay.total.toLocaleString()}</span>
               </div>
 
               {/* Desktop buttons */}

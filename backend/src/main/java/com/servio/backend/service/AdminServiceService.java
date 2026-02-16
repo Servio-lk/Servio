@@ -1,18 +1,16 @@
 package com.servio.backend.service;
 
-import com.servio.backend.entity.Service;
 import com.servio.backend.entity.ServiceCategory;
 import com.servio.backend.repository.ServiceCategoryRepository;
 import com.servio.backend.repository.ServiceRepository;
 import com.servio.dto.admin.ServiceRequest;
 import com.servio.dto.admin.ServiceToggleRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
-@Service
+@org.springframework.stereotype.Service
 @RequiredArgsConstructor
 public class AdminServiceService {
 

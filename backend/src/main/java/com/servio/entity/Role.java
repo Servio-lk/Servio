@@ -1,7 +1,6 @@
 package com.servio.entity;
 
 public enum Role {
-    CUSTOMER,
-    ADMIN,
-    STAFF
+    ROLE_USER,
+    ROLE_ADMIN
 }

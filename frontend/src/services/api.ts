@@ -94,6 +94,60 @@ interface Offer {
   validUntil: string;
 }
 
+// Service Record Interfaces
+interface ServiceRecord {
+  id: number;
+  vehicleId: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  serviceType: string;
+  description: string;
+  serviceDate: string;
+  mileage: number;
+  cost: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface ServiceRecordRequest {
+  vehicleId: number;
+  serviceType: string;
+  description: string;
+  serviceDate: string;
+  mileage: number;
+  cost: number;
+}
+
+// Appointment Interfaces
+interface AppointmentDto {
+  id: number;
+  userId: number;
+  userName: string;
+  userEmail: string;
+  vehicleId: number | null;
+  vehicleMake: string | null;
+  vehicleModel: string | null;
+  serviceType: string;
+  appointmentDate: string;
+  status: string;
+  location: string | null;
+  notes: string | null;
+  estimatedCost: number;
+  actualCost: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface AppointmentRequest {
+  userId?: number;
+  vehicleId?: number;
+  serviceType: string;
+  appointmentDate: string;
+  location?: string;
+  notes?: string;
+  estimatedCost: number;
+}
+
 class ApiService {
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
@@ -234,6 +288,91 @@ class ApiService {
     });
     return this.handleResponse<Offer[]>(response);
   }
+
+  // Service Record Management Endpoints
+  async createServiceRecord(recordData: ServiceRecordRequest): Promise<ApiResponse<ServiceRecord>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords`, {
+      method: 'POST',
+      headers: this.getHeaders(true), // Requires Auth
+      body: JSON.stringify(recordData),
+    });
+    return this.handleResponse<ServiceRecord>(response);
+  }
+
+  async getServiceRecordsByVehicle(vehicleId: number): Promise<ApiResponse<ServiceRecord[]>> {
+    const response = await fetch(`${API_BASE_URL}/vehicles/${vehicleId}/servicerecords`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<ServiceRecord[]>(response);
+  }
+
+  async updateServiceRecord(id: number, recordData: Partial<ServiceRecordRequest>): Promise<ApiResponse<ServiceRecord>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(recordData),
+    });
+    return this.handleResponse<ServiceRecord>(response);
+  }
+
+  async deleteServiceRecord(id: number): Promise<ApiResponse<void>> {
+    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  // Appointment Management Endpoints
+  async createAppointment(appointmentData: AppointmentRequest): Promise<ApiResponse<AppointmentDto>> {
+    const user = this.getCurrentUser();
+    const requestData = {
+      ...appointmentData,
+      userId: user?.id,
+    };
+
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(requestData),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  async getUserAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
+    const user = this.getCurrentUser();
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}/appointments/user/${user.id}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto[]>(response);
+  }
+
+  async getAppointmentById(id: number): Promise<ApiResponse<AppointmentDto>> {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  async updateAppointmentStatus(id: number, status: string): Promise<ApiResponse<AppointmentDto>> {
+    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ status }),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  async cancelAppointment(id: number): Promise<ApiResponse<AppointmentDto>> {
+    return this.updateAppointmentStatus(id, 'CANCELLED');
+  }
 }
 
 export const apiService = new ApiService();
@@ -247,5 +386,9 @@ export type {
   ServiceItem,
   ServiceOption,
   ServiceProvider,
-  Offer
+  Offer,
+  ServiceRecord,
+  ServiceRecordRequest,
+  AppointmentDto,
+  AppointmentRequest
 };

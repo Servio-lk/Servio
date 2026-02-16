@@ -4,6 +4,7 @@ import com.servio.dto.SignupRequest;
 import com.servio.dto.LoginRequest;
 import com.servio.dto.UserResponse;
 import com.servio.dto.AuthResponse;
+import com.servio.entity.Role;
 import com.servio.entity.User;
 import com.servio.repository.UserRepository;
 import com.servio.util.JwtTokenProvider;
@@ -37,12 +38,13 @@ public class AuthService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .passwordHash(passwordHash)
+                .role(Role.ROLE_USER)
                 .build();
 
         User savedUser = userRepository.save(user);
 
         // Generate token
-        String token = jwtTokenProvider.generateToken(savedUser.getId());
+        String token = jwtTokenProvider.generateToken(savedUser.getId(), savedUser.getRole());
 
         UserResponse userResponse = mapToUserResponse(savedUser);
 
@@ -72,7 +74,7 @@ public class AuthService {
         }
 
         // Generate token
-        String token = jwtTokenProvider.generateToken(user.getId());
+        String token = jwtTokenProvider.generateToken(user.getId(), user.getRole());
 
         UserResponse userResponse = mapToUserResponse(user);
 

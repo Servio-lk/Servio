@@ -4,10 +4,22 @@ FROM maven:3.9-eclipse-temurin-17 AS builder
 WORKDIR /app
 
 COPY pom.xml .
-RUN mvn dependency:go-offline
+
+# Download dependencies with retry logic
+RUN --mount=type=cache,target=/root/.m2 \
+    for i in 1 2 3; do \
+        mvn dependency:go-offline && break || \
+        (echo "Attempt $i failed, retrying..." && sleep 5); \
+    done
 
 COPY src ./src
-RUN mvn clean package -DskipTests
+
+# Build with retry logic
+RUN --mount=type=cache,target=/root/.m2 \
+    for i in 1 2 3; do \
+        mvn clean package -DskipTests && break || \
+        (echo "Build attempt $i failed, retrying..." && sleep 5); \
+    done
 
 # Production stage
 FROM eclipse-temurin:17-jre
