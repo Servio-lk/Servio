@@ -15,33 +15,19 @@ const navItems = [
   { icon: List, label: 'Services', path: '/services' },
   { icon: FileText, label: 'Activity', path: '/activity' },
   { icon: User, label: 'Account', path: '/account' },
+  { icon: Car, label: 'My Vehicles', path: '/vehicles'}
 ];
 
 // Desktop sidebar component
 function DesktopSidebar() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
       {/* Logo */}
-      <div className="p-6 border-b border-black/10">
+      <div className="px-6 h-[64px] border-b border-black/10 inline-flex justify-center items-center">
         <img src={LogoImage} alt="Servio" className="h-10 w-auto" />
-      </div>
-
-      {/* User info */}
-      <div className="p-4 border-b border-black/10">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#ffe7df] rounded-full flex items-center justify-center">
-            <User className="w-5 h-5 text-[#ff5d2e]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-black truncate">
-              {user?.fullName || 'Guest'}
-            </p>
-            <p className="text-xs text-black/50 truncate">{user?.email}</p>
-          </div>
-        </div>
       </div>
 
       {/* Navigation */}
@@ -72,13 +58,6 @@ function DesktopSidebar() {
       {/* Quick actions */}
       <div className="p-4 border-t border-black/10">
         <div className="flex flex-col gap-2">
-          <Link
-            to="/vehicles"
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
-          >
-            <Car className="w-5 h-5" />
-            <span className="font-medium">My Vehicles</span>
-          </Link>
           <Link
             to="/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
@@ -318,7 +297,7 @@ export function AppLayout({ children, showNav = true }: AppLayoutProps) {
 
       {/* Main content */}
       <main className="lg:ml-64 lg:pt-16 pb-20 lg:pb-6">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 py-4 lg:py-6">
+        <div className="max-w-4xl mx-auto px-4 lg:px-6 py-4 lg:py-6">
           {children}
         </div>
       </main>
