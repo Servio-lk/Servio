@@ -14,8 +14,7 @@ const navItems = [
   { icon: Home, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
   { icon: FileText, label: 'Activity', path: '/activity' },
-  { icon: User, label: 'Account', path: '/account' },
-  { icon: Car, label: 'My Vehicles', path: '/vehicles'}
+  { icon: User, label: 'Account', path: '/account' }
 ];
 
 // Desktop sidebar component
@@ -275,14 +274,14 @@ export function AppLayout({ children, showNav = true }: AppLayoutProps) {
 
   if (!showNav) {
     return (
-      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
+      <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#fff7f5]">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
+    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#fff7f5]">
       {/* Desktop sidebar */}
       <DesktopSidebar />
       
