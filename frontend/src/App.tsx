@@ -8,6 +8,7 @@ import { AdminGuard } from '@/components/AdminGuard'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import AuthCallback from './pages/AuthCallback'
+import AdminSetup from './pages/AdminSetup'
 
 // Main app pages (responsive - works on both mobile and desktop)
 import HomePage from './pages/HomePage'
@@ -54,6 +55,9 @@ function App() {
 
           {/* OAuth callback route */}
           <Route path="/auth/callback" element={<AuthCallback />} />
+
+          {/* Admin setup page - for creating admin users */}
+          <Route path="/admin-setup" element={<AdminSetup />} />
 
           {/* Public appointment status page - accessible via QR code */}
           <Route path="/appointment/:id" element={<AppointmentStatusPage />} />
