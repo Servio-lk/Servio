@@ -19,6 +19,7 @@ com/servio/backend/controller/ServiceController.class
 com/servio/dto/PaymentDto$PaymentDtoBuilder.class
 com/servio/service/VehicleService.class
 com/servio/dto/ServiceRecordDto$ServiceRecordDtoBuilder.class
+com/servio/dto/SupabaseLoginRequest.class
 com/servio/config/SecurityConfig.class
 com/servio/dto/LoginRequest$LoginRequestBuilder.class
 com/servio/dto/VehicleDto$VehicleDtoBuilder.class

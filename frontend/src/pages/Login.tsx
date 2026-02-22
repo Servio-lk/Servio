@@ -28,12 +28,12 @@ function LoginHeader() {
   );
 }
 
-function EmailInput({ 
-  value, 
-  onChange 
-}: { 
-  value: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void 
+function EmailInput({
+  value,
+  onChange
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
   return (
     <div className="w-full">
@@ -48,12 +48,12 @@ function EmailInput({
   );
 }
 
-function PasswordInput({ 
-  value, 
-  onChange 
-}: { 
-  value: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void 
+function PasswordInput({
+  value,
+  onChange
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
   return (
     <div className="w-full">
@@ -103,10 +103,10 @@ function OrDivider() {
 function GoogleIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
     </svg>
   );
 }
@@ -114,8 +114,8 @@ function GoogleIcon() {
 function FacebookIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M24 12c0-6.627-5.373-12-12-12S0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854V15.47H7.078V12h3.047V9.356c0-3.007 1.792-4.668 4.533-4.668 1.312 0 2.686.234 2.686.234v2.953H15.83c-1.491 0-1.956.925-1.956 1.874V12h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z" fill="#1877F2"/>
-      <path d="M16.671 15.469L17.203 12h-3.328V9.749c0-.949.465-1.874 1.956-1.874h1.513V4.922s-1.374-.234-2.686-.234c-2.741 0-4.533 1.661-4.533 4.668V12H7.078v3.469h3.047v8.385a12.09 12.09 0 003.75 0V15.47h2.796z" fill="#fff"/>
+      <path d="M24 12c0-6.627-5.373-12-12-12S0 5.373 0 12c0 5.99 4.388 10.954 10.125 11.854V15.47H7.078V12h3.047V9.356c0-3.007 1.792-4.668 4.533-4.668 1.312 0 2.686.234 2.686.234v2.953H15.83c-1.491 0-1.956.925-1.956 1.874V12h3.328l-.532 3.469h-2.796v8.385C19.612 22.954 24 17.99 24 12z" fill="#1877F2" />
+      <path d="M16.671 15.469L17.203 12h-3.328V9.749c0-.949.465-1.874 1.956-1.874h1.513V4.922s-1.374-.234-2.686-.234c-2.741 0-4.533 1.661-4.533 4.668V12H7.078v3.469h3.047v8.385a12.09 12.09 0 003.75 0V15.47h2.796z" fill="#fff" />
     </svg>
   );
 }
@@ -151,7 +151,7 @@ function FacebookLoginButton({ onClick }: { onClick: () => void }) {
 function GlobeIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="#0A82FF"/>
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="#0A82FF" />
     </svg>
   );
 }
@@ -159,20 +159,20 @@ function GlobeIcon() {
 function HelpIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" fill="#0A82FF"/>
+      <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z" fill="#0A82FF" />
     </svg>
   );
 }
 
 function SignupLink() {
   const navigate = useNavigate();
-  
+
   return (
     <div className="flex justify-center items-center gap-2 w-full">
       <p className="text-xs md:text-sm text-gray-600">
         Don't have an account?
       </p>
-      <button 
+      <button
         onClick={() => navigate('/signup')}
         className="text-xs md:text-sm text-[#FF5D2E] hover:underline font-semibold"
       >
@@ -229,12 +229,13 @@ function LoginForm() {
           fullName: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email || email,
           phone: user.user_metadata?.phone || null,
-          role: user.user_metadata?.role || 'USER',
+          role: user.user_metadata?.role?.toUpperCase() || (email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
         };
 
+        const isAdminRole = user.user_metadata?.role?.toUpperCase() === 'ADMIN' || email === 'admin@servio.lk';
         login(userData, session);
         toast.success("Welcome back!");
-        navigate('/home');
+        navigate(isAdminRole ? '/admin' : '/home');
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -276,13 +277,13 @@ function LoginForm() {
     <div className="w-full max-w-md px-4 sm:px-6 md:px-8">
       <div className="flex flex-col gap-3 md:gap-4 lg:gap-6">
         <LoginHeader />
-        
+
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
             {error}
           </div>
         )}
-        
+
         <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8">
           <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} />
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -290,9 +291,9 @@ function LoginForm() {
 
         <LoginButton onClick={handleLogin} disabled={loading} />
         <ForgotPassword />
-        
+
         <OrDivider />
-        
+
         <div className="flex flex-col gap-3 md:gap-4">
           <GoogleLoginButton onClick={handleGoogleLogin} />
           <FacebookLoginButton onClick={handleFacebookLogin} />

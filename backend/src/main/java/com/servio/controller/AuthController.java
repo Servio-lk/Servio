@@ -2,6 +2,7 @@ package com.servio.controller;
 
 import com.servio.dto.SignupRequest;
 import com.servio.dto.LoginRequest;
+import com.servio.dto.SupabaseLoginRequest;
 import com.servio.dto.UserResponse;
 import com.servio.dto.AuthResponse;
 import com.servio.dto.ApiResponse;
@@ -52,11 +53,26 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/supabase-login")
+    public ResponseEntity<AuthResponse> supabaseLogin(@Valid @RequestBody SupabaseLoginRequest request) {
+        try {
+            AuthResponse response = authService.loginWithSupabase(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(AuthResponse.builder()
+                            .success(false)
+                            .message(e.getMessage())
+                            .build());
+        }
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile(Authentication authentication) {
         try {
-            Long userId = (Long) authentication.getPrincipal();
-            UserResponse userResponse = authService.getProfile(userId);
+            // Principal is now the Supabase UUID (String), not a Long
+            String userId = authentication.getPrincipal().toString();
+            UserResponse userResponse = authService.getProfileByUuid(userId);
 
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
                     .success(true)

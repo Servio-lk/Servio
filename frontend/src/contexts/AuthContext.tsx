@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isBackendTokenReady, setIsBackendTokenReady] = useState(false);
 
   useEffect(() => {
     // Initialize auth state from Supabase
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fullName: currentSession.user.user_metadata?.full_name || currentSession.user.email?.split('@')[0] || 'User',
             email: currentSession.user.email || '',
             phone: currentSession.user.user_metadata?.phone || null,
-            role: currentSession.user.user_metadata?.role || 'USER',
+            role: currentSession.user.user_metadata?.role?.toUpperCase() || (currentSession.user.email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
           };
           setUser(userData);
         }
@@ -69,12 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: newSession.user.user_metadata?.full_name || newSession.user.email?.split('@')[0] || 'User',
           email: newSession.user.email || '',
           phone: newSession.user.user_metadata?.phone || null,
-          role: newSession.user.user_metadata?.role || 'USER',
+          role: newSession.user.user_metadata?.role?.toUpperCase() || (newSession.user.email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
         };
         setUser(userData);
       } else {
         setUser(null);
         setSupabaseUser(null);
+        setIsBackendTokenReady(false);
       }
     });
 
@@ -83,10 +85,59 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Exchange Supabase token for Backend Spring Boot token
+  useEffect(() => {
+    const syncBackendToken = async () => {
+      if (session && user && !isBackendTokenReady) {
+        try {
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+          console.log('[Auth] Exchanging Supabase token for backend token...');
+          const response = await fetch(`${API_URL}/auth/supabase-login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accessToken: session.access_token,
+              email: user.email,
+              fullName: user.fullName,
+              phone: user.phone || '',
+              role: user.role || 'USER'
+            })
+          });
+          console.log('[Auth] supabase-login response status:', response.status);
+          const text = await response.text();
+          console.log('[Auth] supabase-login raw response:', text);
+          try {
+            const data = JSON.parse(text);
+            if (data.success && data.data?.token) {
+              localStorage.setItem('token', data.data.token);
+              console.log('[Auth] Backend token stored successfully');
+              setIsBackendTokenReady(true);
+            } else {
+              console.warn('[Auth] supabase-login did not return a token:', data);
+              setIsBackendTokenReady(true); // unblock UI even on non-success
+            }
+          } catch {
+            console.warn('[Auth] Could not parse supabase-login response:', text);
+            setIsBackendTokenReady(true); // unblock UI
+          }
+        } catch (error) {
+          console.error('[Auth] Backend token exchange network error:', error);
+          setIsBackendTokenReady(true); // unblock UI even on network failure
+        }
+      } else if (!session) {
+        localStorage.removeItem('token');
+        setIsBackendTokenReady(false);
+      }
+    };
+
+    syncBackendToken();
+  }, [session, user, isBackendTokenReady]);
+
   const login = (userData: User, userSession: Session) => {
     setUser(userData);
     setSession(userSession);
     setSupabaseUser(userSession.user);
+    setIsBackendTokenReady(false);
   };
 
   const logout = async () => {
@@ -94,6 +145,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setSupabaseUser(null);
+    setIsBackendTokenReady(false);
   };
 
   return (
@@ -103,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         isAuthenticated: !!session,
         isAdmin: user?.role === 'ADMIN',
-        isLoading,
+        isLoading: isLoading || (!!session && !!user && !isBackendTokenReady),
         login,
         logout,
         supabaseUser,

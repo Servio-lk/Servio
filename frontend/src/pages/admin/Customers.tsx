@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
-import { Users, Search, Mail, Phone, Filter, Shield, MoreVertical } from 'lucide-react';
+import { Users, Search, Mail, Phone, Filter, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AdminCustomers() {
@@ -27,8 +27,8 @@ export function AdminCustomers() {
 
   const filteredCustomers = customers.filter(
     (customer) =>
-      customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (customer.fullName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (customer.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const formatDate = (dateString: string) => {
@@ -59,23 +59,14 @@ export function AdminCustomers() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
           <div className="text-sm text-gray-600 mb-1">Total Customers</div>
           <div className="text-3xl font-bold text-black">{customers.length}</div>
         </div>
         <div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
-          <div className="text-sm text-gray-600 mb-1">Admin Users</div>
-          <div className="text-3xl font-bold text-[#ff5d2e]">
-            {customers.filter(c => c.role === 'ADMIN').length}
-          </div>
-        </div>
-        <div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
-          <div className="text-sm text-gray-600 mb-1">Regular Customers</div>
-          <div className="text-3xl font-bold text-blue-600">
-            {customers.filter(c => c.role === 'CUSTOMER').length}
-          </div>
+          <div className="text-sm text-gray-600 mb-1">Showing</div>
+          <div className="text-3xl font-bold text-[#ff5d2e]">{filteredCustomers.length}</div>
         </div>
       </div>
 
@@ -135,7 +126,7 @@ export function AdminCustomers() {
                           {(customer.fullName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div className="font-medium text-black">
-                          {customer.fullName}
+                          {customer.fullName || 'Unknown'}
                         </div>
                       </div>
                     </td>
@@ -152,16 +143,8 @@ export function AdminCustomers() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full border ${customer.role === 'ADMIN'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : customer.role === 'STAFF'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-gray-50 text-gray-700 border-gray-200'
-                          }`}
-                      >
-                        {customer.role === 'ADMIN' && <Shield className="w-3 h-3" />}
-                        {customer.role}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium rounded-full border bg-gray-50 text-gray-700 border-gray-200">
+                        CUSTOMER
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
