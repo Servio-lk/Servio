@@ -106,7 +106,6 @@ public class AuthService {
                 .build();
     }
 
-    @Transactional
     public AuthResponse loginWithSupabase(SupabaseLoginRequest request) {
         // Validate the Supabase access token by hitting the Supabase Auth API
         RestTemplate restTemplate = new RestTemplate();
