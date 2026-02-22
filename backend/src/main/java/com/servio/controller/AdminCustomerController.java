@@ -1,5 +1,6 @@
 package com.servio.controller;
 
+import com.servio.dto.AdminCustomerDetailsDto;
 import com.servio.dto.ApiResponse;
 import com.servio.entity.Profile;
 import com.servio.service.AdminCustomerService;
@@ -31,5 +32,11 @@ public class AdminCustomerController {
     public ResponseEntity<ApiResponse<Profile>> getCustomerById(@PathVariable String id) {
         Profile customer = adminCustomerService.getCustomerById(id);
         return ResponseEntity.ok(ApiResponse.success("Customer retrieved successfully", customer));
+    }
+
+    @GetMapping("/{id}/details")
+    public ResponseEntity<ApiResponse<AdminCustomerDetailsDto>> getCustomerDetails(@PathVariable String id) {
+        AdminCustomerDetailsDto details = adminCustomerService.getCustomerDetails(id);
+        return ResponseEntity.ok(ApiResponse.success("Customer details retrieved successfully", details));
     }
 }
