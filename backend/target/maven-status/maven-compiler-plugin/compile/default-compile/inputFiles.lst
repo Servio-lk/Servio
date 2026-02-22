@@ -65,6 +65,7 @@
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/repository/PaymentRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/repository/UserRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/service/VehicleService.java
+/Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/dto/SupabaseLoginRequest.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/repository/ServiceRecordRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/controller/NotificationController.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/security/JwtAuthenticationFilter.java

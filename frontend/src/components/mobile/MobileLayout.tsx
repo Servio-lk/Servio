@@ -12,7 +12,7 @@ export function MobileLayout({
   showStatusBar = true 
 }: MobileLayoutProps) {
   return (
-    <div className="flex flex-col h-screen w-full max-w-[428px] mx-auto bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
+    <div className="flex flex-col h-screen w-full max-w-[428px] mx-auto bg-[#fff7f5]">
       {showStatusBar && (
         <div className="flex items-center justify-between px-4 pt-5 pb-5">
           <div className="font-semibold text-[17px]">9:41</div>

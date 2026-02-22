@@ -4,10 +4,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 class AdminApiService {
   private getHeaders(): HeadersInit {
     const token = localStorage.getItem('token');
-    return {
+    console.log('[AdminApi] Token from localStorage:', token ? token.substring(0, 30) + '...' : 'NULL');
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
     };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   async getAllServices() {

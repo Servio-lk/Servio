@@ -28,7 +28,7 @@ export default function Services() {
   ];
 
   return (
-    <div className="flex flex-col h-screen w-full bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
+    <div className="flex flex-col h-screen w-full bg-[#fff7f5]">
       {/* Status Bar */}
       <div className="flex items-center justify-between px-4 pt-5 pb-5">
         <div className="font-semibold text-[17px]">9:41</div>

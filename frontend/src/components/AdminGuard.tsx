@@ -11,7 +11,7 @@ export function AdminGuard({ children }: AdminGuardProps) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen w-full bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
+      <div className="flex items-center justify-center h-screen w-full bg-[#fff7f5]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 border-4 border-[#ff5d2e] border-t-transparent rounded-full animate-spin" />
           <p className="text-base font-medium text-black/70">Loading...</p>
