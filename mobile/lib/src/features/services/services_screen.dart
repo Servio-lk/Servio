@@ -31,13 +31,14 @@ final List<ServiceItem> _periodicMaintenanceItems = const [
   ServiceItem(
     title: 'Washing Packages',
     iconPath: 'assets/service icons/Washing Packages.png',
+    imagePath: 'assets/service images/Washing Packages.jpg',
     basePrice: 'LKR 1,500.00',
     description: 'Keep your vehicle spotless with our comprehensive washing packages. Choose from basic exterior wash to full interior-exterior detailing.',
   ),
   ServiceItem(
     title: 'Lube Services',
     iconPath: 'assets/service icons/Lube Services.png',
-    imagePath: 'assets/service images/Lubricant Service.png',
+    imagePath: 'assets/service images/Lubricant Service.jpg',
     basePrice: 'LKR 1,500.00',
     description: 'Protect your engine and maintain peak performance with our professional oil change service. We only use high-quality lubricants and filters, ensuring your vehicle runs smoothly and efficiently.',
     optionsTitle: 'Pricing and Oil Selection',
@@ -50,24 +51,28 @@ final List<ServiceItem> _periodicMaintenanceItems = const [
   ServiceItem(
     title: 'Exterior & Interior Detailing',
     iconPath: 'assets/service icons/Exterior & Interior Detailing.png',
+    imagePath: 'assets/service images/Exterior Detailing.jpg',
     basePrice: 'LKR 5,000.00',
     description: 'Give your vehicle a showroom finish with our professional exterior and interior detailing service using premium products.',
   ),
   ServiceItem(
     title: 'Engine Tune ups',
     iconPath: 'assets/service icons/Engine Tune ups.png',
+    imagePath: 'assets/service images/Mechanical Repair.jpg',
     basePrice: 'LKR 3,500.00',
     description: 'Restore your engine\'s power and efficiency with a full tune-up including spark plugs, filters, and system checks.',
   ),
   ServiceItem(
     title: 'Inspection Reports',
     iconPath: 'assets/service icons/Inspection Reports.png',
+    imagePath: 'assets/service images/Mulipoint Inspection Report.jpg',
     basePrice: 'LKR 2,000.00',
     description: 'Comprehensive multi-point vehicle inspection covering all critical systems with a detailed digital report.',
   ),
   ServiceItem(
     title: 'Tyre Services',
     iconPath: 'assets/service icons/Tyre Services.png',
+    imagePath: 'assets/service images/Periodic Maintenance.jpg',
     basePrice: 'LKR 500.00',
     description: 'Full tyre services including rotation, balancing, inflation checks and replacement recommendations.',
   ),
@@ -92,6 +97,7 @@ final List<ServiceItem> _periodicMaintenanceItems = const [
   ServiceItem(
     title: 'Battery Services',
     iconPath: 'assets/service icons/Battery Services.png',
+    imagePath: 'assets/service images/Electrical & Electronic.jpg',
     basePrice: 'LKR 500.00',
     description: 'Battery health check, terminal cleaning and replacement service for all vehicle makes and models.',
   ),
@@ -116,6 +122,7 @@ final List<ServiceItem> _collisionRepairsItems = const [
   ServiceItem(
     title: 'Insurance Claims',
     iconPath: 'assets/service icons/Insurance Claims.png',
+    imagePath: 'assets/service images/General Collision Repair.jpg',
     basePrice: 'Free consultation',
     description: 'We work directly with all major insurance providers to handle your claim from assessment to repair completion.',
   ),
@@ -128,6 +135,7 @@ final List<ServiceItem> _collisionRepairsItems = const [
   ServiceItem(
     title: 'Full Paints',
     iconPath: 'assets/service icons/Full Paints.png',
+    imagePath: 'assets/service images/Complete Paint.jpg',
     basePrice: 'LKR 45,000.00',
     description: 'Factory-quality full vehicle respray using premium automotive paint with colour matching technology.',
   ),
