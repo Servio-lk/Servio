@@ -180,6 +180,33 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
+    public List<AppointmentDto> getMyAppointments(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        String userId = authentication.getPrincipal().toString();
+
+        // Try to parse as UUID (Supabase user)
+        try {
+            UUID profileId = UUID.fromString(userId);
+            return appointmentRepository.findProfileAppointmentsOrderByDate(profileId).stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            // Not a UUID, try as Long (local user)
+            try {
+                Long localUserId = Long.parseLong(userId);
+                return appointmentRepository.findUserAppointmentsOrderByDate(localUserId).stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+            } catch (NumberFormatException nfe) {
+                throw new RuntimeException("Invalid user ID format: " + userId);
+            }
+        }
+    }
+
+    @Transactional(readOnly = true)
     public AppointmentDto getAppointmentById(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));

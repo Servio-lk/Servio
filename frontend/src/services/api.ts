@@ -382,14 +382,8 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // Use supabaseId for Supabase users, fallback to id for local users
-    const userId = user.supabaseId || user.id;
-    if (!userId) {
-      // If no ID available, get all appointments (backend will filter by auth token)
-      return this.getAllAppointments();
-    }
-
-    const response = await fetch(`${API_BASE_URL}/appointments/user/${userId}`, {
+    // Use the new /my endpoint which automatically uses authentication context
+    const response = await fetch(`${API_BASE_URL}/appointments/my`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
