@@ -126,11 +126,11 @@ export function AdminAppointments() {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-[#ff5d2e] font-bold text-xs">
-                          {(appointment.user?.fullName || 'U').charAt(0).toUpperCase()}
+                          {(appointment.userName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="text-sm font-medium text-black">{appointment.user?.fullName || 'Unknown User'}</p>
-                          <p className="text-xs text-gray-500">{appointment.user?.email}</p>
+                          <p className="text-sm font-medium text-black">{appointment.userName || 'Unknown User'}</p>
+                          <p className="text-xs text-gray-500">{appointment.userEmail}</p>
                         </div>
                       </div>
                     </td>

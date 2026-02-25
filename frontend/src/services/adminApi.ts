@@ -49,6 +49,29 @@ class AdminApiService {
     });
     return response.json();
   }
+
+  async getCustomerDetails(id: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/customers/${id}/details`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async getWalkInCustomers() {
+    const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createWalkInCustomer(payload: Record<string, unknown>) {
+    const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
 }
 
 export const adminApi = new AdminApiService();
