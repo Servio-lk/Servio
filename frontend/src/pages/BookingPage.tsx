@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
@@ -6,22 +6,27 @@ import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
 export default function BookingPage() {
   const { id: serviceId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  
-  const [selectedDate, setSelectedDate] = useState('Tomorrow');
+
+  // Feature 2 fix: store index (0-6) instead of label string — always stable
+  const [selectedDateIndex, setSelectedDateIndex] = useState(0);
   const [selectedTime, setSelectedTime] = useState('9:00 AM - 9:30 AM');
   const [isBooking, setIsBooking] = useState(false);
   const [currentStep, setCurrentStep] = useState<'time' | 'checkout'>('time');
 
-  // Get data from URL params
+  // Feature 1: track booked slots for the selected date
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+
   const selectedOil = searchParams.get('oil') || 'standard';
   const specialInstructions = searchParams.get('notes') || '';
 
-  // Service catalog - same as ServiceDetailPage
   const servicesCatalog: { [key: string]: any } = {
     '1': { id: '1', name: 'Washing Packages', basePrice: 500 },
     '2': { id: '2', name: 'Lube Services', basePrice: 1500 },
@@ -39,32 +44,28 @@ export default function BookingPage() {
     '14': { id: '14', name: 'Hybrid Services', basePrice: 3500 },
   };
 
-  // Get current service details
   const currentService = servicesCatalog[serviceId || '2'] || servicesCatalog['2'];
 
-  // Generate real dates for the next 7 days
   const generateDates = () => {
     const today = new Date();
     const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     return Array.from({ length: 7 }, (_, i) => {
       const date = new Date(today);
-      date.setDate(today.getDate() + i + 1); // Start from tomorrow
-      
-      const dayName = daysOfWeek[date.getDay()];
-      const monthName = months[date.getMonth()];
-      const dayNum = date.getDate();
-      
+      date.setDate(today.getDate() + i + 1);
       return {
-        label: i === 0 ? 'Tomorrow' : dayName,
-        date: `${monthName} ${dayNum}`,
-        fullDate: date
+        label: i === 0 ? 'Tomorrow' : daysOfWeek[date.getDay()],
+        date: `${months[date.getMonth()]} ${date.getDate()}`,
+        fullDate: date,
+        // ISO date string for the booked-slots API: YYYY-MM-DD
+        isoDate: date.toISOString().split('T')[0],
       };
     });
   };
 
   const dates = generateDates();
+  const selectedDateObj = dates[selectedDateIndex];
 
   const timeSlots = [
     '9:00 AM - 9:30 AM',
@@ -87,13 +88,52 @@ export default function BookingPage() {
     '5:30 PM - 6:00 PM',
   ];
 
+  // Feature 1: helper — extract "HH:mm" from a slot label like "9:00 AM - 9:30 AM"
+  const slotToHHMM = (slot: string): string => {
+    const startTime = slot.split(' - ')[0]; // "9:00 AM"
+    const [time, period] = startTime.split(' ');
+    const [h, m] = time.split(':').map(Number);
+    let hour24 = h;
+    if (period === 'PM' && h !== 12) hour24 = h + 12;
+    else if (period === 'AM' && h === 12) hour24 = 0;
+    return `${String(hour24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  };
+
+  const isSlotBooked = (slot: string) => bookedSlots.includes(slotToHHMM(slot));
+
+  // Feature 1: fetch booked slots whenever the selected date changes
+  useEffect(() => {
+    const fetchBookedSlots = async () => {
+      setIsLoadingSlots(true);
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/appointments/booked-slots?date=${selectedDateObj.isoDate}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setBookedSlots(data.data ?? []);
+          // If the currently-selected time just became booked, pick the first free slot
+          if (data.data?.includes(slotToHHMM(selectedTime))) {
+            const firstFree = timeSlots.find(s => !data.data.includes(slotToHHMM(s)));
+            if (firstFree) setSelectedTime(firstFree);
+          }
+        }
+      } catch {
+        // silently fail — slots just won't be grayed out
+      } finally {
+        setIsLoadingSlots(false);
+      }
+    };
+    fetchBookedSlots();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDateIndex]);
+
   const oilOptions: Record<string, { name: string; price: number }> = {
     'standard': { name: 'Standard/Conventional Oil', price: 4000 },
     'synthetic-blend': { name: 'Synthetic Blend Oil', price: 5500 },
     'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
   };
 
-  // Calculate order details based on service type
   const isLubeService = serviceId === '2';
   const orderDetails = {
     service: currentService.name,
@@ -103,6 +143,32 @@ export default function BookingPage() {
     total: currentService.basePrice + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
   };
 
+  const convertToDateTime = (dateObj: Date, timeSlot: string): string => {
+    const appointmentDate = new Date(dateObj);
+    const startTime = timeSlot.split(' - ')[0];
+    const [time, period] = startTime.split(' ');
+    const [hours, minutes] = time.split(':').map(Number);
+    let hour24 = hours;
+    if (period === 'PM' && hours !== 12) hour24 = hours + 12;
+    else if (period === 'AM' && hours === 12) hour24 = 0;
+    appointmentDate.setHours(hour24, minutes, 0, 0);
+
+    // Build a LOCAL-time ISO string (no UTC conversion).
+    // Using toISOString() would shift to UTC, causing the backend to store the wrong
+    // time and the confirmation screen to display the wrong time.
+    // Example: 11:00 AM IST → toISOString() → "05:30Z" (wrong)
+    //          11:00 AM IST → local ISO       → "...T11:00:00"   (correct)
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return (
+      `${appointmentDate.getFullYear()}-` +
+      `${pad(appointmentDate.getMonth() + 1)}-` +
+      `${pad(appointmentDate.getDate())}T` +
+      `${pad(appointmentDate.getHours())}:` +
+      `${pad(appointmentDate.getMinutes())}:00`
+    );
+  };
+
+
   const handleBook = async () => {
     if (!user) {
       toast.error('Please login to book a service');
@@ -111,22 +177,12 @@ export default function BookingPage() {
     }
 
     setIsBooking(true);
-    
     try {
-      // Convert selected date and time to ISO datetime
-      const appointmentDateTime = convertToDateTime(selectedDate, selectedTime);
-      
-      console.log('Booking appointment:', {
-        serviceType: orderDetails.service,
-        appointmentDate: appointmentDateTime,
-        estimatedCost: orderDetails.total
-      });
-      
-      // Create appointment request
+      const appointmentDateTime = convertToDateTime(selectedDateObj.fullDate, selectedTime);
       const appointmentRequest = {
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
-        location: 'Colombo Service Center', // Default location
+        location: 'Colombo Service Center',
         notes: specialInstructions || (isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`),
         estimatedCost: orderDetails.total,
         customerName: user.fullName,
@@ -135,9 +191,6 @@ export default function BookingPage() {
       };
 
       const response = await apiService.createAppointment(appointmentRequest);
-      
-      console.log('Appointment response:', response);
-      
       if (response.success && response.data) {
         toast.success('Appointment booked successfully!');
         navigate(`/confirmed/${response.data.id}`);
@@ -145,74 +198,81 @@ export default function BookingPage() {
         toast.error(response.message || 'Failed to book appointment');
       }
     } catch (error: any) {
-      console.error('Booking error:', error);
-      
-      // More detailed error message
       let errorMessage = 'Failed to book appointment. ';
-      if (error.message) {
-        errorMessage += error.message;
-      } else if (error.error) {
-        errorMessage += error.error;
-      } else {
-        errorMessage += 'Please check your connection and try again.';
-      }
-      
+      if (error.message) errorMessage += error.message;
+      else errorMessage += 'Please check your connection and try again.';
       toast.error(errorMessage);
     } finally {
       setIsBooking(false);
     }
   };
 
-  // Helper function to convert date and time to ISO datetime string
-  const convertToDateTime = (dateLabel: string, timeSlot: string): string => {
-    // Find the selected date from our generated dates array
-    const selectedDateObj = dates.find(d => d.label === dateLabel);
-    
-    if (!selectedDateObj) {
-      // Fallback to tomorrow if date not found
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      return tomorrow.toISOString();
+  // ── Time slot button (reused in both mobile + desktop) ────────────────────
+  const TimeSlotButton = ({ time, variant }: { time: string; variant: 'list' | 'grid' }) => {
+    const booked = isSlotBooked(time);
+    const selected = selectedTime === time && !booked;
+
+    if (variant === 'list') {
+      return (
+        <button
+          key={time}
+          onClick={() => !booked && setSelectedTime(time)}
+          disabled={booked}
+          className={`w-full p-4 rounded-lg flex items-center justify-between transition-all ${booked
+            ? 'bg-gray-100 border border-gray-200 cursor-not-allowed opacity-60'
+            : selected
+              ? 'bg-[#ffe7df] border-2 border-[#ff5d2e]'
+              : 'bg-white border border-black/10 hover:border-[#ff5d2e]'
+            }`}
+        >
+          <span className={`font-medium ${booked ? 'text-gray-400 line-through' : 'text-black'}`}>
+            {time}
+          </span>
+          {booked ? (
+            <span className="text-xs text-gray-400 font-medium">Booked</span>
+          ) : (
+            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selected ? 'border-[#ff5d2e]' : 'border-black/30'
+              }`}>
+              {selected && <div className="w-3 h-3 rounded-full bg-[#ff5d2e]" />}
+            </div>
+          )}
+        </button>
+      );
     }
-    
-    // Use the actual date from the calendar
-    const appointmentDate = new Date(selectedDateObj.fullDate);
-    
-    // Extract time from slot (e.g., "9:00 AM - 9:30 AM" -> "9:00 AM")
-    const startTime = timeSlot.split(' - ')[0];
-    
-    // Parse time
-    const [time, period] = startTime.split(' ');
-    const [hours, minutes] = time.split(':').map(Number);
-    
-    let hour24 = hours;
-    if (period === 'PM' && hours !== 12) {
-      hour24 = hours + 12;
-    } else if (period === 'AM' && hours === 12) {
-      hour24 = 0;
-    }
-    
-    appointmentDate.setHours(hour24, minutes, 0, 0);
-    
-    return appointmentDate.toISOString();
+
+    // grid variant (desktop)
+    return (
+      <button
+        key={time}
+        onClick={() => !booked && setSelectedTime(time)}
+        disabled={booked}
+        className={`p-3 rounded-lg text-center transition-all ${booked
+          ? 'bg-gray-100 border border-gray-200 cursor-not-allowed opacity-60'
+          : selected
+            ? 'bg-[#ff5d2e] text-white'
+            : 'bg-white border border-[#ffe7df] hover:border-[#ff5d2e]'
+          }`}
+      >
+        <span className={`text-sm font-medium ${booked && !selected ? 'text-gray-400 line-through' : ''}`}>
+          {time}
+        </span>
+        {booked && <div className="text-xs text-gray-400 mt-0.5">Booked</div>}
+      </button>
+    );
   };
 
-  const selectedDateObj = dates.find(d => d.label === selectedDate);
-
-  // Mobile view - Step-based
+  // ── Mobile views ──────────────────────────────────────────────────────────
   const MobileTimeSelection = () => (
     <div className="flex flex-col gap-4 pb-24">
-      {/* Date Selection */}
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
-        {dates.map((dateOption) => (
+        {dates.map((dateOption, i) => (
           <button
-            key={dateOption.label}
-            onClick={() => setSelectedDate(dateOption.label)}
-            className={`flex flex-col gap-2 items-center justify-center min-w-[100px] px-4 py-3 rounded-lg shadow-sm text-center flex-shrink-0 ${
-              selectedDate === dateOption.label
-                ? 'bg-white border-2 border-[#ff5d2e]'
-                : 'bg-white border border-[#ffe7df]'
-            }`}
+            key={i}
+            onClick={() => setSelectedDateIndex(i)}
+            className={`flex flex-col gap-2 items-center justify-center min-w-[100px] px-4 py-3 rounded-lg shadow-sm text-center flex-shrink-0 ${selectedDateIndex === i
+              ? 'bg-white border-2 border-[#ff5d2e]'
+              : 'bg-white border border-[#ffe7df]'
+              }`}
           >
             <p className="text-base font-medium text-black">{dateOption.label}</p>
             <p className="text-xs text-black/50">{dateOption.date}</p>
@@ -220,38 +280,20 @@ export default function BookingPage() {
         ))}
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-black/10" />
 
-      {/* Time Slots */}
       <div className="flex flex-col gap-2">
-        {timeSlots.map((time) => (
-          <button
-            key={time}
-            onClick={() => setSelectedTime(time)}
-            className={`w-full p-4 rounded-lg flex items-center justify-between ${
-              selectedTime === time
-                ? 'bg-[#ffe7df] border-2 border-[#ff5d2e]'
-                : 'bg-white border border-black/10'
-            }`}
-          >
-            <span className="font-medium text-black">{time}</span>
-            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-              selectedTime === time ? 'border-[#ff5d2e]' : 'border-black/30'
-            }`}>
-              {selectedTime === time && (
-                <div className="w-3 h-3 rounded-full bg-[#ff5d2e]" />
-              )}
-            </div>
-          </button>
-        ))}
+        {isLoadingSlots ? (
+          <div className="text-center py-8 text-black/40 text-sm">Loading available slots...</div>
+        ) : (
+          timeSlots.map((time) => <TimeSlotButton key={time} time={time} variant="list" />)
+        )}
       </div>
     </div>
   );
 
   const MobileCheckout = () => (
     <div className="flex flex-col gap-6 pb-24">
-      {/* Order Summary */}
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-black">Order Summary</h3>
         <div className="bg-white rounded-lg p-4 flex items-center gap-3">
@@ -260,19 +302,14 @@ export default function BookingPage() {
             <p className="font-medium text-black">{orderDetails.service}</p>
             <p className="text-sm text-black/50">{selectedDateObj?.date} • {selectedTime}</p>
           </div>
-          <button 
-            onClick={() => setCurrentStep('time')}
-            className="text-sm font-medium text-[#ff5d2e]"
-          >
+          <button onClick={() => setCurrentStep('time')} className="text-sm font-medium text-[#ff5d2e]">
             Edit
           </button>
         </div>
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-black/10" />
 
-      {/* Price Breakdown */}
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-black">Price Breakdown</h3>
         <div className="flex flex-col gap-2 bg-white rounded-lg p-4">
@@ -294,10 +331,8 @@ export default function BookingPage() {
         </div>
       </div>
 
-      {/* Divider */}
       <div className="h-px bg-black/10" />
 
-      {/* Details */}
       <div className="flex flex-col gap-2">
         <button className="bg-white rounded-lg p-4 flex items-center gap-3 hover:bg-[#fff7f5] transition-colors">
           <Car className="w-5 h-5" />
@@ -326,11 +361,8 @@ export default function BookingPage() {
           <div className="flex items-center gap-4 px-4 py-3 lg:px-0">
             <button
               onClick={() => {
-                if (currentStep === 'checkout') {
-                  setCurrentStep('time');
-                } else {
-                  navigate(-1);
-                }
+                if (currentStep === 'checkout') setCurrentStep('time');
+                else navigate(-1);
               }}
               className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
             >
@@ -341,7 +373,6 @@ export default function BookingPage() {
             </h1>
           </div>
 
-          {/* Step indicator - Mobile only */}
           <div className="lg:hidden flex items-center gap-2 px-4 mt-2">
             <div className={`flex-1 h-1 rounded-full ${currentStep === 'time' ? 'bg-[#ff5d2e]' : 'bg-[#ffe7df]'}`} />
             <div className={`flex-1 h-1 rounded-full ${currentStep === 'checkout' ? 'bg-[#ff5d2e]' : 'bg-[#ffe7df]'}`} />
@@ -350,34 +381,32 @@ export default function BookingPage() {
 
         {/* Main content */}
         <div className="flex-1 max-w-6xl mx-auto w-full px-4 lg:px-6">
-          {/* Mobile view - Step based */}
+          {/* Mobile */}
           <div className="lg:hidden">
             {currentStep === 'time' ? <MobileTimeSelection /> : <MobileCheckout />}
           </div>
 
-          {/* Desktop view - Side by side */}
+          {/* Desktop */}
           <div className="hidden lg:grid lg:grid-cols-5 gap-8">
-            {/* Left column - Time selection */}
+            {/* Left — Time selection */}
             <div className="lg:col-span-3 flex flex-col gap-6">
-              {/* Date Selection */}
+              {/* Date picker */}
               <div className="flex flex-col gap-4">
                 <h3 className="text-lg font-semibold text-black flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-[#ff5d2e]" />
-                  Select Date
+                  <Calendar className="w-5 h-5 text-[#ff5d2e]" /> Select Date
                 </h3>
                 <div className="flex gap-3 overflow-x-auto pb-2">
-                  {dates.map((dateOption) => (
+                  {dates.map((dateOption, i) => (
                     <button
-                      key={dateOption.label}
-                      onClick={() => setSelectedDate(dateOption.label)}
-                      className={`flex flex-col gap-2 items-center justify-center min-w-[120px] px-4 py-4 rounded-lg shadow-sm text-center transition-all ${
-                        selectedDate === dateOption.label
-                          ? 'bg-[#ff5d2e] text-white'
-                          : 'bg-white border border-[#ffe7df] hover:border-[#ff5d2e]'
-                      }`}
+                      key={i}
+                      onClick={() => setSelectedDateIndex(i)}
+                      className={`flex flex-col gap-2 items-center justify-center min-w-[120px] px-4 py-4 rounded-lg shadow-sm text-center transition-all ${selectedDateIndex === i
+                        ? 'bg-[#ff5d2e] text-white'
+                        : 'bg-white border border-[#ffe7df] hover:border-[#ff5d2e]'
+                        }`}
                     >
                       <p className="text-base font-medium">{dateOption.label}</p>
-                      <p className={`text-sm ${selectedDate === dateOption.label ? 'text-white/70' : 'text-black/50'}`}>
+                      <p className={`text-sm ${selectedDateIndex === i ? 'text-white/70' : 'text-black/50'}`}>
                         {dateOption.date}
                       </p>
                     </button>
@@ -385,30 +414,20 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Time Selection */}
+              {/* Time slots */}
               <div className="flex flex-col gap-4">
                 <h3 className="text-lg font-semibold text-black flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-[#ff5d2e]" />
-                  Select Time
+                  <Clock className="w-5 h-5 text-[#ff5d2e]" /> Select Time
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {timeSlots.map((time) => (
-                    <button
-                      key={time}
-                      onClick={() => setSelectedTime(time)}
-                      className={`p-3 rounded-lg text-center transition-all ${
-                        selectedTime === time
-                          ? 'bg-[#ff5d2e] text-white'
-                          : 'bg-white border border-[#ffe7df] hover:border-[#ff5d2e]'
-                      }`}
-                    >
-                      <span className="text-sm font-medium">{time}</span>
-                    </button>
-                  ))}
-                </div>
+                {isLoadingSlots ? (
+                  <div className="text-center py-8 text-black/40 text-sm">Loading available slots...</div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {timeSlots.map((time) => <TimeSlotButton key={time} time={time} variant="grid" />)}
+                  </div>
+                )}
               </div>
 
-              {/* Special Instructions */}
               {specialInstructions && (
                 <div className="flex flex-col gap-2 p-4 bg-[#fff7f5] rounded-lg">
                   <p className="text-sm font-medium text-black/70">Special Instructions</p>
@@ -417,12 +436,11 @@ export default function BookingPage() {
               )}
             </div>
 
-            {/* Right column - Checkout summary */}
+            {/* Right — Booking summary */}
             <div className="lg:col-span-2">
               <div className="sticky top-24 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-6">
                 <h3 className="text-lg font-semibold text-black">Booking Summary</h3>
 
-                {/* Service info */}
                 <div className="flex items-center gap-3 p-3 bg-[#fff7f5] rounded-lg">
                   <div className="w-12 h-12 bg-[#ffe7df] rounded-lg" />
                   <div className="flex-1">
@@ -431,7 +449,6 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Price breakdown */}
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-black/70">Service Fee</span>
@@ -450,7 +467,6 @@ export default function BookingPage() {
                   </div>
                 </div>
 
-                {/* Details */}
                 <div className="flex flex-col gap-2">
                   <button className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3 hover:bg-[#ffe7df] transition-colors">
                     <Car className="w-5 h-5 text-[#ff5d2e]" />
@@ -469,7 +485,6 @@ export default function BookingPage() {
                   </button>
                 </div>
 
-                {/* Book button */}
                 <button
                   onClick={handleBook}
                   disabled={isBooking}

@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, List, Tag, Calendar, Users, LogOut, Menu, X, Bell, User } from 'lucide-react';
+import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -10,6 +10,7 @@ const adminNavItems = [
     { icon: Tag, label: 'Offers', path: '/admin/offers' },
     { icon: Calendar, label: 'Appointments', path: '/admin/appointments' },
     { icon: Users, label: 'Customers', path: '/admin/customers' },
+    { icon: CalendarDays, label: 'Calendar', path: '/admin/calendar' },
 ];
 
 function AdminDesktopSidebar() {

@@ -125,10 +125,10 @@ class SupabaseAuthService {
     }
   }
 
-  // Listen to auth state changes
-  onAuthStateChange(callback: (session: Session | null) => void) {
-    return supabase.auth.onAuthStateChange((_event, session) => {
-      callback(session)
+  // Listen to auth state changes (receives both the event type and session)
+  onAuthStateChange(callback: (session: Session | null, event: string) => void) {
+    return supabase.auth.onAuthStateChange((event, session) => {
+      callback(session, event)
     })
   }
 
