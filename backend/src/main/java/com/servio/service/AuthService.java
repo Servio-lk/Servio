@@ -158,10 +158,12 @@ public class AuthService {
             // supabaseUserId was not a valid UUID - use request fullName
         }
 
+        final String finalDisplayName = displayName;
+
         // Ensure a corresponding backend user exists (appointments require users.id)
         User backendUser = userRepository.findByEmail(tokenEmail)
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .fullName(displayName)
+                .fullName(finalDisplayName)
                         .email(tokenEmail)
                         .phone(request.getPhone())
                         .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))

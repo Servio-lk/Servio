@@ -359,13 +359,9 @@ class ApiService {
     const user = this.getCurrentUser();
     const userId = user?.id ? Number(user.id) : this.getUserIdFromToken();
 
-    if (!userId) {
-      throw new Error('User profile is not ready. Please log in again and retry.');
-    }
-
     const requestData = {
       ...appointmentData,
-      userId,
+      ...(Number.isFinite(userId) ? { userId } : {}),
     };
 
     const response = await fetch(`${API_BASE_URL}/appointments`, {
