@@ -7,7 +7,6 @@ import { AdminGuard } from '@/components/AdminGuard'
 // Auth pages
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import Landing from './pages/Landing'
 import AuthCallback from './pages/AuthCallback'
 import AdminSetup from './pages/AdminSetup'
 
@@ -149,9 +148,9 @@ function App() {
           <Route path="/mobile/confirmed" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/welcome" element={<Navigate to="/login" replace />} />
 
-          {/* Landing page - shows welcome screen or continue option */}
-          <Route path="/" element={<Landing />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Default: redirect root and unknown routes to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
