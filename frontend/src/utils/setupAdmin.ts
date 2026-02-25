@@ -74,7 +74,7 @@ export async function setupAdminUser(
  * Note: This requires direct database access or using Supabase admin API
  * For now, this is a placeholder - you'll need to use the Supabase dashboard
  */
-export async function updateUserRoleInMetadata(userId: string, role: 'ADMIN' | 'CUSTOMER' | 'STAFF'): Promise<AdminSetupResult> {
+export async function updateUserRoleInMetadata(_userId: string, role: 'ADMIN' | 'CUSTOMER' | 'STAFF'): Promise<AdminSetupResult> {
   try {
     // Note: Updating user metadata requires admin privileges
     // This needs to be done via Supabase dashboard or admin API

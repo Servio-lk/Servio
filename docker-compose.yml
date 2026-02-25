@@ -1,5 +1,27 @@
 
 services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: servio-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: servio_user
+      POSTGRES_PASSWORD: servio_password
+      POSTGRES_DB: servio_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U servio_user -d servio_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - servio-network
+
   # Backend API (Spring Boot)
   backend:
     build:
@@ -7,8 +29,19 @@ services:
       dockerfile: Dockerfile
     container_name: servio-backend
     restart: always
-    env_file:
-      - ./backend/.env
+    environment:
+      # Supabase Database Configuration
+      - DB_HOST=aws-1-ap-south-1.pooler.supabase.com
+      - DB_PORT=6543
+      - DB_USER=postgres.szgvnurzdglflmdabjol
+      - DB_PASSWORD=EG/2022/5006/15/19/83
+      - DB_NAME=postgres
+      # JWT Configuration
+      - JWT_SECRET=3q4w5e6r7t8y9u0i1o2p3a4s5d6f7g8h9j0k1l2z3x4c5v6b7n8m9QWERTYUIOP
+      - JWT_EXPIRATION=604800000
+      # CORS Configuration
+      - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173
+      - FRONTEND_URL=http://localhost:5173,http://localhost:3000,http://localhost,http://localhost:80
     ports:
       - "3001:3001"
     networks:

@@ -129,6 +129,9 @@ export default function BookingPage() {
         location: 'Colombo Service Center', // Default location
         notes: specialInstructions || (isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`),
         estimatedCost: orderDetails.total,
+        customerName: user.fullName,
+        customerEmail: user.email,
+        customerPhone: user.phone || undefined,
       };
 
       const response = await apiService.createAppointment(appointmentRequest);

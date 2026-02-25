@@ -33,6 +33,7 @@ public class AuthService {
     private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RestTemplate restTemplate;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -108,7 +109,6 @@ public class AuthService {
 
     public AuthResponse loginWithSupabase(SupabaseLoginRequest request) {
         // Validate the Supabase access token by hitting the Supabase Auth API
-        RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + request.getAccessToken());
         headers.set("apikey", supabaseAnonKey);
@@ -152,7 +152,8 @@ public class AuthService {
         // Look up profile for name (optional - use request data as fallback)
         String displayName = request.getFullName();
         try {
-            Profile profile = profileRepository.findById(UUID.fromString(supabaseUserId)).orElse(null);
+            UUID profileId = UUID.fromString(supabaseUserId);
+            Profile profile = profileRepository.findById(profileId).orElse(null);
             if (profile != null && profile.getFullName() != null) {
                 displayName = profile.getFullName();
             }
