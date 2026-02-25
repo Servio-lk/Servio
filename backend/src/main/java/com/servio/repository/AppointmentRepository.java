@@ -41,4 +41,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         List<Appointment> findByAppointmentDateAndStatusNotIn(
                         @Param("appointmentDate") LocalDateTime appointmentDate,
                         @Param("excludeStatuses") List<String> excludeStatuses);
+
+        // Returns all active appointments for a given date (used to show booked slots
+        // to customers)
+        @Query("SELECT a FROM Appointment a WHERE a.appointmentDate >= :startOfDay AND a.appointmentDate < :endOfDay AND a.status NOT IN ('CANCELLED')")
+        List<Appointment> findBookedSlotsForDate(
+                        @Param("startOfDay") LocalDateTime startOfDay,
+                        @Param("endOfDay") LocalDateTime endOfDay);
 }
