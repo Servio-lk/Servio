@@ -1,79 +1,93 @@
+# Servio — Run Instructions
 
-Based on the project files, here are the instructions to run the application:
+## Prerequisites
 
-### Prerequisites
-- Docker
-- Java 17 or higher
-- Maven 3.8.1 or higher
-- Node.js and npm (for frontend local development)
+| Tool | Version |
+|---|---|
+| Docker & Docker Compose | Latest |
+| Java | 17+ |
+| Maven | 3.8+ |
+| Node.js & npm | 18+ |
 
----
-
-### Option 1: Using Docker Compose (Recommended)
-
-This is the easiest way to get the entire application running (database, backend, and frontend).
-
-1. **Build and start all services:**
-   Open a terminal in the root directory of the project and run:
-   ```bash
-   docker-compose up --build
-   ```
-
-2. **Access the application:**
-   - The **frontend** will be available at: http://localhost
-   - The **backend** API will be running on: http://localhost:8082
-   - The **PostgreSQL database** will be accessible on port: 5433
-
-3. **To stop the application:**
-   Press `Ctrl + C` in the terminal where docker-compose is running, and then run:
-   ```bash
-   docker-compose down
-   ```
+> The database is hosted on **Supabase** — no local database setup is required.
 
 ---
 
-### Option 2: Running Services Locally
+## Setup: Environment Variables
 
-Use this option if you want to run the frontend and backend services on your local machine without Docker containers (you can still use Docker for the database).
+Before running with either option, configure the backend environment:
 
-**1. Start the Database (using Docker):**
-   ```bash
-   docker-compose up -d postgres
-   ```
-   This will start only the PostgreSQL database container.
+```bash
+cp backend/.env.example backend/.env
+```
 
-**2. Run the Backend (Java/Spring Boot):**
-   - **Navigate to the backend directory:**
-     ```bash
-     cd backend
-     ```
-   - **Set Environment Variables:** You need to configure the database connection and JWT secret. On Windows (Command Prompt), you would use `set` instead of `export`.
-     ```bash
-     set DB_HOST=localhost
-     set DB_PORT=5433
-     set DB_NAME=servio_db
-     set DB_USER=servio_user
-     set DB_PASSWORD=servio_password
-     set JWT_SECRET=your-secret-key-that-is-long-and-secure
-     set FRONTEND_URL=http://localhost:5173
-     ```
-   - **Run the application using Maven:**
-     ```bash
-     mvn spring-boot:run
-     ```
-   The backend will start on http://localhost:8080 (if you run it locally without docker). Note that the docker-compose is configured to run the backend on 8082.
+Open `backend/.env` and fill in your Supabase credentials (DB host, user, password, Supabase URL, anon key, JWT secret, etc.).
 
-**3. Run the Frontend (React/Vite):**
-   - **Navigate to the frontend directory:**
-     ```bash
-     cd frontend
-     ```
-   - **Install dependencies:**
-     ```bash
-     npm install
-     ```
-   - **Start the development server:**
-     ```bash
-     npm run dev
-     ```
-   The frontend will start on http://localhost:5173.
+---
+
+## Option 1: Docker Compose (Recommended)
+
+Runs the **backend** and **frontend** in containers. No local Java or Node.js install needed.
+
+**1. Build and start all services:**
+```bash
+docker-compose up --build
+```
+
+**2. Access the application:**
+| Service | URL |
+|---|---|
+| Frontend | http://localhost |
+| Backend API | http://localhost:3001 |
+
+**3. Stop the application:**
+```bash
+docker-compose down
+```
+
+> **Note:** The frontend Supabase vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) are passed in from `backend/.env` via Docker Compose. Make sure they are set.
+
+---
+
+## Option 2: Run Locally (Without Docker)
+
+Use this if you want to develop and hot-reload without containers.
+
+### Backend (Spring Boot / Java)
+
+**1. Navigate to the backend directory:**
+```bash
+cd backend
+```
+
+**2. Ensure `backend/.env` is configured** (see Setup above).
+
+**3. Run the application:**
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn spring-boot:run
+```
+
+> The app reads `backend/.env` automatically via `spring-dotenv` — no manual env export needed.
+
+The backend API will be available at: **http://localhost:3001**
+
+---
+
+### Frontend (React / Vite)
+
+**1. Navigate to the frontend directory:**
+```bash
+cd frontend
+```
+
+**2. Install dependencies** (first time only):
+```bash
+npm install
+```
+
+**3. Start the development server:**
+```bash
+npm run dev
+```
+
+The frontend will be available at: **http://localhost:5173**

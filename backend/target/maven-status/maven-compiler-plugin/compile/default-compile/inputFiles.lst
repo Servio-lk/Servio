@@ -46,6 +46,7 @@
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/config/SecurityConfig.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/service/NotificationService.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/controller/AppointmentController.java
+/Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/entity/Profile.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/backend/repository/ServiceProviderRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/controller/AuthController.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/dto/VehicleRequest.java
@@ -71,6 +72,7 @@
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/security/JwtAuthenticationFilter.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/dto/AppointmentRequest.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/backend/entity/Offer.java
+/Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/repository/ProfileRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/backend/repository/ServiceRepository.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/dto/PaymentStatsDto.java
 /Users/chamindu/Documents/GitHub/Servio/backend/src/main/java/com/servio/dto/AuthResponse.java
