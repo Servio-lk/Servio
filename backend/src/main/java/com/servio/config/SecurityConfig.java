@@ -34,11 +34,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/health").permitAll()
+                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/supabase-login",
+                                "/api/health", "/error")
+                        .permitAll()
                         .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Updated Role-Based Access Control
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -11,31 +11,34 @@ import java.util.List;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
-    
-    List<Appointment> findByUserId(Long userId);
-    
-    List<Appointment> findByStatus(String status);
-    
-    List<Appointment> findByStatusOrderByAppointmentDateDesc(String status);
-    
-    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.status = :status")
-    Long countByStatus(@Param("status") String status);
-    
-    @Query("SELECT a FROM Appointment a ORDER BY a.createdAt DESC")
-    List<Appointment> findRecentAppointments();
-    
-    @Query("SELECT a FROM Appointment a WHERE a.appointmentDate BETWEEN :startDate AND :endDate")
-    List<Appointment> findAppointmentsBetweenDates(
-        @Param("startDate") LocalDateTime startDate, 
-        @Param("endDate") LocalDateTime endDate
-    );
-    
-    @Query("SELECT a FROM Appointment a WHERE a.user.id = :userId ORDER BY a.appointmentDate DESC")
-    List<Appointment> findUserAppointmentsOrderByDate(@Param("userId") Long userId);
-    
-    @Query("SELECT a FROM Appointment a WHERE a.appointmentDate = :appointmentDate AND a.status NOT IN :excludeStatuses")
-    List<Appointment> findByAppointmentDateAndStatusNotIn(
-        @Param("appointmentDate") LocalDateTime appointmentDate,
-        @Param("excludeStatuses") List<String> excludeStatuses
-    );
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle ORDER BY a.createdAt DESC")
+        List<Appointment> findAll();
+
+        List<Appointment> findByUserId(Long userId);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.status = :status ORDER BY a.appointmentDate DESC")
+        List<Appointment> findByStatus(@Param("status") String status);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.status = :status ORDER BY a.appointmentDate DESC")
+        List<Appointment> findByStatusOrderByAppointmentDateDesc(@Param("status") String status);
+
+        @Query("SELECT COUNT(a) FROM Appointment a WHERE a.status = :status")
+        Long countByStatus(@Param("status") String status);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle ORDER BY a.createdAt DESC")
+        List<Appointment> findRecentAppointments();
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.appointmentDate BETWEEN :startDate AND :endDate")
+        List<Appointment> findAppointmentsBetweenDates(
+                        @Param("startDate") LocalDateTime startDate,
+                        @Param("endDate") LocalDateTime endDate);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.user.id = :userId ORDER BY a.appointmentDate DESC")
+        List<Appointment> findUserAppointmentsOrderByDate(@Param("userId") Long userId);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.appointmentDate = :appointmentDate AND a.status NOT IN :excludeStatuses")
+        List<Appointment> findByAppointmentDateAndStatusNotIn(
+                        @Param("appointmentDate") LocalDateTime appointmentDate,
+                        @Param("excludeStatuses") List<String> excludeStatuses);
 }

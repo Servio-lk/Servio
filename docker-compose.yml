@@ -47,6 +47,7 @@ services:
     networks:
       - servio-network
 
+  # Frontend (React/Vite via Nginx)
   frontend:
     build:
       context: ./frontend
@@ -59,14 +60,10 @@ services:
       - backend
     environment:
       - VITE_API_URL=http://localhost:3001/api
-      - VITE_SUPABASE_URL=https://szgvnurzdglflmdabjol.supabase.co
-      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6Z3ZudXJ6ZGdsZmxtZGFiam9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4OTc3NTgsImV4cCI6MjA4NDQ3Mzc1OH0.MeQsJIGJ-Fy9GLrcHg3M1rM-eEIpmKKsRsrVYPI6U6E
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     networks:
       - servio-network
-
-volumes:
-  postgres_data:
-    driver: local
 
 networks:
   servio-network:

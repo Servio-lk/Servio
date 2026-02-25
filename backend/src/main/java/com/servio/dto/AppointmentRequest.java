@@ -13,11 +13,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class AppointmentRequest {
-    private Long userId;
+    private Long userId; // Optional - if null, uses default user
     private Long vehicleId;
     private String serviceType;
     private LocalDateTime appointmentDate;
     private String location;
     private String notes;
     private BigDecimal estimatedCost;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
 }

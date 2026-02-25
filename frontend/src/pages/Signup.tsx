@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { supabaseAuth } from "@/services/supabaseAuth";
-import LogoImage from "@/assets/images/Logo.svg";
+import LogoImage from "/ServioLogo.png";
 import GarageImage from "@/assets/images/Garage image.png";
 
 function SignupLogo() {
@@ -353,10 +353,10 @@ function SignupForm() {
 
 export default function Signup() {
   return (
-    <div className="flex h-screen w-screen bg-white overflow-hidden">
+    <div className="flex h-screen w-full bg-white overflow-hidden fixed inset-0">
       {/* Left side - Form */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center max-h-screen py-4">
+        <div className="w-full h-full flex items-center justify-center py-4 overflow-y-auto">
           <SignupForm />
         </div>
       </div>

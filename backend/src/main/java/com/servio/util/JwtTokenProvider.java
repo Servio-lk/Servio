@@ -18,22 +18,26 @@ public class JwtTokenProvider {
     @Value("${jwt.expiration:86400000}") // Default 24 hours in milliseconds
     private long jwtExpirationMs;
 
-    // Updated to include Role in the token generation
+    // Updated to include Role in the token generation (Long userId - legacy)
     public String generateToken(Long userId, Role role) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+        return generateToken(userId.toString(), role.name());
+    }
 
+    // String userId version - supports UUID from Supabase profiles
+    public String generateToken(String userId, String role) {
+        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
         return Jwts.builder()
-                .subject(userId.toString())
-                .claim("role", role.name()) // Add role to claims
+                .subject(userId)
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(key)
                 .compact();
     }
 
-    public Long getUserIdFromToken(String token) {
+    public String getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return Long.parseLong(claims.getSubject());
+        return claims.getSubject(); // Returns the raw subject string (Long or UUID)
     }
 
     public String getRoleFromToken(String token) {

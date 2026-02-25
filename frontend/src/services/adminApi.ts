@@ -4,10 +4,14 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 class AdminApiService {
   private getHeaders(): HeadersInit {
     const token = localStorage.getItem('token');
-    return {
+    console.log('[AdminApi] Token from localStorage:', token ? token.substring(0, 30) + '...' : 'NULL');
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : '',
     };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   async getAllServices() {
@@ -42,6 +46,29 @@ class AdminApiService {
   async getAllCustomers() {
     const response = await fetch(`${API_BASE_URL}/admin/customers`, {
       headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async getCustomerDetails(id: string) {
+    const response = await fetch(`${API_BASE_URL}/admin/customers/${id}/details`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async getWalkInCustomers() {
+    const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createWalkInCustomer(payload: Record<string, unknown>) {
+    const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
     });
     return response.json();
   }
