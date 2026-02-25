@@ -26,6 +26,7 @@ import { AdminServices } from './pages/admin/Services'
 import { AdminOffers } from './pages/admin/Offers'
 import { AdminAppointments } from './pages/admin/Appointments'
 import { AdminCustomers } from './pages/admin/Customers'
+import { AdminInventory } from './pages/admin/Inventory'
 import AdminCalendar from './pages/admin/AdminCalendar'
 
 import './App.css'
@@ -137,6 +138,7 @@ function App() {
             <Route path="offers" element={<AdminOffers />} />
             <Route path="appointments" element={<AdminAppointments />} />
             <Route path="customers" element={<AdminCustomers />} />
+            <Route path="inventory" element={<AdminInventory />} />
             <Route path="calendar" element={<AdminCalendar />} />
           </Route>
 

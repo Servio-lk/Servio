@@ -75,6 +75,49 @@ class AdminApiService {
     });
     return response.json();
   }
+
+  // Inventory Management
+  async getAllInventory() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/inventory`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createInventoryItem(payload: any) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/inventory`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateInventoryItem(id: number, payload: any) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/inventory/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async deleteInventoryItem(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/inventory/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return response;
+  }
+
+  async updateInventoryStock(id: number, quantity: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/inventory/${id}/stock`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ quantity }),
+    });
+    return response.json();
+  }
 }
 
 export const adminApi = new AdminApiService();

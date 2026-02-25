@@ -27,6 +27,7 @@ export function AdminLayout() {
   const navigation = [
     { name: 'Dashboard', href: '/admin', icon: LayoutDashboard },
     { name: 'Services', href: '/admin/services', icon: Package },
+    { name: 'Inventory', href: '/admin/inventory', icon: Package },
     { name: 'Offers', href: '/admin/offers', icon: Tag },
     { name: 'Appointments', href: '/admin/appointments', icon: Calendar },
     { name: 'Customers', href: '/admin/customers', icon: Users },
@@ -44,9 +45,8 @@ export function AdminLayout() {
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-30 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex items-center justify-between h-16 px-6 bg-gray-800">
           <div className="flex items-center gap-3">
@@ -69,11 +69,10 @@ export function AdminLayout() {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center px-4 py-3 mt-2 rounded-lg transition-colors ${
-                  isActive
+                className={`flex items-center px-4 py-3 mt-2 rounded-lg transition-colors ${isActive
                     ? 'bg-gray-800 text-white'
                     : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                }`}
+                  }`}
                 onClick={() => setSidebarOpen(false)}
               >
                 <Icon className="h-5 w-5 mr-3" />

@@ -55,6 +55,9 @@ public class Service {
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<ServiceOption> options;
 
+    @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ServiceInventoryRequirement> inventoryRequirements;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
