@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import LogoImage from '/ServioLogo.png';
 import {
   LayoutDashboard,
   Package,
@@ -48,7 +49,10 @@ export function AdminLayout() {
         }`}
       >
         <div className="flex items-center justify-between h-16 px-6 bg-gray-800">
-          <span className="text-xl font-bold text-white">Servio Admin</span>
+          <div className="flex items-center gap-3">
+            <img src={LogoImage} alt="Servio" className="h-8 w-auto brightness-0 invert" />
+            <span className="text-xl font-bold text-white">Admin</span>
+          </div>
           <button
             className="lg:hidden text-gray-400 hover:text-white"
             onClick={() => setSidebarOpen(false)}

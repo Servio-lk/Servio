@@ -4,23 +4,41 @@ import com.servio.dto.SignupRequest;
 import com.servio.dto.LoginRequest;
 import com.servio.dto.UserResponse;
 import com.servio.dto.AuthResponse;
+import com.servio.entity.Profile;
 import com.servio.entity.Role;
 import com.servio.entity.User;
+import com.servio.repository.ProfileRepository;
 import com.servio.repository.UserRepository;
+import com.servio.dto.SupabaseLoginRequest;
 import com.servio.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
     private final UserRepository userRepository;
+    private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+
+    @Value("${supabase.url}")
+    private String supabaseUrl;
+
+    @Value("${supabase.anon.key}")
+    private String supabaseAnonKey;
 
     @Transactional
     public AuthResponse signup(SignupRequest request) {
@@ -38,7 +56,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .phone(request.getPhone())
                 .passwordHash(passwordHash)
-                .role(Role.ROLE_USER)
+                .role(Role.USER)
                 .build();
 
         User savedUser = userRepository.save(user);
@@ -86,6 +104,93 @@ public class AuthService {
                         .token(token)
                         .build())
                 .build();
+    }
+
+    public AuthResponse loginWithSupabase(SupabaseLoginRequest request) {
+        // Validate the Supabase access token by hitting the Supabase Auth API
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + request.getAccessToken());
+        headers.set("apikey", supabaseAnonKey);
+
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+
+        String supabaseUserId;
+        String tokenEmail;
+
+        try {
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    supabaseUrl + "/auth/v1/user",
+                    HttpMethod.GET,
+                    entity,
+                    Map.class);
+
+            Map<String, Object> body = response.getBody();
+            if (body == null || !body.containsKey("id")) {
+                throw new IllegalArgumentException("Invalid Supabase token: no user id in response");
+            }
+
+            supabaseUserId = (String) body.get("id");
+            tokenEmail = (String) body.get("email");
+
+            if (tokenEmail == null || !tokenEmail.equalsIgnoreCase(request.getEmail())) {
+                throw new IllegalArgumentException(
+                        "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Unauthorized: Supabase token validation failed - " + e.getMessage());
+        }
+
+        // Determine role from the request (default to USER)
+        String role = "ADMIN".equalsIgnoreCase(request.getRole()) ? "ADMIN" : "USER";
+
+        // Generate backend JWT using the Supabase UUID as subject
+        String backendToken = jwtTokenProvider.generateToken(supabaseUserId, role);
+
+        // Look up profile for name (optional - use request data as fallback)
+        String displayName = request.getFullName();
+        try {
+            Profile profile = profileRepository.findById(UUID.fromString(supabaseUserId)).orElse(null);
+            if (profile != null && profile.getFullName() != null) {
+                displayName = profile.getFullName();
+            }
+        } catch (IllegalArgumentException ignored) {
+            // supabaseUserId was not a valid UUID - use request fullName
+        }
+
+        UserResponse userResponse = UserResponse.builder()
+                .fullName(displayName)
+                .email(tokenEmail)
+                .role(role)
+                .build();
+
+        return AuthResponse.builder()
+                .success(true)
+                .message("Supabase login successful")
+                .data(AuthResponse.AuthData.builder()
+                        .user(userResponse)
+                        .token(backendToken)
+                        .build())
+                .build();
+    }
+
+    public UserResponse getProfileByUuid(String userId) {
+        try {
+            UUID uuid = UUID.fromString(userId);
+            Profile profile = profileRepository.findById(uuid).orElse(null);
+            if (profile == null) {
+                throw new IllegalArgumentException("User not found");
+            }
+            return UserResponse.builder()
+                    .fullName(profile.getFullName())
+                    .email(profile.getEmail())
+                    .role(profile.getRole() != null ? profile.getRole() : "USER")
+                    .build();
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("User not found: " + userId);
+        }
     }
 
     public UserResponse getProfile(Long userId) {

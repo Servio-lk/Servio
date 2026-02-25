@@ -27,19 +27,29 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             String token = extractTokenFromRequest(request);
+            String requestURI = request.getRequestURI();
 
-            if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-                Long userId = jwtTokenProvider.getUserIdFromToken(token);
-                String role = jwtTokenProvider.getRoleFromToken(token);
+            if (StringUtils.hasText(token)) {
+                boolean valid = jwtTokenProvider.validateToken(token);
+                logger.info("JWT validation for " + requestURI + ": " + (valid ? "VALID" : "INVALID")
+                        + ", token prefix: " + token.substring(0, Math.min(20, token.length())));
+                if (valid) {
+                    String userId = jwtTokenProvider.getUserIdFromToken(token);
+                    String role = jwtTokenProvider.getRoleFromToken(token);
+                    logger.info("Authenticated user id=" + userId + ", role=" + role + " for " + requestURI);
 
-                // Create authority from role
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
+                    // Store authority WITHOUT "ROLE_" prefix so it matches hasAuthority('ADMIN') in
+                    // controllers
+                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
 
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(userId, null, Collections.singletonList(authority));
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId,
+                            null, Collections.singletonList(authority));
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            } else {
+                logger.info("No JWT token found in request to: " + requestURI);
             }
         } catch (Exception e) {
             logger.error("Could not set user authentication", e);
