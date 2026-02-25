@@ -56,11 +56,25 @@ public class AdminAppointmentController {
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {
+        Long userId = null;
+        String userName = null;
+        String userEmail = null;
+
+        // Check if this is a profile-based appointment (Supabase) or user-based (local)
+        if (appointment.getProfile() != null) {
+            userName = appointment.getProfile().getFullName();
+            userEmail = appointment.getProfile().getEmail();
+        } else if (appointment.getUser() != null) {
+            userId = appointment.getUser().getId();
+            userName = appointment.getUser().getFullName();
+            userEmail = appointment.getUser().getEmail();
+        }
+
         return AppointmentDto.builder()
                 .id(appointment.getId())
-                .userId(appointment.getUser().getId())
-                .userName(appointment.getUser().getFullName())
-                .userEmail(appointment.getUser().getEmail())
+                .userId(userId)
+                .userName(userName)
+                .userEmail(userEmail)
                 .vehicleId(appointment.getVehicle() != null ? appointment.getVehicle().getId() : null)
                 .vehicleMake(appointment.getVehicle() != null ? appointment.getVehicle().getMake() : null)
                 .vehicleModel(appointment.getVehicle() != null ? appointment.getVehicle().getModel() : null)

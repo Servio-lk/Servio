@@ -124,6 +124,7 @@ C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\s
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\backend\dto\ServiceResponse.java
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\backend\entity\ServiceProvider.java
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\entity\ServiceRecord.java
+C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\config\RestTemplateConfig.java
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\service\MechanicService.java
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\dto\PaymentRequest.java
 C:\Users\Tharuka Dissanayake\Documents\GitHub\Servio\backend\src\main\java\com\servio\repository\ServiceRecordRepository.java

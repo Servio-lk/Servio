@@ -20,4 +20,7 @@ public class AppointmentRequest {
     private String location;
     private String notes;
     private BigDecimal estimatedCost;
+    private String customerName;
+    private String customerEmail;
+    private String customerPhone;
 }

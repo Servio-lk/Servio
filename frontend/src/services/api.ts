@@ -146,6 +146,9 @@ interface AppointmentRequest {
   location?: string;
   notes?: string;
   estimatedCost: number;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }
 
 class ApiService {
