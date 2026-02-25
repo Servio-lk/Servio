@@ -152,6 +152,32 @@ interface AppointmentRequest {
 }
 
 class ApiService {
+  private getUserIdFromToken(): number | null {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+
+      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const payloadJson = decodeURIComponent(
+        atob(payloadBase64)
+          .split('')
+          .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
+          .join('')
+      );
+      const payload = JSON.parse(payloadJson);
+      const subject = payload?.sub;
+
+      if (subject === undefined || subject === null) return null;
+      const numericId = Number(subject);
+      return Number.isFinite(numericId) ? numericId : null;
+    } catch {
+      return null;
+    }
+  }
+
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -330,9 +356,15 @@ class ApiService {
   // Appointment Management Endpoints
   async createAppointment(appointmentData: AppointmentRequest): Promise<ApiResponse<AppointmentDto>> {
     const user = this.getCurrentUser();
+    const userId = user?.id ? Number(user.id) : this.getUserIdFromToken();
+
+    if (!userId) {
+      throw new Error('User profile is not ready. Please log in again and retry.');
+    }
+
     const requestData = {
       ...appointmentData,
-      userId: user?.id,
+      userId,
     };
 
     const response = await fetch(`${API_BASE_URL}/appointments`, {
