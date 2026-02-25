@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { SlidersHorizontal, RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
+import { RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 import type { AppointmentDto } from '@/services/api';
@@ -9,12 +9,15 @@ import { toast } from 'sonner';
 export default function ActivityPage() {
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
 
   useEffect(() => {
     const fetchAppointments = async () => {
       try {
         setIsLoading(true);
-        const response = await apiService.getUserAppointments();
+        const response = showAllAppointments 
+          ? await apiService.getAllAppointments()
+          : await apiService.getUserAppointments();
         
         if (response.success && response.data) {
           // Sort by date, newest first
@@ -32,7 +35,7 @@ export default function ActivityPage() {
     };
 
     fetchAppointments();
-  }, []);
+  }, [showAllAppointments]);
 
   // Separate upcoming and past appointments
   const now = new Date();
@@ -86,10 +89,21 @@ export default function ActivityPage() {
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl lg:text-3xl font-semibold text-black">Activity</h1>
-          <button className="p-2 hover:bg-[#ffe7df] rounded-lg transition-colors">
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
+          <h1 className="text-2xl lg:text-3xl font-semibold text-black">
+            {showAllAppointments ? 'All Appointments' : 'My Activity'}
+          </h1>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowAllAppointments(!showAllAppointments)}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
+                showAllAppointments 
+                  ? 'bg-[#ff5d2e] text-white' 
+                  : 'bg-[#ffe7df] text-[#ff5d2e] hover:bg-[#ffd4c7]'
+              }`}
+            >
+              {showAllAppointments ? 'Show My Appointments' : 'Show All Appointments'}
+            </button>
+          </div>
         </div>
 
         {/* Main content grid */}

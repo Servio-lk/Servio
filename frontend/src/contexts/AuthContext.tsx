@@ -3,7 +3,8 @@ import { supabaseAuth } from '@/services/supabaseAuth';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 interface User {
-  id: string;
+  id: string | null;
+  supabaseId?: string | null;
   fullName: string;
   email: string;
   phone: string | null;

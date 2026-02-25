@@ -1,27 +1,5 @@
-
 services:
-  # PostgreSQL Database
-  postgres:
-    image: postgres:16-alpine
-    container_name: servio-postgres
-    restart: always
-    environment:
-      POSTGRES_USER: servio_user
-      POSTGRES_PASSWORD: servio_password
-      POSTGRES_DB: servio_db
-    ports:
-      - "5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U servio_user -d servio_db"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - servio-network
-
-  # Backend API (Spring Boot)
+  # Backend API (Spring Boot) - Using Shared/Remote Database
   backend:
     build:
       context: ./backend
@@ -29,12 +7,12 @@ services:
     container_name: servio-backend
     restart: always
     environment:
-      # Supabase Database Configuration (Remote/Shared)
-      - DB_HOST=aws-1-ap-south-1.pooler.supabase.com
-      - DB_PORT=6543
-      - DB_USER=postgres.szgvnurzdglflmdabjol
-      - DB_PASSWORD=EG/2022/5006/15/19/83
-      - DB_NAME=postgres
+      # Remote/Shared Database Configuration (update these with your shared DB credentials)
+      - DB_HOST=${SHARED_DB_HOST:-your-shared-db-host.com}
+      - DB_PORT=${SHARED_DB_PORT:-5432}
+      - DB_USER=${SHARED_DB_USER:-your_db_user}
+      - DB_PASSWORD=${SHARED_DB_PASSWORD:-your_db_password}
+      - DB_NAME=${SHARED_DB_NAME:-servio_db}
       # JWT Configuration
       - JWT_SECRET=3q4w5e6r7t8y9u0i1o2p3a4s5d6f7g8h9j0k1l2z3x4c5v6b7n8m9QWERTYUIOP
       - JWT_EXPIRATION=604800000
@@ -65,10 +43,6 @@ services:
       - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6Z3ZudXJ6ZGdsZmxtZGFiam9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4OTc3NTgsImV4cCI6MjA4NDQ3Mzc1OH0.MeQsJIGJ-Fy9GLrcHg3M1rM-eEIpmKKsRsrVYPI6U6E
     networks:
       - servio-network
-
-volumes:
-  postgres_data:
-    driver: local
 
 networks:
   servio-network:

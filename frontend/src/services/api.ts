@@ -32,12 +32,13 @@ interface LoginData {
 }
 
 interface User {
-  id: number;
+  id: number | null;
+  supabaseId?: string | null;
   fullName: string;
   email: string;
   phone: string | null;
   role: string;
-  createdAt: string;
+  createdAt: string | null;
 }
 
 interface AuthResponse {
@@ -381,7 +382,22 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    const response = await fetch(`${API_BASE_URL}/appointments/user/${user.id}`, {
+    // Use supabaseId for Supabase users, fallback to id for local users
+    const userId = user.supabaseId || user.id;
+    if (!userId) {
+      // If no ID available, get all appointments (backend will filter by auth token)
+      return this.getAllAppointments();
+    }
+
+    const response = await fetch(`${API_BASE_URL}/appointments/user/${userId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto[]>(response);
+  }
+
+  async getAllAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
+    const response = await fetch(`${API_BASE_URL}/appointments`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });

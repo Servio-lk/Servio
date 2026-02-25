@@ -171,7 +171,15 @@ public class AuthService {
         // Generate backend JWT using backend numeric user ID for consistency
         String backendToken = jwtTokenProvider.generateToken(backendUser.getId(), backendUser.getRole());
 
-        UserResponse userResponse = mapToUserResponse(backendUser);
+        UserResponse userResponse = UserResponse.builder()
+                .id(backendUser.getId())
+                .supabaseId(supabaseUserId) // Set the Supabase UUID
+                .fullName(displayName)
+                .email(tokenEmail)
+                .phone(request.getPhone())
+                .role(requestedRole.name())
+                .createdAt(backendUser.getCreatedAt())
+                .build();
 
         return AuthResponse.builder()
                 .success(true)
