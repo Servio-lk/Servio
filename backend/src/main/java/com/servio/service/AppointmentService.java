@@ -1,6 +1,7 @@
 package com.servio.service;
 
 import com.servio.dto.*;
+
 import com.servio.entity.Appointment;
 import com.servio.entity.Profile;
 import com.servio.entity.User;
@@ -17,6 +18,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -199,6 +203,20 @@ public class AppointmentService {
     @Transactional
     public void deleteAppointment(Long id) {
         appointmentRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getBookedSlotsForDate(LocalDate date) {
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+        return appointmentRepository.findBookedSlotsForDate(startOfDay, endOfDay)
+                .stream()
+                .map(a -> {
+                    // Format as "HH:mm" — this is what the frontend parses from the slot label
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("HH:mm");
+                    return a.getAppointmentDate().format(fmt);
+                })
+                .collect(Collectors.toList());
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {

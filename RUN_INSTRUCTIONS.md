@@ -91,3 +91,42 @@ npm run dev
 ```
 
 The frontend will be available at: **http://localhost:5173**
+
+---
+
+## Backend Quick Reference
+
+### Start the backend (recommended — uses `run-backend.sh`)
+```bash
+./run-backend.sh
+```
+
+### Start the backend manually (from the repo root)
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn -f backend/pom.xml spring-boot:run
+```
+
+### Kill whatever is already on port 3001, then start
+```bash
+lsof -ti :3001 | xargs kill -9 2>/dev/null; ./run-backend.sh
+```
+
+### Check what's running on port 3001
+```bash
+lsof -i :3001
+```
+
+### Kill the process on port 3001 without restarting
+```bash
+lsof -ti :3001 | xargs kill -9 2>/dev/null
+```
+
+### Clean build (use when you make Java dependency changes)
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn -f backend/pom.xml clean package -DskipTests
+```
+
+### Run tests
+```bash
+JAVA_HOME=$(/usr/libexec/java_home -v 17) mvn -f backend/pom.xml test
+```
