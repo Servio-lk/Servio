@@ -110,6 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = JSON.parse(text);
             if (data.success && data.data?.token) {
               localStorage.setItem('token', data.data.token);
+              if (data.data.user) {
+                localStorage.setItem('user', JSON.stringify(data.data.user));
+              }
               console.log('[Auth] Backend token stored successfully');
               setIsBackendTokenReady(true);
             } else {

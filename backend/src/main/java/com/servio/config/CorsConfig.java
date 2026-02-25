@@ -22,7 +22,7 @@ public class CorsConfig {
 
         // Parse allowed origins from comma-separated string
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOriginPatterns(origins);
 
         // Allow all HTTP methods
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));

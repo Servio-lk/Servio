@@ -144,10 +144,7 @@ public class AuthService {
         }
 
         // Determine role from the request (default to USER)
-        String role = "ADMIN".equalsIgnoreCase(request.getRole()) ? "ADMIN" : "USER";
-
-        // Generate backend JWT using the Supabase UUID as subject
-        String backendToken = jwtTokenProvider.generateToken(supabaseUserId, role);
+        Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
 
         // Look up profile for name (optional - use request data as fallback)
         String displayName = request.getFullName();
@@ -160,11 +157,20 @@ public class AuthService {
             // supabaseUserId was not a valid UUID - use request fullName
         }
 
-        UserResponse userResponse = UserResponse.builder()
-                .fullName(displayName)
-                .email(tokenEmail)
-                .role(role)
-                .build();
+        // Ensure a corresponding backend user exists (appointments require users.id)
+        User backendUser = userRepository.findByEmail(tokenEmail)
+                .orElseGet(() -> userRepository.save(User.builder()
+                        .fullName(displayName)
+                        .email(tokenEmail)
+                        .phone(request.getPhone())
+                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                        .role(requestedRole)
+                        .build()));
+
+        // Generate backend JWT using backend numeric user ID for consistency
+        String backendToken = jwtTokenProvider.generateToken(backendUser.getId(), backendUser.getRole());
+
+        UserResponse userResponse = mapToUserResponse(backendUser);
 
         return AuthResponse.builder()
                 .success(true)
