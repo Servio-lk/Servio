@@ -146,10 +146,7 @@ public class AuthService {
         }
 
         // Determine role from the request (default to USER)
-        String role = "ADMIN".equalsIgnoreCase(request.getRole()) ? "ADMIN" : "USER";
-
-        // Generate backend JWT using the Supabase UUID as subject
-        String backendToken = jwtTokenProvider.generateToken(supabaseUserId, role);
+        final Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
 
         // Look up profile for display name (optional - use request data as fallback)
         String displayName = request.getFullName();
@@ -162,11 +159,30 @@ public class AuthService {
         } catch (IllegalArgumentException ignored) {
             // supabaseUserId was not a valid UUID
         }
+        final String finalDisplayName = displayName;
+
+        // Ensure a corresponding backend user exists (appointments require users.id)
+        final String finalTokenEmail = tokenEmail;
+        User backendUser = userRepository.findByEmail(finalTokenEmail)
+                .orElseGet(() -> userRepository.save(User.builder()
+                        .fullName(finalDisplayName)
+                        .email(finalTokenEmail)
+                        .phone(request.getPhone())
+                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                        .role(requestedRole)
+                        .build()));
+
+        // Generate backend JWT using backend numeric user ID for consistency
+        String backendToken = jwtTokenProvider.generateToken(backendUser.getId(), backendUser.getRole());
 
         UserResponse userResponse = UserResponse.builder()
+                .id(backendUser.getId())
+                .supabaseId(supabaseUserId) // Set the Supabase UUID
                 .fullName(displayName)
                 .email(tokenEmail)
-                .role(role)
+                .phone(request.getPhone())
+                .role(requestedRole.name())
+                .createdAt(backendUser.getCreatedAt())
                 .build();
 
         return AuthResponse.builder()

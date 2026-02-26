@@ -75,6 +75,14 @@ class AdminApiService {
     });
     return response.json();
   }
+
+  async updateAppointmentStatus(id: number, status: string) {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/status?status=${status}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
 }
 
 export const adminApi = new AdminApiService();
