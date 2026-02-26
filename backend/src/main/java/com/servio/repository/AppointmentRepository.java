@@ -38,6 +38,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.user.id = :userId ORDER BY a.appointmentDate DESC")
         List<Appointment> findUserAppointmentsOrderByDate(@Param("userId") Long userId);
 
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.user.id = :userId ORDER BY a.createdAt DESC")
+        List<Appointment> findUserAppointmentsOrderByCreatedAt(@Param("userId") Long userId);
+
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.profile.id = :profileId ORDER BY a.appointmentDate DESC")
         List<Appointment> findProfileAppointmentsOrderByDate(@Param("profileId") UUID profileId);
 

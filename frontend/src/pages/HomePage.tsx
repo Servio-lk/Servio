@@ -63,7 +63,12 @@ export default function HomePage() {
           const appointmentsResponse = await apiService.getUserAppointments();
           if (appointmentsResponse.success && appointmentsResponse.data) {
             const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
-              .sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime())
+              .sort((a, b) => {
+                // Sort by creation time (newest booking first); fall back to appointment date
+                const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+                const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+                return tB - tA;
+              })
               .slice(0, 5)
               .map(app => ({
                 id: app.id,

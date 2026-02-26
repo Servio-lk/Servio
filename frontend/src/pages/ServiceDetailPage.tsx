@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Check, Clock, Star, Shield, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Car, Check, Clock, Star, Shield } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 
 export default function ServiceDetailPage() {
@@ -8,6 +8,7 @@ export default function ServiceDetailPage() {
   const navigate = useNavigate();
   const [selectedOil, setSelectedOil] = useState('standard');
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [vehicleName, setVehicleName] = useState('');
 
   // Service catalog with all services
   const servicesCatalog: { [key: string]: any } = {
@@ -424,18 +425,24 @@ export default function ServiceDetailPage() {
                   </div>
                 </div>
 
-                {/* Vehicle selector */}
+                {/* Vehicle input */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-black/70">Select Vehicle</label>
-                  <button className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center justify-between hover:bg-[#ffe7df] transition-colors">
-                    <span className="font-medium text-black">Toyota Premio</span>
-                    <ChevronRight className="w-5 h-5 text-black/50" />
-                  </button>
+                  <label className="text-sm font-medium text-black/70">Your Vehicle</label>
+                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3 focus-within:ring-2 focus-within:ring-[#ff5d2e]/30 transition-all">
+                    <Car className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={vehicleName}
+                      onChange={e => setVehicleName(e.target.value)}
+                      placeholder="e.g. Toyota Premio 2019"
+                      className="flex-1 text-sm font-medium text-black bg-transparent outline-none placeholder:text-black/40"
+                    />
+                  </div>
                 </div>
 
                 {/* Book button */}
                 <Link
-                  to={`/book/${service.id}?oil=${selectedOil}&notes=${encodeURIComponent(specialInstructions)}`}
+                  to={`/book/${service.id}?oil=${selectedOil}&notes=${encodeURIComponent(specialInstructions)}&vehicle=${encodeURIComponent(vehicleName)}`}
                   className="w-full bg-[#ff5d2e] text-white py-4 rounded-xl font-semibold text-center shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] hover:bg-[#e54d1e] transition-colors"
                 >
                   Book Now • LKR {totalPrice.toLocaleString()}
@@ -450,9 +457,19 @@ export default function ServiceDetailPage() {
         </div>
 
         {/* Mobile bottom CTA */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 p-4 safe-area-pb">
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 p-4 safe-area-pb flex flex-col gap-3">
+          <div className="flex items-center gap-3 px-1 py-2 bg-[#fff7f5] rounded-xl focus-within:ring-2 focus-within:ring-[#ff5d2e]/30 transition-all">
+            <Car className="w-5 h-5 text-[#ff5d2e] ml-3 flex-shrink-0" />
+            <input
+              type="text"
+              value={vehicleName}
+              onChange={e => setVehicleName(e.target.value)}
+              placeholder="Enter vehicle name (e.g. Toyota Premio)"
+              className="flex-1 text-sm font-medium text-black bg-transparent outline-none placeholder:text-black/40 pr-3"
+            />
+          </div>
           <Link
-            to={`/book/${service.id}?oil=${selectedOil}&notes=${encodeURIComponent(specialInstructions)}`}
+            to={`/book/${service.id}?oil=${selectedOil}&notes=${encodeURIComponent(specialInstructions)}&vehicle=${encodeURIComponent(vehicleName)}`}
             className="w-full bg-[#ff5d2e] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)]"
           >
             <span>Book now</span>

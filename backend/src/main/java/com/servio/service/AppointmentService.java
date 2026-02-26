@@ -180,7 +180,7 @@ public class AppointmentService {
     public List<AppointmentDto> getUserAppointments(String userId) {
         try {
             Long localUserId = Long.parseLong(userId);
-            return appointmentRepository.findUserAppointmentsOrderByDate(localUserId).stream()
+            return appointmentRepository.findUserAppointmentsOrderByCreatedAt(localUserId).stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } catch (NumberFormatException e) {
