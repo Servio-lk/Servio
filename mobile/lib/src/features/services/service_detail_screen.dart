@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'choose_a_time_screen.dart';
 
 // ─── SERVICE DETAIL DATA MODEL ───────────────────────────────────────────────
 
@@ -519,7 +520,11 @@ class _BottomButtonSection extends StatelessWidget {
           padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
           child: GestureDetector(
             onTap: () {
-              // TODO: navigate to booking flow
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChooseATimeScreen(),
+                ),
+              );
             },
             child: Container(
               height: 48,
