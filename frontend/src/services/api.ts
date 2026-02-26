@@ -33,7 +33,7 @@ interface LoginData {
 }
 
 interface User {
-  id: number;
+  id: number | string;
   fullName: string;
   email: string;
   phone: string | null;
@@ -345,12 +345,8 @@ class ApiService {
   }
 
   async getUserAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
-    const user = this.getCurrentUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await apiFetch(`${API_BASE_URL}/appointments/user/${user.id}`, {
+    // /appointments/my reads the user from the JWT on the backend — no stored ID needed
+    const response = await apiFetch(`${API_BASE_URL}/appointments/my`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });

@@ -15,9 +15,8 @@ export default function ActivityPage() {
     const fetchAppointments = async () => {
       try {
         setIsLoading(true);
-        const response = showAllAppointments 
-          ? await apiService.getAllAppointments()
-          : await apiService.getUserAppointments();
+        // Always fetch the current user's own appointments via /appointments/my
+        const response = await apiService.getUserAppointments();
         
         if (response.success && response.data) {
           // Sort by date, newest first

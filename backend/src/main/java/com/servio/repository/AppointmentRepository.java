@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
@@ -36,6 +37,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.user.id = :userId ORDER BY a.appointmentDate DESC")
         List<Appointment> findUserAppointmentsOrderByDate(@Param("userId") Long userId);
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.profile.id = :profileId ORDER BY a.appointmentDate DESC")
+        List<Appointment> findProfileAppointmentsOrderByDate(@Param("profileId") UUID profileId);
 
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.appointmentDate = :appointmentDate AND a.status NOT IN :excludeStatuses")
         List<Appointment> findByAppointmentDateAndStatusNotIn(

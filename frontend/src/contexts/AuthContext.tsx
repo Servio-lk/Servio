@@ -71,6 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       if (data.success && data.data?.token) {
         localStorage.setItem('token', data.data.token);
+        if (data.data.user) {
+          localStorage.setItem('user', JSON.stringify(data.data.user));
+        }
         console.log('[Auth] Backend token refreshed successfully');
         return true;
       }
@@ -189,6 +192,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const data = JSON.parse(text);
           if (data.success && data.data?.token) {
             localStorage.setItem('token', data.data.token);
+            if (data.data.user) {
+              localStorage.setItem('user', JSON.stringify(data.data.user));
+            }
             console.log('[Auth] Backend token stored successfully');
           } else {
             console.warn('[Auth] supabase-login did not return a token:', data);
@@ -219,6 +225,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setSupabaseUser(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setIsBackendTokenReady(false);
   };
 

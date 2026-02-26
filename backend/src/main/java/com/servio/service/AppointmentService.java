@@ -177,10 +177,35 @@ public class AppointmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppointmentDto> getUserAppointments(Long userId) {
-        return appointmentRepository.findUserAppointmentsOrderByDate(userId).stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
+    public List<AppointmentDto> getUserAppointments(String userId) {
+        try {
+            Long localUserId = Long.parseLong(userId);
+            return appointmentRepository.findUserAppointmentsOrderByDate(localUserId).stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            try {
+                UUID profileId = UUID.fromString(userId);
+                return appointmentRepository.findProfileAppointmentsOrderByDate(profileId).stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+            } catch (IllegalArgumentException ex) {
+                return List.of();
+            }
+        }
+    }
+
+    /**
+     * Returns appointments for the currently authenticated user by reading
+     * the user ID directly from the JWT — no need for the frontend to pass it.
+     */
+    @Transactional(readOnly = true)
+    public List<AppointmentDto> getMyAppointments(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return List.of();
+        }
+        String userId = authentication.getPrincipal().toString();
+        return getUserAppointments(userId);
     }
 
     @Transactional(readOnly = true)
