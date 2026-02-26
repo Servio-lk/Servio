@@ -70,12 +70,20 @@ export default function HomePage() {
                 return tB - tA;
               })
               .slice(0, 5)
-              .map(app => ({
-                id: app.id,
-                name: app.serviceType,
-                date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                vehicle: app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}` : 'Unknown Vehicle',
-              }));
+              .map(app => {
+                // Prefer linked vehicle entity; fall back to parsing notes ("Vehicle: Toyota Premio | ...")
+                let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
+                if (!vehicle && app.notes) {
+                  const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
+                  if (match) vehicle = match[1].trim();
+                }
+                return {
+                  id: app.id,
+                  name: app.serviceType,
+                  date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                  vehicle: vehicle || '',
+                };
+              });
             setRecentServices(mappedServices);
           }
         } catch (err) {
@@ -215,7 +223,9 @@ export default function HomePage() {
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-black">{service.name}</p>
-                        <p className="text-sm text-black/50">{service.vehicle} • {service.date}</p>
+                        <p className="text-sm text-black/50">
+                          {service.vehicle ? `${service.vehicle} • ` : ''}{service.date}
+                        </p>
                       </div>
                       <button className="px-4 py-2 bg-[#ff5d2e] text-white rounded-lg text-sm font-medium hover:bg-[#e54d1e] transition-colors">
                         Rebook
