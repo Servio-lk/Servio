@@ -25,6 +25,22 @@ export function AdminAppointments() {
     }
   };
 
+  const handleStatusChange = async (appointmentId: number, newStatus: string) => {
+    try {
+      await adminApi.updateAppointmentStatus(appointmentId, newStatus);
+      toast.success('Appointment status updated successfully');
+      // Update the local state
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, status: newStatus } : apt
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+      toast.error('Failed to update appointment status');
+    }
+  };
+
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -144,13 +160,19 @@ export function AdminAppointments() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full border ${getStatusColor(
+                      <select
+                        value={appointment.status}
+                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#ff5d2e] focus:ring-offset-1 transition-all ${getStatusColor(
                           appointment.status
                         )}`}
                       >
-                        {appointment.status}
-                      </span>
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-black">
                       <div className="flex items-center gap-1">
