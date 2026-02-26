@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
@@ -7,6 +7,7 @@ import { ServiceCard } from '@/components/ServiceCard';
 import { OfferCard } from '@/components/OfferCard';
 import type { ServiceItem, Offer, ServiceProvider, AppointmentDto } from '@/services/api';
 import { apiService } from '@/services/api';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 interface RecentService {
   id: number;
@@ -33,6 +34,48 @@ export default function HomePage() {
       loadHomeData();
     }
   }, [user, authLoading]);
+
+  // Refresh only the appointments list (lightweight — no full page reload)
+  const refreshAppointments = useCallback(async () => {
+    if (!user) return;
+    try {
+      setAppointmentsLoading(true);
+      const appointmentsResponse = await apiService.getUserAppointments();
+      if (appointmentsResponse.success && appointmentsResponse.data) {
+        const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
+          .sort((a, b) => {
+            const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+            const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+            return tB - tA;
+          })
+          .slice(0, 5)
+          .map(app => {
+            let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
+            if (!vehicle && app.notes) {
+              const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
+              if (match) vehicle = match[1].trim();
+            }
+            return {
+              id: app.id,
+              name: app.serviceType,
+              date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              vehicle: vehicle || '',
+            };
+          });
+        setRecentServices(mappedServices);
+      }
+    } catch (err) {
+      console.error('[HomePage] WS refresh failed:', err);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  }, [user]);
+
+  // Subscribe to real-time appointment updates
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => { refreshAppointments(); }, [refreshAppointments]),
+  );
 
   const loadHomeData = async () => {
     try {

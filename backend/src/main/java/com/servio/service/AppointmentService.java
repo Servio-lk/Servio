@@ -35,6 +35,7 @@ public class AppointmentService {
     private final ProfileRepository profileRepository;
     private final JdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
+    private final AppointmentEventPublisher eventPublisher;
 
     @Transactional
     public AppointmentDto createAppointment(AppointmentRequest request, Authentication authentication) {
@@ -108,7 +109,9 @@ public class AppointmentService {
                 .build();
 
         appointment = appointmentRepository.save(appointment);
-        return convertToDto(appointment);
+        AppointmentDto dto = convertToDto(appointment);
+        eventPublisher.publish("CREATED", dto);
+        return dto;
     }
 
     private String resolveRole(Authentication authentication) {
@@ -222,7 +225,9 @@ public class AppointmentService {
 
         appointment.setStatus(status);
         appointment = appointmentRepository.save(appointment);
-        return convertToDto(appointment);
+        AppointmentDto dto = convertToDto(appointment);
+        eventPublisher.publish("UPDATED", dto);
+        return dto;
     }
 
     @Transactional

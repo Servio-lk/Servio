@@ -47,6 +47,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Public availability endpoint — no auth needed to check free slots
                         .requestMatchers("/api/appointments/booked-slots").permitAll()
+                        // WebSocket handshake and SockJS fallback endpoints
+                        .requestMatchers("/ws/**").permitAll()
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()
