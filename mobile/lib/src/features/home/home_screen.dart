@@ -249,10 +249,10 @@ class _SuggestionsList extends StatelessWidget {
   const _SuggestionsList();
 
   static const _suggestions = [
-    {'title': 'Lube Services', 'icon': PhosphorIconsBold.drop},
-    {'title': 'Washing Packages', 'icon': PhosphorIconsBold.drop},
-    {'title': 'Exterior & Interior Detailing', 'icon': PhosphorIconsBold.paintBrush},
-    {'title': 'Engine Tune ups', 'icon': PhosphorIconsBold.engine},
+    {'title': 'Lube Services', 'iconPath': 'assets/service icons/Lube Services.png'},
+    {'title': 'Washing Packages', 'iconPath': 'assets/service icons/Washing Packages.png'},
+    {'title': 'Exterior & Interior Detailing', 'iconPath': 'assets/service icons/Exterior & Interior Detailing.png'},
+    {'title': 'Engine Tune ups', 'iconPath': 'assets/service icons/Engine Tune ups.png'},
   ];
 
   @override
@@ -265,7 +265,7 @@ class _SuggestionsList extends StatelessWidget {
           padding: EdgeInsets.only(bottom: index < _suggestions.length - 1 ? 8 : 0),
           child: _SuggestionItem(
             title: item['title'] as String,
-            icon: item['icon'] as IconData,
+            iconPath: item['iconPath'] as String,
           ),
         );
       }).toList(),
@@ -275,11 +275,11 @@ class _SuggestionsList extends StatelessWidget {
 
 class _SuggestionItem extends StatelessWidget {
   final String title;
-  final IconData icon;
+  final String iconPath;
 
   const _SuggestionItem({
     required this.title,
-    required this.icon,
+    required this.iconPath,
   });
 
   @override
@@ -300,7 +300,7 @@ class _SuggestionItem extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
-          // Icon placeholder
+          // Service icon from assets
           Container(
             width: 48,
             height: 48,
@@ -308,10 +308,15 @@ class _SuggestionItem extends StatelessWidget {
               color: const Color(0xFFFFF0EC),
               borderRadius: BorderRadius.circular(4),
             ),
-            child: PhosphorIcon(
-              icon,
-              size: 24,
-              color: const Color(0xFFFF5D2E),
+            padding: const EdgeInsets.all(8),
+            child: Image.asset(
+              iconPath,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.build,
+                size: 24,
+                color: Color(0xFFFF5D2E),
+              ),
             ),
           ),
           const SizedBox(width: 12),

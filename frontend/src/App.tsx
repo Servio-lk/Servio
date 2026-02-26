@@ -7,7 +7,6 @@ import { AdminGuard } from '@/components/AdminGuard'
 // Auth pages
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import Landing from './pages/Landing'
 import AuthCallback from './pages/AuthCallback'
 import AdminSetup from './pages/AdminSetup'
 
@@ -27,6 +26,7 @@ import { AdminServices } from './pages/admin/Services'
 import { AdminOffers } from './pages/admin/Offers'
 import { AdminAppointments } from './pages/admin/Appointments'
 import { AdminCustomers } from './pages/admin/Customers'
+import AdminCalendar from './pages/admin/AdminCalendar'
 
 import './App.css'
 
@@ -137,6 +137,7 @@ function App() {
             <Route path="offers" element={<AdminOffers />} />
             <Route path="appointments" element={<AdminAppointments />} />
             <Route path="customers" element={<AdminCustomers />} />
+            <Route path="calendar" element={<AdminCalendar />} />
           </Route>
 
           {/* Redirect old mobile routes to new unified routes */}
@@ -149,9 +150,9 @@ function App() {
           <Route path="/mobile/confirmed" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/welcome" element={<Navigate to="/login" replace />} />
 
-          {/* Landing page - shows welcome screen or continue option */}
-          <Route path="/" element={<Landing />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Default: redirect root and unknown routes to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

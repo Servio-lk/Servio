@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -60,6 +61,23 @@ public class AppointmentController {
                                 .success(true)
                                 .message("Recent appointments retrieved successfully")
                                 .data(appointments)
+                                .build());
+        }
+
+        /**
+         * Returns a list of already-booked start times (in "HH:mm" format) for the
+         * given date.
+         * Used by the customer booking UI to gray out unavailable slots.
+         * No authentication required — this is public availability info.
+         */
+        @GetMapping("/booked-slots")
+        public ResponseEntity<ApiResponse<List<String>>> getBookedSlots(
+                        @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate date) {
+                List<String> bookedSlots = appointmentService.getBookedSlotsForDate(date);
+                return ResponseEntity.ok(ApiResponse.<List<String>>builder()
+                                .success(true)
+                                .message("Booked slots retrieved successfully")
+                                .data(bookedSlots)
                                 .build());
         }
 

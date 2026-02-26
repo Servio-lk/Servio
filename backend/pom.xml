@@ -94,6 +94,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Dotenv - auto-load backend/.env into Spring environment -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+            <version>4.0.0</version>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

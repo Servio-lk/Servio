@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { supabaseAuth } from "@/services/supabaseAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "/ServioLogo.png";
 import GarageImage from "@/assets/images/Garage image.png";
+
 
 function LoginLogo() {
   return (
@@ -55,18 +57,33 @@ function PasswordInput({
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       <Input
-        type="password"
+        type={showPassword ? "text" : "password"}
         value={value}
         onChange={onChange}
         placeholder="Password"
-        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 pr-11 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
       />
+      <button
+        type="button"
+        onClick={() => setShowPassword((prev) => !prev)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+        aria-label={showPassword ? "Hide password" : "Show password"}
+      >
+        {showPassword ? (
+          <EyeOff className="w-5 h-5" />
+        ) : (
+          <Eye className="w-5 h-5" />
+        )}
+      </button>
     </div>
   );
 }
+
 
 function LoginButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
   return (

@@ -1,10 +1,11 @@
 // Dynamically determine API URL based on current host
+import { apiFetch } from './apiFetch';
 const getApiBaseUrl = () => {
   // If environment variable is set, use it
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  
+
   // For local development and mobile access, use the same host but different port
   const host = window.location.hostname;
   return `http://${host}:3001/api`;
@@ -32,13 +33,12 @@ interface LoginData {
 }
 
 interface User {
-  id: number | null;
-  supabaseId?: string | null;
+  id: number;
   fullName: string;
   email: string;
   phone: string | null;
   role: string;
-  createdAt: string | null;
+  createdAt: string;
 }
 
 interface AuthResponse {
@@ -153,32 +153,6 @@ interface AppointmentRequest {
 }
 
 class ApiService {
-  private getUserIdFromToken(): number | null {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-
-    try {
-      const parts = token.split('.');
-      if (parts.length < 2) return null;
-
-      const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const payloadJson = decodeURIComponent(
-        atob(payloadBase64)
-          .split('')
-          .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
-          .join('')
-      );
-      const payload = JSON.parse(payloadJson);
-      const subject = payload?.sub;
-
-      if (subject === undefined || subject === null) return null;
-      const numericId = Number(subject);
-      return Number.isFinite(numericId) ? numericId : null;
-    } catch {
-      return null;
-    }
-  }
-
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
@@ -196,7 +170,7 @@ class ApiService {
 
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const data = await response.json();
-    
+
     if (!response.ok) {
       throw data;
     }
@@ -213,7 +187,7 @@ class ApiService {
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
-    
+
     if (data.success && data.data?.token) {
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
@@ -230,7 +204,7 @@ class ApiService {
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
-    
+
     if (data.success && data.data?.token) {
       localStorage.setItem('token', data.data.token);
       localStorage.setItem('user', JSON.stringify(data.data.user));
@@ -240,7 +214,7 @@ class ApiService {
   }
 
   async getProfile(): Promise<ApiResponse<User>> {
-    const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
@@ -321,7 +295,7 @@ class ApiService {
 
   // Service Record Management Endpoints
   async createServiceRecord(recordData: ServiceRecordRequest): Promise<ApiResponse<ServiceRecord>> {
-    const response = await fetch(`${API_BASE_URL}/servicerecords`, {
+    const response = await apiFetch(`${API_BASE_URL}/servicerecords`, {
       method: 'POST',
       headers: this.getHeaders(true), // Requires Auth
       body: JSON.stringify(recordData),
@@ -330,7 +304,7 @@ class ApiService {
   }
 
   async getServiceRecordsByVehicle(vehicleId: number): Promise<ApiResponse<ServiceRecord[]>> {
-    const response = await fetch(`${API_BASE_URL}/vehicles/${vehicleId}/servicerecords`, {
+    const response = await apiFetch(`${API_BASE_URL}/vehicles/${vehicleId}/servicerecords`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
@@ -338,7 +312,7 @@ class ApiService {
   }
 
   async updateServiceRecord(id: number, recordData: Partial<ServiceRecordRequest>): Promise<ApiResponse<ServiceRecord>> {
-    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/servicerecords/${id}`, {
       method: 'PUT',
       headers: this.getHeaders(true),
       body: JSON.stringify(recordData),
@@ -347,7 +321,7 @@ class ApiService {
   }
 
   async deleteServiceRecord(id: number): Promise<ApiResponse<void>> {
-    const response = await fetch(`${API_BASE_URL}/servicerecords/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/servicerecords/${id}`, {
       method: 'DELETE',
       headers: this.getHeaders(true),
     });
@@ -357,18 +331,12 @@ class ApiService {
   // Appointment Management Endpoints
   async createAppointment(appointmentData: AppointmentRequest): Promise<ApiResponse<AppointmentDto>> {
     const user = this.getCurrentUser();
-    const userId = user?.id ? Number(user.id) : this.getUserIdFromToken();
-
-    if (!userId) {
-      throw new Error('User profile is not ready. Please log in again and retry.');
-    }
-
     const requestData = {
       ...appointmentData,
-      userId,
+      userId: user?.id,
     };
 
-    const response = await fetch(`${API_BASE_URL}/appointments`, {
+    const response = await apiFetch(`${API_BASE_URL}/appointments`, {
       method: 'POST',
       headers: this.getHeaders(true),
       body: JSON.stringify(requestData),
@@ -382,16 +350,7 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // Use the new /my endpoint which automatically uses authentication context
-    const response = await fetch(`${API_BASE_URL}/appointments/my`, {
-      method: 'GET',
-      headers: this.getHeaders(true),
-    });
-    return this.handleResponse<AppointmentDto[]>(response);
-  }
-
-  async getAllAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
-    const response = await fetch(`${API_BASE_URL}/appointments`, {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/user/${user.id}`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
@@ -399,7 +358,7 @@ class ApiService {
   }
 
   async getAppointmentById(id: number): Promise<ApiResponse<AppointmentDto>> {
-    const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'GET',
       headers: this.getHeaders(true),
     });
@@ -407,7 +366,7 @@ class ApiService {
   }
 
   async updateAppointmentStatus(id: number, status: string): Promise<ApiResponse<AppointmentDto>> {
-    const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/status`, {
       method: 'PATCH',
       headers: this.getHeaders(true),
       body: JSON.stringify({ status }),
@@ -421,11 +380,11 @@ class ApiService {
 }
 
 export const apiService = new ApiService();
-export type { 
-  User, 
-  SignupData, 
-  LoginData, 
-  AuthResponse, 
+export type {
+  User,
+  SignupData,
+  LoginData,
+  AuthResponse,
   ApiResponse,
   ServiceCategory,
   ServiceItem,

@@ -13,6 +13,7 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U servio_user -d servio_db"]
       interval: 10s
@@ -29,7 +30,7 @@ services:
     container_name: servio-backend
     restart: always
     environment:
-      # Supabase Database Configuration (Remote/Shared)
+      # Supabase Database Configuration
       - DB_HOST=aws-1-ap-south-1.pooler.supabase.com
       - DB_PORT=6543
       - DB_USER=postgres.szgvnurzdglflmdabjol
@@ -41,14 +42,12 @@ services:
       # CORS Configuration
       - CORS_ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://localhost:5173
       - FRONTEND_URL=http://localhost:5173,http://localhost:3000,http://localhost,http://localhost:80
-      # Supabase Configuration
-      - SUPABASE_URL=https://szgvnurzdglflmdabjol.supabase.co
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6Z3ZudXJ6ZGdsZmxtZGFiam9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4OTc3NTgsImV4cCI6MjA4NDQ3Mzc1OH0.MeQsJIGJ-Fy9GLrcHg3M1rM-eEIpmKKsRsrVYPI6U6E
     ports:
       - "3001:3001"
     networks:
       - servio-network
 
+  # Frontend (React/Vite via Nginx)
   frontend:
     build:
       context: ./frontend
@@ -61,14 +60,10 @@ services:
       - backend
     environment:
       - VITE_API_URL=http://localhost:3001/api
-      - VITE_SUPABASE_URL=https://szgvnurzdglflmdabjol.supabase.co
-      - VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN6Z3ZudXJ6ZGdsZmxtZGFiam9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4OTc3NTgsImV4cCI6MjA4NDQ3Mzc1OH0.MeQsJIGJ-Fy9GLrcHg3M1rM-eEIpmKKsRsrVYPI6U6E
+      - VITE_SUPABASE_URL=${SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     networks:
       - servio-network
-
-volumes:
-  postgres_data:
-    driver: local
 
 networks:
   servio-network:

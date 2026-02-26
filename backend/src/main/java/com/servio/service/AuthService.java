@@ -108,7 +108,9 @@ public class AuthService {
     }
 
     public AuthResponse loginWithSupabase(SupabaseLoginRequest request) {
-        // Validate the Supabase access token by hitting the Supabase Auth API
+        // Validate the Supabase access token via Supabase Auth API.
+        // The frontend always refreshes the session before calling this endpoint,
+        // so the token will always be fresh and session_not_found cannot occur.
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + request.getAccessToken());
         headers.set("apikey", supabaseAnonKey);
@@ -146,7 +148,7 @@ public class AuthService {
         // Determine role from the request (default to USER)
         final Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
 
-        // Look up profile for name (optional - use request data as fallback)
+        // Look up profile for display name (optional - use request data as fallback)
         String displayName = request.getFullName();
         try {
             UUID profileId = UUID.fromString(supabaseUserId);
@@ -155,7 +157,7 @@ public class AuthService {
                 displayName = profile.getFullName();
             }
         } catch (IllegalArgumentException ignored) {
-            // supabaseUserId was not a valid UUID - use request fullName
+            // supabaseUserId was not a valid UUID
         }
         final String finalDisplayName = displayName;
 
