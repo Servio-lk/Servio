@@ -345,14 +345,17 @@ class ApiService {
   }
 
   async getUserAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
-    const user = this.getCurrentUser();
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    const response = await apiFetch(`${API_BASE_URL}/appointments/user/${user.id}`, {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/my`, {
       method: 'GET',
       headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto[]>(response);
+  }
+
+  async getAllAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/appointments`, {
+      method: 'GET',
+      headers: this.getHeaders(false),
     });
     return this.handleResponse<AppointmentDto[]>(response);
   }

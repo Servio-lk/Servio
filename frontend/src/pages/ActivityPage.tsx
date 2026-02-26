@@ -25,10 +25,15 @@ export default function ActivityPage() {
             new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
           );
           setAppointments(sorted);
+          console.log(`Loaded ${sorted.length} appointments:`, sorted);
+        } else {
+          console.warn('No appointments found or response was not successful:', response);
+          setAppointments([]);
         }
       } catch (error: any) {
         console.error('Error fetching appointments:', error);
         toast.error('Failed to load appointments');
+        setAppointments([]);
       } finally {
         setIsLoading(false);
       }
