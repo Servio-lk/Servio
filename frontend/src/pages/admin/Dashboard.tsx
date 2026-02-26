@@ -12,6 +12,7 @@ export function AdminDashboard() {
     totalCustomers: 0,
     totalRevenue: 0,
   });
+  const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,28 +21,34 @@ export function AdminDashboard() {
 
   const loadStats = async () => {
     try {
-      const [services, offers, appointments, customers] = await Promise.all([
-        adminApi.getAllServices(),
-        adminApi.getAllOffers(),
-        adminApi.getAllAppointments(),
-        adminApi.getAllCustomers(),
-      ]);
+      const dashboardRes = await adminApi.getDashboardStats();
+      if (dashboardRes?.success) {
+        const data = dashboardRes.data;
+        setStats({
+          // The backend gives us totalCustomers, totalAppointments, totalRevenue
+          // and upcomingAppointments. We'll map them appropriately:
+          totalServices: 0, // Not provided by the new endpoint, defaulting to 0 or fetch separately
+          activeServices: 0,
+          totalOffers: 0,
+          pendingAppointments: data.totalAppointments || 0, // Reusing field for display
+          totalCustomers: data.totalCustomers || 0,
+          totalRevenue: data.totalRevenue || 0,
+        });
 
-      // Calculate sample revenue from completed appointments
-      const revenue = appointments.data
-        ?.filter((a: any) => a.status === 'COMPLETED')
-        .reduce((sum: number, a: any) => sum + (a.actualCost || 0), 0) || 0;
+        if (data.upcomingAppointments) {
+          setUpcomingAppointments(data.upcomingAppointments);
+        }
 
-      setStats({
-        totalServices: services.data?.length || 0,
-        activeServices: services.data?.filter((s: any) => s.isActive).length || 0,
-        totalOffers: offers.data?.length || 0,
-        pendingAppointments: appointments.data?.filter((a: any) => a.status === 'PENDING').length || 0,
-        totalCustomers: customers.data?.length || 0,
-        totalRevenue: revenue,
-      });
+        // Let's still fetch active services to keep the "Active Services" card valid
+        const services = await adminApi.getAllServices();
+        setStats(prev => ({
+          ...prev,
+          totalServices: services?.data?.length || 0,
+          activeServices: services?.data?.filter((s: any) => s.isActive).length || 0
+        }));
+      }
     } catch (error) {
-      console.error('Failed to load stats:', error);
+      console.error('Failed to load dashboard stats:', error);
     } finally {
       setLoading(false);
     }
@@ -162,38 +169,33 @@ export function AdminDashboard() {
           </div>
 
           <div className="flex flex-col gap-4">
-            {/* Placeholder for activity items - normally mapped from data */}
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                JD
+            {upcomingAppointments && upcomingAppointments.length > 0 ? (
+              upcomingAppointments.map((appt, i) => (
+                <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
+                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                    {(appt.userName || 'U').substring(0, 2)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-black">
+                      {appt.userName || 'Unknown'} booked <span className="font-bold">{appt.serviceType}</span>
+                    </p>
+                    <p className="text-xs text-black/50">
+                      {new Date(appt.appointmentDate).toLocaleString()} - {appt.vehicleMake} {appt.vehicleModel}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${appt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
+                      appt.status === 'CONFIRMED' ? 'bg-blue-100 text-blue-700' :
+                        'bg-green-100 text-green-700'
+                    }`}>
+                    {appt.status}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-black/50 text-sm">
+                No upcoming appointments found.
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-black">John Doe booked a <span className="font-bold">Full Service</span></p>
-                <p className="text-xs text-black/50">2 minutes ago</p>
-              </div>
-              <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">Pending</span>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 font-bold text-xs">
-                JS
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-black">Jane Smith completed payment</p>
-                <p className="text-xs text-black/50">1 hour ago</p>
-              </div>
-              <span className="text-xs font-bold text-black">Rs. 5,000</span>
-            </div>
-
-            <div className="flex items-center gap-4 p-4 rounded-lg bg-gray-50/50 hover:bg-gray-50 transition-colors">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs">
-                NS
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-black">New Service Added: <span className="font-bold">Hybrid Battery Check</span></p>
-                <p className="text-xs text-black/50">Yesterday</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 

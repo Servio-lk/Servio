@@ -39,6 +39,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
+                        // Public availability endpoint — no auth needed to check free slots
+                        .requestMatchers("/api/appointments/booked-slots").permitAll()
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()
