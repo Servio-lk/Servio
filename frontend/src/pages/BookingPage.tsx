@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,24 +27,27 @@ export default function BookingPage() {
   const selectedOil = searchParams.get('oil') || 'standard';
   const specialInstructions = searchParams.get('notes') || '';
 
-  const servicesCatalog: { [key: string]: any } = {
-    '1': { id: '1', name: 'Washing Packages', basePrice: 500 },
-    '2': { id: '2', name: 'Lube Services', basePrice: 1500 },
-    '3': { id: '3', name: 'Exterior & Interior Detailing', basePrice: 3000 },
-    '4': { id: '4', name: 'Engine Tune ups', basePrice: 2500 },
-    '5': { id: '5', name: 'Inspection Reports', basePrice: 1000 },
-    '6': { id: '6', name: 'AC Services', basePrice: 1200 },
-    '7': { id: '7', name: 'Tire Services', basePrice: 800 },
-    '8': { id: '8', name: 'Wheel Alignment', basePrice: 1500 },
-    '9': { id: '9', name: 'Repair & Modifications', basePrice: 2000 },
-    '10': { id: '10', name: 'Battery Services', basePrice: 500 },
-    '11': { id: '11', name: 'Nano Coating Packages', basePrice: 15000 },
-    '12': { id: '12', name: 'Nano Coating Treatments', basePrice: 8000 },
-    '13': { id: '13', name: 'Insurance Claims', basePrice: 0 },
-    '14': { id: '14', name: 'Hybrid Services', basePrice: 3500 },
-  };
+  const [currentService, setCurrentService] = useState<any>(null);
+  const [isServiceLoading, setIsServiceLoading] = useState(true);
 
-  const currentService = servicesCatalog[serviceId || '2'] || servicesCatalog['2'];
+  useEffect(() => {
+    const fetchService = async () => {
+      try {
+        setIsServiceLoading(true);
+        // Fallback to ID 2 (Lube Services) if none provided
+        const idToFetch = serviceId ? parseInt(serviceId) : 2;
+        const response = await apiService.getServiceById(idToFetch);
+        if (response.success && response.data) {
+          setCurrentService(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load service:', error);
+      } finally {
+        setIsServiceLoading(false);
+      }
+    };
+    fetchService();
+  }, [serviceId]);
 
   const generateDates = () => {
     const today = new Date();
@@ -134,13 +137,13 @@ export default function BookingPage() {
     'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
   };
 
-  const isLubeService = serviceId === '2';
+  const isLubeService = currentService?.name === 'Lube Services' || serviceId === '2';
   const orderDetails = {
-    service: currentService.name,
-    serviceFee: currentService.basePrice,
+    service: currentService?.name || '',
+    serviceFee: currentService?.basePrice || 0,
     oilType: isLubeService ? (oilOptions[selectedOil]?.name || 'Standard Oil') : null,
     oilPrice: isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0,
-    total: currentService.basePrice + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
+    total: (currentService?.basePrice || 0) + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
   };
 
   const convertToDateTime = (dateObj: Date, timeSlot: string): string => {
@@ -352,6 +355,34 @@ export default function BookingPage() {
       </div>
     </div>
   );
+
+  if (isServiceLoading) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="w-10 h-10 animate-spin text-[#ff5d2e] mb-4" />
+            <p className="text-black/60 font-medium text-sm">Loading service details...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!currentService) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center text-center p-4">
+            <p className="text-xl font-semibold text-black mb-2">Service not found</p>
+            <button onClick={() => navigate('/services')} className="text-[#ff5d2e] hover:underline">
+              Return to Services
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout showNav={false}>

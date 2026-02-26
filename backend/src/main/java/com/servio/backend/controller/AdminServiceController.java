@@ -3,6 +3,7 @@ package com.servio.backend.controller;
 import com.servio.backend.entity.Service;
 import com.servio.backend.service.AdminServiceService;
 import com.servio.dto.ApiResponse;
+import com.servio.dto.admin.AdminServiceDto;
 import com.servio.dto.admin.ServiceRequest;
 import com.servio.dto.admin.ServiceToggleRequest;
 import jakarta.validation.Valid;
@@ -23,8 +24,8 @@ public class AdminServiceController {
     private final AdminServiceService adminServiceService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Service>>> getAllServices() {
-        List<Service> services = adminServiceService.getAllServices();
+    public ResponseEntity<ApiResponse<List<AdminServiceDto>>> getAllServices() {
+        List<AdminServiceDto> services = adminServiceService.getAllServices();
         return ResponseEntity.ok(ApiResponse.success("Services retrieved successfully", services));
     }
 

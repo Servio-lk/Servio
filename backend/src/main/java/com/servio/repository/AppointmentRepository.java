@@ -48,4 +48,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         List<Appointment> findBookedSlotsForDate(
                         @Param("startOfDay") LocalDateTime startOfDay,
                         @Param("endOfDay") LocalDateTime endOfDay);
+
+        @Query("SELECT SUM(a.actualCost) FROM Appointment a WHERE a.status = 'COMPLETED'")
+        java.math.BigDecimal calculateTotalRevenue();
+
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.appointmentDate >= CURRENT_TIMESTAMP AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC")
+        List<Appointment> findUpcomingAppointments();
 }
