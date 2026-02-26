@@ -1,12 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../bookings/appointments_repository.dart';
 import '../bookings/checkout_screen.dart';
 
 // ─── CHOOSE A TIME SCREEN ────────────────────────────────────────────────────
 
 class ChooseATimeScreen extends StatefulWidget {
-  const ChooseATimeScreen({super.key});
+  final String serviceType;
+  final String estimatedCostStr;
+
+  const ChooseATimeScreen({
+    super.key,
+    required this.serviceType,
+    required this.estimatedCostStr,
+  });
 
   @override
   State<ChooseATimeScreen> createState() => _ChooseATimeScreenState();
@@ -16,15 +24,102 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
   int _selectedDateIndex = 0;
   int _selectedTimeIndex = 0;
 
-  static const List<_DateOption> _dateOptions = [
-    _DateOption(label: 'Tomorrow', date: 'Oct 26'),
-    _DateOption(label: 'Mon', date: 'Oct 27'),
-    _DateOption(label: 'Tue', date: 'Oct 28'),
-    _DateOption(label: 'Wed', date: 'Oct 29'),
-    _DateOption(label: 'Thu', date: 'Oct 30'),
-    _DateOption(label: 'Fri', date: 'Oct 31'),
-    _DateOption(label: 'Sat', date: 'Nov 1'),
-  ];
+  final AppointmentsRepository _repository = AppointmentsRepository();
+  List<String> _bookedSlots = [];
+  bool _isLoadingSlots = false;
+
+  late final List<_DateOption> _dateOptions;
+
+  @override
+  void initState() {
+    super.initState();
+    _dateOptions = _generateDateOptions();
+    _fetchBookedSlotsForDate();
+  }
+
+  List<_DateOption> _generateDateOptions() {
+    final today = DateTime.now();
+    final List<String> daysOfWeek = [
+      'Sun',
+      'Mon',
+      'Tue',
+      'Wed',
+      'Thu',
+      'Fri',
+      'Sat',
+    ];
+    final List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return List.generate(7, (i) {
+      final date = today.add(Duration(days: i + 1));
+      final label = i == 0 ? 'Tomorrow' : daysOfWeek[date.weekday % 7];
+      final displayDate = '${months[date.month - 1]} ${date.day}';
+      return _DateOption(label: label, date: displayDate, fullDate: date);
+    });
+  }
+
+  Future<void> _fetchBookedSlotsForDate() async {
+    if (!mounted) return;
+    setState(() => _isLoadingSlots = true);
+    try {
+      final date = _dateOptions[_selectedDateIndex].fullDate;
+      final slots = await _repository.getBookedSlotsForDate(
+        date,
+        widget.serviceType,
+      );
+      if (!mounted) return;
+      setState(() {
+        _bookedSlots = slots;
+        // If the currently selected time just became booked, pick the first free slot
+        if (_isSlotBooked(_timeSlots[_selectedTimeIndex])) {
+          final firstFreeIndex = _timeSlots.indexWhere(
+            (s) => !_isSlotBooked(s),
+          );
+          if (firstFreeIndex != -1) {
+            _selectedTimeIndex = firstFreeIndex;
+          }
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoadingSlots = false);
+      }
+    }
+  }
+
+  String _slotToHHMM(String slot) {
+    final startTime = slot.split(' - ')[0]; // "9:00 AM"
+    final parts = startTime.split(' ');
+    final timeParts = parts[0].split(':');
+    int h = int.parse(timeParts[0]);
+    final int m = int.parse(timeParts[1]);
+    final String period = parts[1];
+
+    if (period == 'PM' && h != 12) {
+      h += 12;
+    } else if (period == 'AM' && h == 12) {
+      h = 0;
+    }
+
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
+  bool _isSlotBooked(String slot) {
+    return _bookedSlots.contains(_slotToHHMM(slot));
+  }
 
   static const List<String> _timeSlots = [
     '9:00 AM - 9:30 AM',
@@ -60,10 +155,7 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFF7F5),
-              Color(0xFFFBFBFB),
-            ],
+            colors: [Color(0xFFFFF7F5), Color(0xFFFBFBFB)],
           ),
         ),
         child: SafeArea(
@@ -84,7 +176,10 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
                         dateOptions: _dateOptions,
                         selectedIndex: _selectedDateIndex,
                         onDateSelected: (index) {
-                          setState(() => _selectedDateIndex = index);
+                          setState(() {
+                            _selectedDateIndex = index;
+                            _fetchBookedSlotsForDate();
+                          });
                         },
                       ),
 
@@ -97,13 +192,21 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
 
                       // Time Slots (scrollable)
                       Expanded(
-                        child: _TimeSlotList(
-                          timeSlots: _timeSlots,
-                          selectedIndex: _selectedTimeIndex,
-                          onTimeSelected: (index) {
-                            setState(() => _selectedTimeIndex = index);
-                          },
-                        ),
+                        child: _isLoadingSlots
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFFF5D2E),
+                                ),
+                              )
+                            : _TimeSlotList(
+                                timeSlots: _timeSlots,
+                                selectedIndex: _selectedTimeIndex,
+                                bookedSlots: _bookedSlots,
+                                isSlotBooked: _isSlotBooked,
+                                onTimeSelected: (index) {
+                                  setState(() => _selectedTimeIndex = index);
+                                },
+                              ),
                       ),
                     ],
                   ),
@@ -111,7 +214,12 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
               ),
 
               // ── Bottom Buttons ──
-              const _BottomButtonSection(),
+              _BottomButtonSection(
+                selectedDate: _dateOptions[_selectedDateIndex].fullDate,
+                selectedTime: _timeSlots[_selectedTimeIndex],
+                serviceType: widget.serviceType,
+                estimatedCostStr: widget.estimatedCostStr,
+              ),
             ],
           ),
         ),
@@ -125,8 +233,13 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
 class _DateOption {
   final String label;
   final String date;
+  final DateTime fullDate;
 
-  const _DateOption({required this.label, required this.date});
+  const _DateOption({
+    required this.label,
+    required this.date,
+    required this.fullDate,
+  });
 }
 
 // ─── HEADER SECTION ──────────────────────────────────────────────────────────
@@ -300,11 +413,15 @@ class _SectionDivider extends StatelessWidget {
 class _TimeSlotList extends StatelessWidget {
   final List<String> timeSlots;
   final int selectedIndex;
+  final List<String> bookedSlots;
+  final bool Function(String) isSlotBooked;
   final ValueChanged<int> onTimeSelected;
 
   const _TimeSlotList({
     required this.timeSlots,
     required this.selectedIndex,
+    required this.bookedSlots,
+    required this.isSlotBooked,
     required this.onTimeSelected,
   });
 
@@ -323,10 +440,12 @@ class _TimeSlotList extends StatelessWidget {
               return _buildItemDivider();
             }
             final slotIndex = index ~/ 2;
+            final isBooked = isSlotBooked(timeSlots[slotIndex]);
             return _TimeSlotItem(
               timeLabel: timeSlots[slotIndex],
-              isSelected: selectedIndex == slotIndex,
-              onTap: () => onTimeSelected(slotIndex),
+              isSelected: selectedIndex == slotIndex && !isBooked,
+              isBooked: isBooked,
+              onTap: isBooked ? null : () => onTimeSelected(slotIndex),
             );
           },
         ),
@@ -353,11 +472,13 @@ class _TimeSlotList extends StatelessWidget {
 class _TimeSlotItem extends StatelessWidget {
   final String timeLabel;
   final bool isSelected;
-  final VoidCallback onTap;
+  final bool isBooked;
+  final VoidCallback? onTap;
 
   const _TimeSlotItem({
     required this.timeLabel,
     required this.isSelected,
+    required this.isBooked,
     required this.onTap,
   });
 
@@ -367,15 +488,9 @@ class _TimeSlotItem extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        decoration: const BoxDecoration(
-        ),
+        decoration: const BoxDecoration(),
         child: Padding(
-          padding: const EdgeInsets.only(
-            left: 12,
-            right: 4,
-            top: 4,
-            bottom: 4,
-          ),
+          padding: const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
           child: Row(
             children: [
               // Time label
@@ -385,27 +500,43 @@ class _TimeSlotItem extends StatelessWidget {
                   style: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black,
+                    color: isBooked ? Colors.black38 : Colors.black,
+                    decoration: isBooked ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              // Radio button (44x44 tap target)
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: Center(
-                  child: PhosphorIcon(
-                    isSelected
-                        ? PhosphorIconsFill.radioButton
-                        : PhosphorIconsRegular.circle,
-                    size: 24,
-                    color: isSelected
-                        ? const Color(0xFFFF5D2E)
-                        : Colors.black,
+              // Radio button or booked text
+              if (isBooked)
+                SizedBox(
+                  height: 44,
+                  child: Center(
+                    child: Text(
+                      'Booked',
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black38,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: PhosphorIcon(
+                      isSelected
+                          ? PhosphorIconsFill.radioButton
+                          : PhosphorIconsRegular.circle,
+                      size: 24,
+                      color: isSelected
+                          ? const Color(0xFFFF5D2E)
+                          : Colors.black,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -417,7 +548,17 @@ class _TimeSlotItem extends StatelessWidget {
 // ─── BOTTOM BUTTON SECTION ───────────────────────────────────────────────────
 
 class _BottomButtonSection extends StatelessWidget {
-  const _BottomButtonSection();
+  final DateTime selectedDate;
+  final String selectedTime;
+  final String serviceType;
+  final String estimatedCostStr;
+
+  const _BottomButtonSection({
+    required this.selectedDate,
+    required this.selectedTime,
+    required this.serviceType,
+    required this.estimatedCostStr,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +573,12 @@ class _BottomButtonSection extends StatelessWidget {
               onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => CheckoutScreen(),
+                    builder: (_) => CheckoutScreen(
+                      selectedDate: selectedDate,
+                      selectedTime: selectedTime,
+                      serviceType: serviceType,
+                      estimatedCostStr: estimatedCostStr,
+                    ),
                   ),
                 );
               },
@@ -472,10 +618,7 @@ class _BottomButtonSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFE7DF),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Center(
@@ -496,4 +639,3 @@ class _BottomButtonSection extends StatelessWidget {
     );
   }
 }
-

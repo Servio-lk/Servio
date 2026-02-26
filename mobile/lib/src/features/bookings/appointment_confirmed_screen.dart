@@ -6,7 +6,16 @@ import 'package:qr_flutter/qr_flutter.dart';
 // ─── APPOINTMENT CONFIRMED SCREEN ────────────────────────────────────────────
 
 class AppointmentConfirmedScreen extends StatelessWidget {
-  const AppointmentConfirmedScreen({super.key});
+  final String appointmentId;
+  final String serviceType;
+  final String formattedDate;
+
+  const AppointmentConfirmedScreen({
+    super.key,
+    required this.appointmentId,
+    required this.serviceType,
+    required this.formattedDate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,10 +25,7 @@ class AppointmentConfirmedScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFF7F5),
-              Color(0xFFFBFBFB),
-            ],
+            colors: [Color(0xFFFFF7F5), Color(0xFFFBFBFB)],
           ),
         ),
         child: SafeArea(
@@ -30,9 +36,13 @@ class AppointmentConfirmedScreen extends StatelessWidget {
               const _HeaderSection(),
 
               // ── Scrollable Content ──
-              const Expanded(
+              Expanded(
                 child: SingleChildScrollView(
-                  child: _AppointmentCard(),
+                  child: _AppointmentCard(
+                    appointmentId: appointmentId,
+                    serviceType: serviceType,
+                    formattedDate: formattedDate,
+                  ),
                 ),
               ),
 
@@ -95,7 +105,15 @@ class _HeaderSection extends StatelessWidget {
 // ─── APPOINTMENT CARD ────────────────────────────────────────────────────────
 
 class _AppointmentCard extends StatelessWidget {
-  const _AppointmentCard();
+  final String appointmentId;
+  final String serviceType;
+  final String formattedDate;
+
+  const _AppointmentCard({
+    required this.appointmentId,
+    required this.serviceType,
+    required this.formattedDate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -105,17 +123,17 @@ class _AppointmentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── QR Code Container ──
-          const _QrCodeSection(),
+          _QrCodeSection(appointmentId: appointmentId),
 
           const SizedBox(height: 24),
 
           // ── Service Info ──
-          const _ServiceInfoSection(),
+          _ServiceInfoSection(serviceType: serviceType),
 
           const SizedBox(height: 24),
 
           // ── Date & Time Card ──
-          const _DateTimeCard(),
+          _DateTimeCard(formattedDate: formattedDate),
 
           const SizedBox(height: 24),
 
@@ -130,7 +148,9 @@ class _AppointmentCard extends StatelessWidget {
 // ─── QR CODE SECTION ─────────────────────────────────────────────────────────
 
 class _QrCodeSection extends StatelessWidget {
-  const _QrCodeSection();
+  final String appointmentId;
+
+  const _QrCodeSection({required this.appointmentId});
 
   @override
   Widget build(BuildContext context) {
@@ -182,7 +202,7 @@ class _QrCodeSection extends StatelessWidget {
                     ),
                   ),
                   child: Text(
-                    '#SL-GOV-2025-00483',
+                    '#$appointmentId',
                     style: GoogleFonts.instrumentSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -197,7 +217,7 @@ class _QrCodeSection extends StatelessWidget {
 
           // QR Code (256x256)
           QrImageView(
-            data: 'SL-GOV-2025-00483',
+            data: 'SERVIO-APT-$appointmentId',
             version: QrVersions.auto,
             size: 256,
             backgroundColor: Colors.white,
@@ -219,7 +239,9 @@ class _QrCodeSection extends StatelessWidget {
 // ─── SERVICE INFO SECTION ────────────────────────────────────────────────────
 
 class _ServiceInfoSection extends StatelessWidget {
-  const _ServiceInfoSection();
+  final String serviceType;
+
+  const _ServiceInfoSection({required this.serviceType});
 
   @override
   Widget build(BuildContext context) {
@@ -246,7 +268,7 @@ class _ServiceInfoSection extends StatelessWidget {
               children: [
                 // Service name (16px Medium, black, tracking 0.16)
                 Text(
-                  'Lubricant Service',
+                  serviceType,
                   style: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -279,7 +301,9 @@ class _ServiceInfoSection extends StatelessWidget {
 // ─── DATE & TIME CARD ────────────────────────────────────────────────────────
 
 class _DateTimeCard extends StatelessWidget {
-  const _DateTimeCard();
+  final String formattedDate;
+
+  const _DateTimeCard({required this.formattedDate});
 
   @override
   Widget build(BuildContext context) {
@@ -324,7 +348,7 @@ class _DateTimeCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 // Date/time value (16px Medium, black, tracking 0.16, leading 20)
                 Text(
-                  'Oct 26 · 9:00 AM - 9:30 AM',
+                  formattedDate,
                   style: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
@@ -383,26 +407,18 @@ class _InfoItem extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _InfoItem({
-    required this.icon,
-    required this.label,
-  });
+  const _InfoItem({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-      ),
+      decoration: const BoxDecoration(),
       child: Padding(
         padding: const EdgeInsets.all(4),
         child: Row(
           children: [
             // Icon (24x24)
-            PhosphorIcon(
-              icon,
-              size: 24,
-              color: Colors.black,
-            ),
+            PhosphorIcon(icon, size: 24, color: Colors.black),
             const SizedBox(width: 12),
             // Label (flex-1, 14px Medium, #4B4B4B)
             Expanded(
@@ -442,10 +458,7 @@ class _BottomButtonSection extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: const Color(0xFFFFE7DF),
-                width: 1,
-              ),
+              border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
             ),
             padding: const EdgeInsets.all(12),
             child: Center(
@@ -464,4 +477,3 @@ class _BottomButtonSection extends StatelessWidget {
     );
   }
 }
-

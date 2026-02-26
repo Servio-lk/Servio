@@ -2,11 +2,106 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'appointment_confirmed_screen.dart';
+import 'appointments_repository.dart';
 
 // ─── CHECKOUT SCREEN ─────────────────────────────────────────────────────────
 
-class CheckoutScreen extends StatelessWidget {
-  const CheckoutScreen({super.key});
+class CheckoutScreen extends StatefulWidget {
+  final DateTime selectedDate;
+  final String selectedTime;
+  final String serviceType;
+  final String estimatedCostStr;
+
+  const CheckoutScreen({
+    super.key,
+    required this.selectedDate,
+    required this.selectedTime,
+    required this.serviceType,
+    required this.estimatedCostStr,
+  });
+
+  @override
+  State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutScreenState extends State<CheckoutScreen> {
+  bool _isBooking = false;
+  final AppointmentsRepository _repository = AppointmentsRepository();
+
+  Future<void> _handleBook() async {
+    setState(() => _isBooking = true);
+    try {
+      final startTime = widget.selectedTime.split(' - ')[0]; // "9:00 AM"
+      final parts = startTime.split(' ');
+      final timeParts = parts[0].split(':');
+      int h = int.parse(timeParts[0]);
+      final int m = int.parse(timeParts[1]);
+      final String period = parts[1];
+
+      if (period == 'PM' && h != 12) {
+        h += 12;
+      } else if (period == 'AM' && h == 12) {
+        h = 0;
+      }
+
+      final dt = widget.selectedDate;
+      final appointmentDate = DateTime(dt.year, dt.month, dt.day, h, m);
+
+      // Parse numeric cost from string (e.g., 'LKR 5,500.00' -> 5500.0)
+      final withoutDecimal = widget.estimatedCostStr.contains('.')
+          ? widget.estimatedCostStr.substring(
+              0,
+              widget.estimatedCostStr.lastIndexOf('.'),
+            )
+          : widget.estimatedCostStr;
+      final digitsOnly = withoutDecimal.replaceAll(RegExp(r'[^0-9]'), '');
+      final parsedCost = digitsOnly.isNotEmpty ? double.parse(digitsOnly) : 0.0;
+
+      final appointment = await _repository.createAppointment(
+        serviceType: widget.serviceType,
+        appointmentDate: appointmentDate,
+        estimatedCost: parsedCost,
+      );
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AppointmentConfirmedScreen(
+            appointmentId: appointment.id.toString(),
+            serviceType: widget.serviceType,
+            formattedDate: '${_formatDate(dt)} · ${widget.selectedTime}',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to book: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _isBooking = false);
+      }
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final List<String> months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,10 +111,7 @@ class CheckoutScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFFFF7F5),
-              Color(0xFFFBFBFB),
-            ],
+            colors: [Color(0xFFFFF7F5), Color(0xFFFBFBFB)],
           ),
         ),
         child: SafeArea(
@@ -38,14 +130,21 @@ class CheckoutScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Order Summary
-                        const _OrderSummarySection(),
+                        _OrderSummarySection(
+                          selectedDate: widget.selectedDate,
+                          selectedTime: widget.selectedTime,
+                          formattedDate: _formatDate(widget.selectedDate),
+                          serviceType: widget.serviceType,
+                        ),
 
                         const SizedBox(height: 16),
                         const _SectionDivider(),
                         const SizedBox(height: 16),
 
                         // Price Breakdown
-                        const _PriceBreakdownSection(),
+                        _PriceBreakdownSection(
+                          estimatedCostStr: widget.estimatedCostStr,
+                        ),
 
                         const SizedBox(height: 16),
                         const _SectionDivider(),
@@ -67,7 +166,7 @@ class CheckoutScreen extends StatelessWidget {
               ),
 
               // ── Bottom Buttons ──
-              const _BottomButtonSection(),
+              _BottomButtonSection(onBook: _handleBook, isBooking: _isBooking),
             ],
           ),
         ),
@@ -125,7 +224,17 @@ class _HeaderSection extends StatelessWidget {
 // ─── ORDER SUMMARY SECTION ───────────────────────────────────────────────────
 
 class _OrderSummarySection extends StatelessWidget {
-  const _OrderSummarySection();
+  final DateTime selectedDate;
+  final String selectedTime;
+  final String formattedDate;
+  final String serviceType;
+
+  const _OrderSummarySection({
+    required this.selectedDate,
+    required this.selectedTime,
+    required this.formattedDate,
+    required this.serviceType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,10 +267,7 @@ class _OrderSummarySection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF7F5),
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(
-                    color: const Color(0xFFFFE7DF),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
                 ),
                 child: const Center(
                   child: PhosphorIcon(
@@ -172,14 +278,13 @@ class _OrderSummarySection extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Lubricant Service',
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF4B4B4B),
-                  ),
+              // Service Title
+              Text(
+                serviceType,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF4B4B4B),
                 ),
               ),
             ],
@@ -195,7 +300,7 @@ class _OrderSummarySection extends StatelessWidget {
                 child: Row(
                   children: [
                     Text(
-                      'Tomorrow (Oct 26)',
+                      formattedDate,
                       style: GoogleFonts.instrumentSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -214,7 +319,7 @@ class _OrderSummarySection extends StatelessWidget {
                     const SizedBox(width: 4),
                     Flexible(
                       child: Text(
-                        '9:00 AM - 9:30 AM',
+                        selectedTime,
                         style: GoogleFonts.instrumentSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -271,7 +376,8 @@ class _SectionDivider extends StatelessWidget {
 // ─── PRICE BREAKDOWN SECTION ─────────────────────────────────────────────────
 
 class _PriceBreakdownSection extends StatelessWidget {
-  const _PriceBreakdownSection();
+  final String estimatedCostStr;
+  const _PriceBreakdownSection({required this.estimatedCostStr});
 
   @override
   Widget build(BuildContext context) {
@@ -342,8 +448,7 @@ class _PriceLineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-      ),
+      decoration: const BoxDecoration(),
       child: Padding(
         padding: const EdgeInsets.all(4),
         child: Row(
@@ -354,8 +459,7 @@ class _PriceLineItem extends StatelessWidget {
                 label,
                 style: GoogleFonts.instrumentSans(
                   fontSize: 14,
-                  fontWeight:
-                      isBoldLabel ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isBoldLabel ? FontWeight.w700 : FontWeight.w500,
                   color: const Color(0xFF4B4B4B),
                 ),
               ),
@@ -432,11 +536,7 @@ class _InfoItem extends StatelessWidget {
           child: Row(
             children: [
               // Icon (24x24)
-              PhosphorIcon(
-                icon,
-                size: 24,
-                color: Colors.black,
-              ),
+              PhosphorIcon(icon, size: 24, color: Colors.black),
               const SizedBox(width: 12),
               // Label (flex-1)
               Expanded(
@@ -479,8 +579,7 @@ class _PaymentMethodSection extends StatelessWidget {
       },
       behavior: HitTestBehavior.opaque,
       child: Container(
-        decoration: const BoxDecoration(
-        ),
+        decoration: const BoxDecoration(),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           child: Row(
@@ -523,7 +622,10 @@ class _PaymentMethodSection extends StatelessWidget {
 // ─── BOTTOM BUTTON SECTION ───────────────────────────────────────────────────
 
 class _BottomButtonSection extends StatelessWidget {
-  const _BottomButtonSection();
+  final VoidCallback onBook;
+  final bool isBooking;
+
+  const _BottomButtonSection({required this.onBook, required this.isBooking});
 
   @override
   Widget build(BuildContext context) {
@@ -535,18 +637,12 @@ class _BottomButtonSection extends StatelessWidget {
           children: [
             // Book button
             GestureDetector(
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => AppointmentConfirmedScreen(),
-                  ),
-                );
-              },
+              onTap: isBooking ? null : onBook,
               child: Container(
                 height: 48,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF5D2E),
+                  color: isBooking ? Colors.grey : const Color(0xFFFF5D2E),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(color: Colors.white, width: 1),
                   boxShadow: const [
@@ -558,14 +654,23 @@ class _BottomButtonSection extends StatelessWidget {
                   ],
                 ),
                 child: Center(
-                  child: Text(
-                    'Book',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
+                  child: isBooking
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          'Book',
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.white,
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -578,10 +683,7 @@ class _BottomButtonSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFE7DF),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
                 ),
                 padding: const EdgeInsets.all(12),
                 child: Center(
@@ -602,4 +704,3 @@ class _BottomButtonSection extends StatelessWidget {
     );
   }
 }
-

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -7,14 +8,15 @@ import '../features/services/services_screen.dart';
 import '../features/bookings/activity_screen.dart';
 import '../features/profile/profile_screen.dart';
 
-class MainNavigationScreen extends StatefulWidget {
+class MainNavigationScreen extends ConsumerStatefulWidget {
   const MainNavigationScreen({super.key});
 
   @override
-  State<MainNavigationScreen> createState() => _MainNavigationScreenState();
+  ConsumerState<MainNavigationScreen> createState() =>
+      _MainNavigationScreenState();
 }
 
-class _MainNavigationScreenState extends State<MainNavigationScreen> {
+class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   int _selectedIndex = 0;
 
   final List<Widget> _screens = const [
@@ -27,10 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _screens),
       bottomNavigationBar: _buildCustomTabBar(),
     );
   }
@@ -40,10 +39,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(
-          top: BorderSide(
-            color: Color.fromRGBO(0, 0, 0, 0.2),
-            width: 0.4,
-          ),
+          top: BorderSide(color: Color.fromRGBO(0, 0, 0, 0.2), width: 0.4),
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 24),
