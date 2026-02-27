@@ -33,7 +33,7 @@ interface LoginData {
 }
 
 interface User {
-  id: number;
+  id: number | string;
   fullName: string;
   email: string;
   phone: string | null;
@@ -345,15 +345,8 @@ class ApiService {
   }
 
   async getUserAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
+    // /appointments/my reads the user from the JWT on the backend — no stored ID needed
     const response = await apiFetch(`${API_BASE_URL}/appointments/my`, {
-      method: 'GET',
-      headers: this.getHeaders(true),
-    });
-    return this.handleResponse<AppointmentDto[]>(response);
-  }
-
-  async getAllAppointments(): Promise<ApiResponse<AppointmentDto[]>> {
-    const response = await apiFetch(`${API_BASE_URL}/appointments`, {
       method: 'GET',
       headers: this.getHeaders(false),
     });

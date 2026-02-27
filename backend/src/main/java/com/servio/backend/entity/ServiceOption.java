@@ -1,5 +1,6 @@
 package com.servio.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class ServiceOption {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false)
+    @JsonIgnoreProperties("options")
     private Service service;
 
     @Column(nullable = false, length = 200)

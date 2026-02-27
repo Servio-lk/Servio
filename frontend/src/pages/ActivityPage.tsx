@@ -1,46 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 import type { AppointmentDto } from '@/services/api';
 import { toast } from 'sonner';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function ActivityPage() {
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAllAppointments, setShowAllAppointments] = useState(false);
 
-  useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setIsLoading(true);
-        const response = showAllAppointments 
-          ? await apiService.getAllAppointments()
-          : await apiService.getUserAppointments();
-        
-        if (response.success && response.data) {
-          // Sort by date, newest first
-          const sorted = response.data.sort((a, b) => 
-            new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
-          );
-          setAppointments(sorted);
-          console.log(`Loaded ${sorted.length} appointments:`, sorted);
-        } else {
-          console.warn('No appointments found or response was not successful:', response);
-          setAppointments([]);
-        }
-      } catch (error: any) {
-        console.error('Error fetching appointments:', error);
-        toast.error('Failed to load appointments');
-        setAppointments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      // Always fetch the current user's own appointments via /appointments/my
+      const response = await apiService.getUserAppointments();
 
+      if (response.success && response.data) {
+        // Sort by creation time (newest booking first)
+        const sorted = response.data.sort((a, b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+          return tB - tA;
+        });
+        setAppointments(sorted);
+      }
+    } catch (error: any) {
+      console.error('Error fetching appointments:', error);
+      toast.error('Failed to load appointments');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
     fetchAppointments();
-  }, [showAllAppointments]);
+  }, [fetchAppointments, showAllAppointments]);
+
+  // Subscribe to real-time appointment updates
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => { fetchAppointments(); }, [fetchAppointments]),
+  );
 
   // Separate upcoming and past appointments
   const now = new Date();

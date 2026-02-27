@@ -161,12 +161,14 @@ public class AuthService {
         }
         final String finalDisplayName = displayName;
 
+        final String finalDisplayName = displayName;
+
         // Ensure a corresponding backend user exists (appointments require users.id)
         final String finalTokenEmail = tokenEmail;
         User backendUser = userRepository.findByEmail(finalTokenEmail)
                 .orElseGet(() -> userRepository.save(User.builder()
-                        .fullName(finalDisplayName)
-                        .email(finalTokenEmail)
+                .fullName(finalDisplayName)
+                        .email(tokenEmail)
                         .phone(request.getPhone())
                         .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .role(requestedRole)
