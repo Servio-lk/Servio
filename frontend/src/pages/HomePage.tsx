@@ -1,25 +1,81 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { ServiceCard } from '@/components/ServiceCard';
 import { OfferCard } from '@/components/OfferCard';
-import type { ServiceItem, Offer, ServiceProvider } from '@/services/api';
+import type { ServiceItem, Offer, ServiceProvider, AppointmentDto } from '@/services/api';
 import { apiService } from '@/services/api';
+import { useWebSocket } from '@/hooks/useWebSocket';
+
+interface RecentService {
+  id: number;
+  name: string;
+  date: string;
+  vehicle: string;
+}
 
 export default function HomePage() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
 
   const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [lastServiceProvider, setLastServiceProvider] = useState<ServiceProvider | null>(null);
+  const [recentServices, setRecentServices] = useState<RecentService[]>([]);
+  const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadHomeData();
-  }, []);
+    // Wait for auth (including backend token exchange) to fully complete before
+    // calling getUserAppointments(), so localStorage.getItem('user') is ready
+    if (!authLoading) {
+      loadHomeData();
+    }
+  }, [user, authLoading]);
+
+  // Refresh only the appointments list (lightweight — no full page reload)
+  const refreshAppointments = useCallback(async () => {
+    if (!user) return;
+    try {
+      setAppointmentsLoading(true);
+      const appointmentsResponse = await apiService.getUserAppointments();
+      if (appointmentsResponse.success && appointmentsResponse.data) {
+        const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
+          .sort((a, b) => {
+            const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+            const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+            return tB - tA;
+          })
+          .slice(0, 5)
+          .map(app => {
+            let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
+            if (!vehicle && app.notes) {
+              const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
+              if (match) vehicle = match[1].trim();
+            }
+            return {
+              id: app.id,
+              name: app.serviceType,
+              date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              vehicle: vehicle || '',
+            };
+          });
+        setRecentServices(mappedServices);
+      }
+    } catch (err) {
+      console.error('[HomePage] WS refresh failed:', err);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  }, [user]);
+
+  // Subscribe to real-time appointment updates
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => { refreshAppointments(); }, [refreshAppointments]),
+  );
 
   const loadHomeData = async () => {
     try {
@@ -42,18 +98,51 @@ export default function HomePage() {
       if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
         setLastServiceProvider(providersResponse.data[0]);
       }
+
+      // Load user's recent appointments
+      if (user) {
+        try {
+          setAppointmentsLoading(true);
+          const appointmentsResponse = await apiService.getUserAppointments();
+          if (appointmentsResponse.success && appointmentsResponse.data) {
+            const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
+              .sort((a, b) => {
+                // Sort by creation time (newest booking first); fall back to appointment date
+                const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+                const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+                return tB - tA;
+              })
+              .slice(0, 5)
+              .map(app => {
+                // Prefer linked vehicle entity; fall back to parsing notes ("Vehicle: Toyota Premio | ...")
+                let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
+                if (!vehicle && app.notes) {
+                  const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
+                  if (match) vehicle = match[1].trim();
+                }
+                return {
+                  id: app.id,
+                  name: app.serviceType,
+                  date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+                  vehicle: vehicle || '',
+                };
+              });
+            setRecentServices(mappedServices);
+          }
+        } catch (err) {
+          console.error('[HomePage] Failed to load appointments:', err);
+        } finally {
+          setAppointmentsLoading(false);
+        }
+      } else {
+        setAppointmentsLoading(false);
+      }
     } catch (error) {
       console.error('Error loading home page data:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  // Sample recent services - TODO: Replace with actual user's service history from API
-  const recentServices = [
-    { id: 1, name: 'Lubricant Service', date: 'Oct 15, 2025', vehicle: 'Toyota Premio' },
-    { id: 2, name: 'Washing Package', date: 'Sep 28, 2025', vehicle: 'Toyota Premio' },
-  ];
 
   if (loading) {
     return (
@@ -151,8 +240,8 @@ export default function HomePage() {
               </div>
             )}
 
-            {/* Recent Services - Desktop only */}
-            <div className="hidden lg:flex flex-col gap-4 mt-4">
+            {/* Recent Services */}
+            <div className="flex flex-col gap-4 mt-4">
               <div className="flex items-center justify-between">
                 <p className="text-lg font-semibold text-black">Recent Services</p>
                 <Link to="/activity" className="text-sm font-semibold text-[#ff5d2e] hover:underline">
@@ -160,25 +249,40 @@ export default function HomePage() {
                 </Link>
               </div>
               <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-                {recentServices.map((service, idx) => (
-                  <div
-                    key={service.id}
-                    className={`p-4 flex items-center gap-4 ${
-                      idx !== recentServices.length - 1 ? 'border-b border-black/10' : ''
-                    }`}
-                  >
-                    <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-[#ff5d2e]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium text-black">{service.name}</p>
-                      <p className="text-sm text-black/50">{service.vehicle} • {service.date}</p>
-                    </div>
-                    <button className="px-4 py-2 bg-[#ff5d2e] text-white rounded-lg text-sm font-medium hover:bg-[#e54d1e] transition-colors">
-                      Rebook
-                    </button>
+                {appointmentsLoading ? (
+                  <div className="p-6 flex justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#ff5d2e]"></div>
                   </div>
-                ))}
+                ) : recentServices.length > 0 ? (
+                  recentServices.map((service, idx) => (
+                    <div
+                      key={service.id}
+                      className={`p-4 flex items-center gap-4 ${
+                        idx !== recentServices.length - 1 ? 'border-b border-black/10' : ''
+                      }`}
+                    >
+                      <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-[#ff5d2e]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-black">{service.name}</p>
+                        <p className="text-sm text-black/50">
+                          {service.vehicle ? `${service.vehicle} • ` : ''}{service.date}
+                        </p>
+                      </div>
+                      <button className="px-4 py-2 bg-[#ff5d2e] text-white rounded-lg text-sm font-medium hover:bg-[#e54d1e] transition-colors">
+                        Rebook
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-6 text-center">
+                    <p className="text-black/50">No recent services found.</p>
+                    <Link to="/services" className="text-[#ff5d2e] font-medium hover:underline mt-2 inline-block">
+                      Book a service
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           </div>

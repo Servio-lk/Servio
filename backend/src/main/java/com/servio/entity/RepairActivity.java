@@ -5,32 +5,29 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users")
+@Table(name = "repair_activities")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class RepairActivity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String fullName;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "repair_job_id", nullable = false)
+    private RepairJob repairJob;
 
-    @Column(unique = true, nullable = false)
-    private String email;
+    @Column(name = "activity_type", nullable = false)
+    private String activityType; // STATUS_CHANGE, NOTE, PARTS_UPDATE, ESTIMATE, ASSIGNMENT, SYSTEM
 
-    @Column
-    private String phone;
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String description;
 
-    @Column(nullable = false)
-    private String passwordHash;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private Role role = Role.USER;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "performed_by_user_id")
+    private User performedByUser;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
