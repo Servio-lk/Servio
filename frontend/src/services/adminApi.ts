@@ -15,6 +15,13 @@ class AdminApiService {
     return headers;
   }
 
+  async getDashboardStats() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/dashboard`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
   async getAllServices() {
     const response = await apiFetch(`${API_BASE_URL}/admin/services`, {
       headers: this.getHeaders(),

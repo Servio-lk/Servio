@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,24 +27,30 @@ export default function BookingPage() {
   const selectedOil = searchParams.get('oil') || 'standard';
   const specialInstructions = searchParams.get('notes') || '';
 
-  const servicesCatalog: { [key: string]: any } = {
-    '1': { id: '1', name: 'Washing Packages', basePrice: 500 },
-    '2': { id: '2', name: 'Lube Services', basePrice: 1500 },
-    '3': { id: '3', name: 'Exterior & Interior Detailing', basePrice: 3000 },
-    '4': { id: '4', name: 'Engine Tune ups', basePrice: 2500 },
-    '5': { id: '5', name: 'Inspection Reports', basePrice: 1000 },
-    '6': { id: '6', name: 'AC Services', basePrice: 1200 },
-    '7': { id: '7', name: 'Tire Services', basePrice: 800 },
-    '8': { id: '8', name: 'Wheel Alignment', basePrice: 1500 },
-    '9': { id: '9', name: 'Repair & Modifications', basePrice: 2000 },
-    '10': { id: '10', name: 'Battery Services', basePrice: 500 },
-    '11': { id: '11', name: 'Nano Coating Packages', basePrice: 15000 },
-    '12': { id: '12', name: 'Nano Coating Treatments', basePrice: 8000 },
-    '13': { id: '13', name: 'Insurance Claims', basePrice: 0 },
-    '14': { id: '14', name: 'Hybrid Services', basePrice: 3500 },
-  };
+  const [vehicleName, setVehicleName] = useState(searchParams.get('vehicle') || '');
+  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
 
-  const currentService = servicesCatalog[serviceId || '2'] || servicesCatalog['2'];
+  const [currentService, setCurrentService] = useState<any>(null);
+  const [isServiceLoading, setIsServiceLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchService = async () => {
+      try {
+        setIsServiceLoading(true);
+        // Fallback to ID 2 (Lube Services) if none provided
+        const idToFetch = serviceId ? parseInt(serviceId) : 2;
+        const response = await apiService.getServiceById(idToFetch);
+        if (response.success && response.data) {
+          setCurrentService(response.data);
+        }
+      } catch (error) {
+        console.error('Failed to load service:', error);
+      } finally {
+        setIsServiceLoading(false);
+      }
+    };
+    fetchService();
+  }, [serviceId]);
 
   const generateDates = () => {
     const today = new Date();
@@ -134,13 +140,35 @@ export default function BookingPage() {
     'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
   };
 
-  const isLubeService = serviceId === '2';
+  // Map service names to icon images in /public/service icons/
+  const serviceIcons: Record<string, string> = {
+    'Washing Packages': '/service icons/Washing Packages.png',
+    'Lube Services': '/service icons/Lube Services.png',
+    'Exterior & Interior Detailing': '/service icons/Exterior & Interior Detailing.png',
+    'Engine Tune ups': '/service icons/Engine Tune ups.png',
+    'Inspection Reports': '/service icons/Inspection Reports.png',
+    'Tyre Services': '/service icons/Tyre Services.png',
+    'Waxing': '/service icons/Waxing.png',
+    'Undercarriage Degreasing': '/service icons/Undercarriage Degreasing.png',
+    'Windscreen Treatments': '/service icons/Windscreen Treatments.png',
+    'Battery Services': '/service icons/Battery Services.png',
+    'Nano Coating Packages': '/service icons/Nano Coating Packages.png',
+    'Nano Coating Treatments': '/service icons/Nano Coating Treatments.png',
+    'Insurance Claims': '/service icons/Insurance Claims.png',
+    'Wheel Alignment': '/service icons/Wheel Alignment.png',
+    'Full Paints': '/service icons/Full Paints.png',
+    'Part Replacements': '/service icons/Part Replacements.png',
+  };
+
+  const serviceIconSrc = currentService?.name ? serviceIcons[currentService.name] : undefined;
+
+  const isLubeService = currentService?.name === 'Lube Services' || serviceId === '2';
   const orderDetails = {
-    service: currentService.name,
-    serviceFee: currentService.basePrice,
+    service: currentService?.name || '',
+    serviceFee: currentService?.basePrice || 0,
     oilType: isLubeService ? (oilOptions[selectedOil]?.name || 'Standard Oil') : null,
     oilPrice: isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0,
-    total: currentService.basePrice + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
+    total: (currentService?.basePrice || 0) + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
   };
 
   const convertToDateTime = (dateObj: Date, timeSlot: string): string => {
@@ -179,11 +207,13 @@ export default function BookingPage() {
     setIsBooking(true);
     try {
       const appointmentDateTime = convertToDateTime(selectedDateObj.fullDate, selectedTime);
+      const vehicleNote = vehicleName.trim() ? `Vehicle: ${vehicleName.trim()}` : '';
+      const baseNote = isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`;
       const appointmentRequest = {
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
         location: 'Colombo Service Center',
-        notes: specialInstructions || (isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`),
+        notes: [specialInstructions, vehicleNote, baseNote].filter(Boolean).join(' | '),
         estimatedCost: orderDetails.total,
         customerName: user.fullName,
         customerEmail: user.email,
@@ -297,7 +327,13 @@ export default function BookingPage() {
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-black">Order Summary</h3>
         <div className="bg-white rounded-lg p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded bg-[#ffe7df]" />
+          <div className="w-12 h-12 rounded bg-[#ffe7df] flex items-center justify-center overflow-hidden">
+            {serviceIconSrc ? (
+              <img src={serviceIconSrc} alt={orderDetails.service} className="w-8 h-8 object-contain" />
+            ) : (
+              <Car className="w-6 h-6 text-[#ff5d2e]" />
+            )}
+          </div>
           <div className="flex-1">
             <p className="font-medium text-black">{orderDetails.service}</p>
             <p className="text-sm text-black/50">{selectedDateObj?.date} • {selectedTime}</p>
@@ -334,24 +370,70 @@ export default function BookingPage() {
       <div className="h-px bg-black/10" />
 
       <div className="flex flex-col gap-2">
-        <button className="bg-white rounded-lg p-4 flex items-center gap-3 hover:bg-[#fff7f5] transition-colors">
-          <Car className="w-5 h-5" />
-          <span className="flex-1 text-left text-sm font-medium text-black/70">Toyota Premio</span>
-          <ChevronRight className="w-4 h-4 text-black/50" />
-        </button>
-        <button className="bg-white rounded-lg p-4 flex items-center gap-3 hover:bg-[#fff7f5] transition-colors">
-          <Phone className="w-5 h-5" />
+        <div className="bg-white rounded-lg p-4 flex items-center gap-3">
+          <Car className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
+          {isEditingVehicle ? (
+            <input
+              autoFocus
+              type="text"
+              value={vehicleName}
+              onChange={e => setVehicleName(e.target.value)}
+              onBlur={() => setIsEditingVehicle(false)}
+              onKeyDown={e => e.key === 'Enter' && setIsEditingVehicle(false)}
+              placeholder="e.g. Toyota Premio"
+              className="flex-1 text-sm font-medium text-black bg-transparent border-b border-[#ff5d2e] outline-none pb-0.5"
+            />
+          ) : (
+            <button
+              onClick={() => setIsEditingVehicle(true)}
+              className="flex-1 text-left text-sm font-medium text-black/70 hover:text-black transition-colors"
+            >
+              {vehicleName.trim() || 'Tap to enter vehicle name'}
+            </button>
+          )}
+          {!isEditingVehicle && (
+            <ChevronRight className="w-4 h-4 text-black/50" />
+          )}
+        </div>
+        <div className="bg-white rounded-lg p-4 flex items-center gap-3">
+          <Phone className="w-5 h-5 flex-shrink-0" />
           <span className="flex-1 text-left text-sm font-medium text-black/70">{user?.phone || '+94 72 4523 299'}</span>
-          <ChevronRight className="w-4 h-4 text-black/50" />
-        </button>
-        <button className="bg-white rounded-lg p-4 flex items-center gap-3 hover:bg-[#fff7f5] transition-colors">
-          <Coins className="w-5 h-5" />
+        </div>
+        <div className="bg-white rounded-lg p-4 flex items-center gap-3">
+          <Coins className="w-5 h-5 flex-shrink-0" />
           <span className="flex-1 text-left text-sm font-medium text-black/70">Cash</span>
-          <ChevronRight className="w-4 h-4 text-black/50" />
-        </button>
+        </div>
       </div>
     </div>
   );
+
+  if (isServiceLoading) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center">
+            <Loader2 className="w-10 h-10 animate-spin text-[#ff5d2e] mb-4" />
+            <p className="text-black/60 font-medium text-sm">Loading service details...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!currentService) {
+    return (
+      <AppLayout showNav={false}>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="flex flex-col items-center text-center p-4">
+            <p className="text-xl font-semibold text-black mb-2">Service not found</p>
+            <button onClick={() => navigate('/services')} className="text-[#ff5d2e] hover:underline">
+              Return to Services
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout showNav={false}>
@@ -442,7 +524,13 @@ export default function BookingPage() {
                 <h3 className="text-lg font-semibold text-black">Booking Summary</h3>
 
                 <div className="flex items-center gap-3 p-3 bg-[#fff7f5] rounded-lg">
-                  <div className="w-12 h-12 bg-[#ffe7df] rounded-lg" />
+                  <div className="w-12 h-12 bg-[#ffe7df] rounded-lg flex items-center justify-center overflow-hidden">
+                    {serviceIconSrc ? (
+                      <img src={serviceIconSrc} alt={orderDetails.service} className="w-8 h-8 object-contain" />
+                    ) : (
+                      <Car className="w-6 h-6 text-[#ff5d2e]" />
+                    )}
+                  </div>
                   <div className="flex-1">
                     <p className="font-medium text-black">{orderDetails.service}</p>
                     <p className="text-sm text-black/50">{selectedDateObj?.date} • {selectedTime}</p>
@@ -468,21 +556,35 @@ export default function BookingPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <button className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3 hover:bg-[#ffe7df] transition-colors">
-                    <Car className="w-5 h-5 text-[#ff5d2e]" />
-                    <span className="flex-1 text-left text-sm font-medium text-black">Toyota Premio</span>
-                    <ChevronRight className="w-4 h-4 text-black/50" />
-                  </button>
-                  <button className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3 hover:bg-[#ffe7df] transition-colors">
-                    <Phone className="w-5 h-5 text-[#ff5d2e]" />
+                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3">
+                    <Car className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={vehicleName}
+                      onChange={e => setVehicleName(e.target.value)}
+                      placeholder="Enter vehicle name (e.g. Toyota Premio)"
+                      className="flex-1 text-sm font-medium text-black bg-transparent outline-none placeholder:text-black/40"
+                    />
+                  </div>
+                  {vehicleName.trim() && (
+                    <p className="text-xs text-black/50 px-1">Vehicle will be noted in your appointment</p>
+                  )}
+                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3">
+                    <Phone className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
                     <span className="flex-1 text-left text-sm font-medium text-black">{user?.phone || '+94 72 4523 299'}</span>
-                    <ChevronRight className="w-4 h-4 text-black/50" />
-                  </button>
-                  <button className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3 hover:bg-[#ffe7df] transition-colors">
-                    <Coins className="w-5 h-5 text-[#ff5d2e]" />
+                  </div>
+                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3">
+                    <Coins className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
                     <span className="flex-1 text-left text-sm font-medium text-black">Pay by Cash</span>
-                    <ChevronRight className="w-4 h-4 text-black/50" />
-                  </button>
+                  </div>
+                  {vehicleName.trim() && (
+                    <div className="mt-1 p-3 bg-[#fff7f5] rounded-lg border border-[#ffe7df]">
+                      <p className="text-xs text-black/50 mb-1">Appointment Summary</p>
+                      <p className="text-sm font-medium text-black">{orderDetails.service}</p>
+                      <p className="text-xs text-black/60">{selectedDateObj?.date} • {selectedTime}</p>
+                      <p className="text-xs text-[#ff5d2e] font-medium mt-1">Vehicle: {vehicleName.trim()}</p>
+                    </div>
+                  )}
                 </div>
 
                 <button

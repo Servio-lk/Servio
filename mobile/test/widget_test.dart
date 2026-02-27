@@ -15,15 +15,10 @@ import 'package:servio_mobile/src/app.dart';
 void main() {
   testWidgets('Welcome screen smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(
-      const ProviderScope(
-        child: ServioApp(),
-      ),
-    );
+    await tester.pumpWidget(const ProviderScope(child: ServioApp()));
 
     // Verify that the Welcome screen is shown.
     expect(find.text('Welcome to Servio'), findsOneWidget);
     expect(find.text('Get Started'), findsOneWidget);
   });
 }
-

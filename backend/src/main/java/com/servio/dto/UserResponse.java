@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class UserResponse {
     private Long id;
+    private String supabaseId; // UUID for Supabase users
     private String fullName;
     private String email;
     private String phone;

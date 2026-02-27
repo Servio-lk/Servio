@@ -82,11 +82,7 @@ class SupabaseService {
   Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
 
   // Update user profile
-  Future<UserResponse> updateUserProfile({
-    Map<String, dynamic>? data,
-  }) async {
-    return await client.auth.updateUser(
-      UserAttributes(data: data),
-    );
+  Future<UserResponse> updateUserProfile({Map<String, dynamic>? data}) async {
+    return await client.auth.updateUser(UserAttributes(data: data));
   }
 }

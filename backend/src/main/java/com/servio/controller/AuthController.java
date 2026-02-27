@@ -70,9 +70,14 @@ public class AuthController {
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile(Authentication authentication) {
         try {
-            // Principal is now the Supabase UUID (String), not a Long
             String userId = authentication.getPrincipal().toString();
-            UserResponse userResponse = authService.getProfileByUuid(userId);
+            UserResponse userResponse;
+
+            try {
+                userResponse = authService.getProfile(Long.parseLong(userId));
+            } catch (NumberFormatException ex) {
+                userResponse = authService.getProfileByUuid(userId);
+            }
 
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
                     .success(true)

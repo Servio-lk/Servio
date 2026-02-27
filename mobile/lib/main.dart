@@ -17,9 +17,5 @@ Future<void> main() async {
     anonKey: SupabaseConfig.supabaseAnonKey,
   );
 
-  runApp(
-    const ProviderScope(
-      child: ServioApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: ServioApp()));
 }

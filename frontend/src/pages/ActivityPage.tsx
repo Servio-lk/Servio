@@ -1,38 +1,49 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { SlidersHorizontal, RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
+import { RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 import type { AppointmentDto } from '@/services/api';
 import { toast } from 'sonner';
+import { useWebSocket } from '@/hooks/useWebSocket';
 
 export default function ActivityPage() {
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
+
+  const fetchAppointments = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      // Always fetch the current user's own appointments via /appointments/my
+      const response = await apiService.getUserAppointments();
+
+      if (response.success && response.data) {
+        // Sort by creation time (newest booking first)
+        const sorted = response.data.sort((a, b) => {
+          const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+          const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+          return tB - tA;
+        });
+        setAppointments(sorted);
+      }
+    } catch (error: any) {
+      console.error('Error fetching appointments:', error);
+      toast.error('Failed to load appointments');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const fetchAppointments = async () => {
-      try {
-        setIsLoading(true);
-        const response = await apiService.getUserAppointments();
-        
-        if (response.success && response.data) {
-          // Sort by date, newest first
-          const sorted = response.data.sort((a, b) => 
-            new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime()
-          );
-          setAppointments(sorted);
-        }
-      } catch (error: any) {
-        console.error('Error fetching appointments:', error);
-        toast.error('Failed to load appointments');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchAppointments();
-  }, []);
+  }, [fetchAppointments, showAllAppointments]);
+
+  // Subscribe to real-time appointment updates
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => { fetchAppointments(); }, [fetchAppointments]),
+  );
 
   // Separate upcoming and past appointments
   const now = new Date();
@@ -86,10 +97,21 @@ export default function ActivityPage() {
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl lg:text-3xl font-semibold text-black">Activity</h1>
-          <button className="p-2 hover:bg-[#ffe7df] rounded-lg transition-colors">
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
+          <h1 className="text-2xl lg:text-3xl font-semibold text-black">
+            {showAllAppointments ? 'All Appointments' : 'My Activity'}
+          </h1>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowAllAppointments(!showAllAppointments)}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm ${
+                showAllAppointments 
+                  ? 'bg-[#ff5d2e] text-white' 
+                  : 'bg-[#ffe7df] text-[#ff5d2e] hover:bg-[#ffd4c7]'
+              }`}
+            >
+              {showAllAppointments ? 'Show My Appointments' : 'Show All Appointments'}
+            </button>
+          </div>
         </div>
 
         {/* Main content grid */}

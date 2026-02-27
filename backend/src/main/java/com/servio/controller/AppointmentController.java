@@ -92,9 +92,25 @@ public class AppointmentController {
                                 .build());
         }
 
+        /**
+         * Returns appointments for the currently logged-in user.
+         * Reads user identity from the JWT — no userId in the URL needed.
+         */
+        @GetMapping("/my")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<List<AppointmentDto>>> getMyAppointments(
+                        Authentication authentication) {
+                List<AppointmentDto> appointments = appointmentService.getMyAppointments(authentication);
+                return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
+                                .success(true)
+                                .message("My appointments retrieved successfully")
+                                .data(appointments)
+                                .build());
+        }
+
         @GetMapping("/user/{userId}")
         public ResponseEntity<ApiResponse<List<AppointmentDto>>> getUserAppointments(
-                        @PathVariable Long userId) {
+                        @PathVariable String userId) {
                 List<AppointmentDto> appointments = appointmentService.getUserAppointments(userId);
                 return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
                                 .success(true)
