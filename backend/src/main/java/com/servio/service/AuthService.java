@@ -146,7 +146,7 @@ public class AuthService {
         }
 
         // Determine role from the request (default to USER)
-        Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
+        final Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
 
         // Look up profile for display name (optional - use request data as fallback)
         String displayName = request.getFullName();
@@ -159,11 +159,13 @@ public class AuthService {
         } catch (IllegalArgumentException ignored) {
             // supabaseUserId was not a valid UUID
         }
+        final String finalDisplayName = displayName;
 
         final String finalDisplayName = displayName;
 
         // Ensure a corresponding backend user exists (appointments require users.id)
-        User backendUser = userRepository.findByEmail(tokenEmail)
+        final String finalTokenEmail = tokenEmail;
+        User backendUser = userRepository.findByEmail(finalTokenEmail)
                 .orElseGet(() -> userRepository.save(User.builder()
                 .fullName(finalDisplayName)
                         .email(tokenEmail)

@@ -348,7 +348,7 @@ class ApiService {
     // /appointments/my reads the user from the JWT on the backend — no stored ID needed
     const response = await apiFetch(`${API_BASE_URL}/appointments/my`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(false),
     });
     return this.handleResponse<AppointmentDto[]>(response);
   }
