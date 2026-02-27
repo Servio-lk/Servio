@@ -140,6 +140,28 @@ export default function BookingPage() {
     'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
   };
 
+  // Map service names to icon images in /public/service icons/
+  const serviceIcons: Record<string, string> = {
+    'Washing Packages': '/service icons/Washing Packages.png',
+    'Lube Services': '/service icons/Lube Services.png',
+    'Exterior & Interior Detailing': '/service icons/Exterior & Interior Detailing.png',
+    'Engine Tune ups': '/service icons/Engine Tune ups.png',
+    'Inspection Reports': '/service icons/Inspection Reports.png',
+    'Tyre Services': '/service icons/Tyre Services.png',
+    'Waxing': '/service icons/Waxing.png',
+    'Undercarriage Degreasing': '/service icons/Undercarriage Degreasing.png',
+    'Windscreen Treatments': '/service icons/Windscreen Treatments.png',
+    'Battery Services': '/service icons/Battery Services.png',
+    'Nano Coating Packages': '/service icons/Nano Coating Packages.png',
+    'Nano Coating Treatments': '/service icons/Nano Coating Treatments.png',
+    'Insurance Claims': '/service icons/Insurance Claims.png',
+    'Wheel Alignment': '/service icons/Wheel Alignment.png',
+    'Full Paints': '/service icons/Full Paints.png',
+    'Part Replacements': '/service icons/Part Replacements.png',
+  };
+
+  const serviceIconSrc = currentService?.name ? serviceIcons[currentService.name] : undefined;
+
   const isLubeService = currentService?.name === 'Lube Services' || serviceId === '2';
   const orderDetails = {
     service: currentService?.name || '',
@@ -305,7 +327,13 @@ export default function BookingPage() {
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-black">Order Summary</h3>
         <div className="bg-white rounded-lg p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded bg-[#ffe7df]" />
+          <div className="w-12 h-12 rounded bg-[#ffe7df] flex items-center justify-center overflow-hidden">
+            {serviceIconSrc ? (
+              <img src={serviceIconSrc} alt={orderDetails.service} className="w-8 h-8 object-contain" />
+            ) : (
+              <Car className="w-6 h-6 text-[#ff5d2e]" />
+            )}
+          </div>
           <div className="flex-1">
             <p className="font-medium text-black">{orderDetails.service}</p>
             <p className="text-sm text-black/50">{selectedDateObj?.date} • {selectedTime}</p>
@@ -496,7 +524,13 @@ export default function BookingPage() {
                 <h3 className="text-lg font-semibold text-black">Booking Summary</h3>
 
                 <div className="flex items-center gap-3 p-3 bg-[#fff7f5] rounded-lg">
-                  <div className="w-12 h-12 bg-[#ffe7df] rounded-lg" />
+                  <div className="w-12 h-12 bg-[#ffe7df] rounded-lg flex items-center justify-center overflow-hidden">
+                    {serviceIconSrc ? (
+                      <img src={serviceIconSrc} alt={orderDetails.service} className="w-8 h-8 object-contain" />
+                    ) : (
+                      <Car className="w-6 h-6 text-[#ff5d2e]" />
+                    )}
+                  </div>
                   <div className="flex-1">
                     <p className="font-medium text-black">{orderDetails.service}</p>
                     <p className="text-sm text-black/50">{selectedDateObj?.date} • {selectedTime}</p>

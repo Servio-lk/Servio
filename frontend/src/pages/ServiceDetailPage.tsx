@@ -10,6 +10,26 @@ export default function ServiceDetailPage() {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [vehicleName, setVehicleName] = useState('');
 
+  // Map service IDs to images in /public/service images/
+  const serviceImages: { [key: string]: string } = {
+    '1': '/service images/Washing Packages.jpg',
+    '2': '/service images/Lubricant Service.jpg',
+    '3': '/service images/Exterior Detailing.jpg',
+    '4': '/service images/Mechanical Repair.jpg',
+    '5': '/service images/Mulipoint Inspection Report.jpg',
+    '6': '/service images/Mechanical Repair.jpg',
+    '7': '/service images/Exterior Detailing.jpg',
+    '8': '/service images/Exterior Detailing.jpg',
+    '9': '/service images/Exterior Detailing.jpg',
+    '10': '/service images/Electrical & Electronic.jpg',
+    '11': '/service images/Exterior Detailing.jpg',
+    '12': '/service images/Exterior Detailing.jpg',
+    '13': '/service images/General Collision Repair.jpg',
+    '14': '/service images/Mechanical Repair.jpg',
+    '15': '/service images/Complete Paint.jpg',
+    '16': '/service images/Mechanical Repair.jpg',
+  };
+
   // Service catalog with all services
   const servicesCatalog: { [key: string]: any } = {
     '1': {
@@ -288,11 +308,11 @@ export default function ServiceDetailPage() {
             <div className="lg:col-span-3 flex flex-col gap-6">
               {/* Service Image */}
               <div className="w-full aspect-[16/9] lg:aspect-[16/7] bg-gradient-to-br from-[#ffe7df] to-[#fff7f5] rounded-2xl overflow-hidden relative">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 bg-[#ff5d2e]/20 rounded-full flex items-center justify-center">
-                    <div className="w-12 h-12 bg-[#ff5d2e]/30 rounded-full" />
-                  </div>
-                </div>
+                <img
+                  src={serviceImages[id || '1'] || serviceImages['1']}
+                  alt={service.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
 
               {/* Service Info */}
