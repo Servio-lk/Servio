@@ -119,18 +119,6 @@ public class AppointmentController {
                                 .build());
         }
 
-        @GetMapping("/my")
-        @PreAuthorize("isAuthenticated()")
-        public ResponseEntity<ApiResponse<List<AppointmentDto>>> getMyAppointments(
-                        Authentication authentication) {
-                List<AppointmentDto> appointments = appointmentService.getMyAppointments(authentication);
-                return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
-                                .success(true)
-                                .message("Your appointments retrieved successfully")
-                                .data(appointments)
-                                .build());
-        }
-
         @GetMapping("/{id}")
         public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(
                         @PathVariable Long id) {
@@ -143,6 +131,7 @@ public class AppointmentController {
         }
 
         @PatchMapping("/{id}/status")
+
         public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentStatus(
                         @PathVariable Long id,
                         @RequestParam String status) {
