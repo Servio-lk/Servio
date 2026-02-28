@@ -89,7 +89,7 @@ class AppointmentModel {
   String get formattedTime {
     final h = appointmentDate.hour;
     final m = appointmentDate.minute.toString().padLeft(2, '0');
-    final period = h >= 12 ? 'PM' : 'AM';
+    final period = h >= 12 ? 'P.M.' : 'A.M.';
     final hour = h > 12 ? h - 12 : (h == 0 ? 12 : h);
     return '$hour:$m $period';
   }
@@ -103,7 +103,6 @@ class AppointmentModel {
       if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
       buf.write(s[i]);
     }
-    buf.write('.00');
     return buf.toString();
   }
 
