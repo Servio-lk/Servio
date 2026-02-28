@@ -47,7 +47,7 @@ export default function Activity() {
 
         {/* Upcoming Service */}
         <div className="flex flex-col gap-4">
-          <p className="text-lg font-semibold text-black">Upcoming service</p>
+          <p className="text-lg font-semibold text-black text-left">Upcoming service</p>
           <div className="border border-[#ffe7df] rounded-2xl p-2 flex flex-col gap-2">
             <div className="h-[185px] rounded-lg bg-gray-200 overflow-hidden">
               {/* Service Image */}
