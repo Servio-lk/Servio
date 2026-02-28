@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, ChevronRight, Calendar, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Coins, Calendar, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
+import { VehicleSelector } from '@/components/VehicleSelector';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
@@ -28,7 +29,6 @@ export default function BookingPage() {
   const specialInstructions = searchParams.get('notes') || '';
 
   const [vehicleName, setVehicleName] = useState(searchParams.get('vehicle') || '');
-  const [isEditingVehicle, setIsEditingVehicle] = useState(false);
 
   const [currentService, setCurrentService] = useState<any>(null);
   const [isServiceLoading, setIsServiceLoading] = useState(true);
@@ -370,31 +370,10 @@ export default function BookingPage() {
       <div className="h-px bg-black/10" />
 
       <div className="flex flex-col gap-2">
-        <div className="bg-white rounded-lg p-4 flex items-center gap-3">
-          <Car className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
-          {isEditingVehicle ? (
-            <input
-              autoFocus
-              type="text"
-              value={vehicleName}
-              onChange={e => setVehicleName(e.target.value)}
-              onBlur={() => setIsEditingVehicle(false)}
-              onKeyDown={e => e.key === 'Enter' && setIsEditingVehicle(false)}
-              placeholder="e.g. Toyota Premio"
-              className="flex-1 text-sm font-medium text-black bg-transparent border-b border-[#ff5d2e] outline-none pb-0.5"
-            />
-          ) : (
-            <button
-              onClick={() => setIsEditingVehicle(true)}
-              className="flex-1 text-left text-sm font-medium text-black/70 hover:text-black transition-colors"
-            >
-              {vehicleName.trim() || 'Tap to enter vehicle name'}
-            </button>
-          )}
-          {!isEditingVehicle && (
-            <ChevronRight className="w-4 h-4 text-black/50" />
-          )}
-        </div>
+        <VehicleSelector
+          value={vehicleName}
+          onSelect={setVehicleName}
+        />
         <div className="bg-white rounded-lg p-4 flex items-center gap-3">
           <Phone className="w-5 h-5 flex-shrink-0" />
           <span className="flex-1 text-left text-sm font-medium text-black/70">{user?.phone || '+94 72 4523 299'}</span>
@@ -556,16 +535,10 @@ export default function BookingPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3">
-                    <Car className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
-                    <input
-                      type="text"
-                      value={vehicleName}
-                      onChange={e => setVehicleName(e.target.value)}
-                      placeholder="Enter vehicle name (e.g. Toyota Premio)"
-                      className="flex-1 text-sm font-medium text-black bg-transparent outline-none placeholder:text-black/40"
-                    />
-                  </div>
+                  <VehicleSelector
+                    value={vehicleName}
+                    onSelect={setVehicleName}
+                  />
                   {vehicleName.trim() && (
                     <p className="text-xs text-black/50 px-1">Vehicle will be noted in your appointment</p>
                   )}

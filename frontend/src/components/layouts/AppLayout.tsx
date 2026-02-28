@@ -1,8 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, List, FileText, User, LogOut, Menu, X, Bell, Car, Settings } from 'lucide-react';
+import { Home, List, FileText, User, LogOut, Menu, X, Car, Settings } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -89,10 +90,7 @@ function DesktopHeader() {
 
       {/* Actions */}
       <div className="flex items-center gap-4">
-        <button className="relative p-2 hover:bg-[#fff7f5] rounded-lg transition-colors">
-          <Bell className="w-5 h-5 text-black/70" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-[#ff5d2e] rounded-full" />
-        </button>
+        <NotificationBell />
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
           <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-[#ff5d2e]" />
@@ -117,8 +115,11 @@ function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
         <Menu className="w-6 h-6" />
       </button>
       <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
-      <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-        <User className="w-4 h-4 text-[#ff5d2e]" />
+      <div className="flex items-center gap-1">
+        <NotificationBell />
+        <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
+          <User className="w-4 h-4 text-[#ff5d2e]" />
+        </div>
       </div>
     </header>
   );
@@ -275,7 +276,14 @@ export function AppLayout({ children, showNav = true }: AppLayoutProps) {
   if (!showNav) {
     return (
       <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#fff7f5]">
-        {children}
+        {/* Desktop sidebar + header always visible */}
+        <DesktopSidebar />
+        <DesktopHeader />
+
+        {/* Desktop: offset for sidebar + header; Mobile: full width */}
+        <main className="lg:ml-64 lg:pt-16">
+          {children}
+        </main>
       </div>
     );
   }

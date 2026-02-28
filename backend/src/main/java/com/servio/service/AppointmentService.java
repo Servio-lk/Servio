@@ -12,6 +12,7 @@ import com.servio.repository.UserRepository;
 import com.servio.repository.VehicleRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -36,6 +37,8 @@ public class AppointmentService {
     private final JdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
     private final AppointmentEventPublisher eventPublisher;
+    @Lazy
+    private final NotificationService notificationService;
 
     @Transactional
     public AppointmentDto createAppointment(AppointmentRequest request, Authentication authentication) {
@@ -111,6 +114,17 @@ public class AppointmentService {
         appointment = appointmentRepository.save(appointment);
         AppointmentDto dto = convertToDto(appointment);
         eventPublisher.publish("CREATED", dto);
+
+        // Send booking confirmation notification to the user (local users only)
+        if (user != null) {
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a");
+            String dateStr = appointment.getAppointmentDate().format(fmt);
+            notificationService.createAppointmentNotification(
+                user.getId(),
+                appointment.getServiceType() + " on " + dateStr
+            );
+        }
+
         return dto;
     }
 
@@ -227,6 +241,19 @@ public class AppointmentService {
         appointment = appointmentRepository.save(appointment);
         AppointmentDto dto = convertToDto(appointment);
         eventPublisher.publish("UPDATED", dto);
+
+        // Notify the user about the status change
+        if (appointment.getUser() != null) {
+            String statusMsg = switch (status.toUpperCase()) {
+                case "CONFIRMED"   -> "Your appointment for " + appointment.getServiceType() + " has been confirmed!";
+                case "IN_PROGRESS" -> "Your " + appointment.getServiceType() + " service has started.";
+                case "COMPLETED"   -> "Your " + appointment.getServiceType() + " service is complete. Thank you!";
+                case "CANCELLED"   -> "Your appointment for " + appointment.getServiceType() + " has been cancelled.";
+                default            -> "Your appointment status has been updated to " + status + ".";
+            };
+            notificationService.createAppointmentNotification(appointment.getUser().getId(), statusMsg);
+        }
+
         return dto;
     }
 

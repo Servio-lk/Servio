@@ -7,6 +7,7 @@ import com.servio.entity.User;
 import com.servio.repository.NotificationRepository;
 import com.servio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,15 +17,17 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
-    
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    
+    @Lazy
+    private final AppointmentEventPublisher eventPublisher;
+
     @Transactional
     public NotificationDto createNotification(NotificationRequest request) {
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
-        
+
         Notification notification = Notification.builder()
             .user(user)
             .title(request.getTitle())
@@ -32,9 +35,14 @@ public class NotificationService {
             .type(request.getType())
             .isRead(false)
             .build();
-        
+
         notification = notificationRepository.save(notification);
-        return convertToDto(notification);
+        NotificationDto dto = convertToDto(notification);
+
+        // Push real-time notification via WebSocket
+        eventPublisher.publishNotification(request.getUserId(), dto);
+
+        return dto;
     }
     
     @Transactional

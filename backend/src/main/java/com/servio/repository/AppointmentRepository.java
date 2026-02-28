@@ -61,4 +61,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.appointmentDate >= CURRENT_TIMESTAMP AND a.status NOT IN ('CANCELLED', 'COMPLETED') ORDER BY a.appointmentDate ASC")
         List<Appointment> findUpcomingAppointments();
+
+        // Appointments whose date falls within [windowStart, windowEnd] — used by reminder scheduler
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile " +
+               "WHERE a.appointmentDate >= :windowStart AND a.appointmentDate < :windowEnd " +
+               "AND a.status NOT IN ('CANCELLED', 'COMPLETED')")
+        List<Appointment> findUpcomingAppointmentsInWindow(
+                        @Param("windowStart") LocalDateTime windowStart,
+                        @Param("windowEnd") LocalDateTime windowEnd);
 }

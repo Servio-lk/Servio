@@ -4,18 +4,22 @@ import com.servio.dto.ServiceRecordDto;
 import com.servio.dto.VehicleDto;
 import com.servio.dto.VehicleRequest;
 import com.servio.dto.VehicleStatsDto;
+import com.servio.entity.Profile;
 import com.servio.entity.User;
 import com.servio.entity.Vehicle;
 import com.servio.entity.ServiceRecord;
+import com.servio.repository.ProfileRepository;
 import com.servio.repository.UserRepository;
 import com.servio.repository.VehicleRepository;
 import com.servio.repository.ServiceRecordRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +29,72 @@ public class VehicleService {
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
     private final ServiceRecordRepository serviceRecordRepository;
+    private final ProfileRepository profileRepository;
+
+    /**
+     * Returns vehicles for the currently authenticated user (UUID or Long).
+     */
+    @Transactional(readOnly = true)
+    public List<VehicleDto> getMyVehicles(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return List.of();
+        }
+        String userId = authentication.getPrincipal().toString();
+        try {
+            UUID profileId = UUID.fromString(userId);
+            return vehicleRepository.findByProfileId(profileId).stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
+            try {
+                Long localUserId = Long.parseLong(userId);
+                return vehicleRepository.findByUserId(localUserId).stream()
+                        .map(this::convertToDto)
+                        .collect(Collectors.toList());
+            } catch (NumberFormatException nfe) {
+                return List.of();
+            }
+        }
+    }
+
+    /**
+     * Creates a vehicle for the currently authenticated user.
+     */
+    @Transactional
+    public VehicleDto createMyVehicle(VehicleRequest request, Authentication authentication) {
+        String userId = authentication.getPrincipal().toString();
+        User user = null;
+        Profile profile = null;
+
+        try {
+            UUID profileId = UUID.fromString(userId);
+            profile = profileRepository.findById(profileId).orElse(null);
+        } catch (IllegalArgumentException e) {
+            try {
+                Long localUserId = Long.parseLong(userId);
+                user = userRepository.findById(localUserId).orElse(null);
+            } catch (NumberFormatException nfe) {
+                throw new RuntimeException("Invalid user ID format: " + userId);
+            }
+        }
+
+        if (user == null && profile == null) {
+            throw new RuntimeException("User not found: " + userId);
+        }
+
+        Vehicle vehicle = Vehicle.builder()
+                .user(user)
+                .profile(profile)
+                .make(request.getMake())
+                .model(request.getModel())
+                .year(request.getYear())
+                .licensePlate(request.getLicensePlate())
+                .vin(request.getVin())
+                .build();
+
+        vehicle = vehicleRepository.save(vehicle);
+        return convertToDto(vehicle);
+    }
 
     @Transactional
     public VehicleDto createVehicle(VehicleRequest request) {

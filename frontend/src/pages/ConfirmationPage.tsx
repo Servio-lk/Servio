@@ -131,15 +131,25 @@ export default function ConfirmationPage() {
   }
 
   const { date, time } = formatDateTime(appointment.appointmentDate);
+
+  // Extract vehicle from notes if not available from vehicle fields
+  let vehicleDisplay = 'No vehicle specified';
+  if (appointment.vehicleMake && appointment.vehicleModel) {
+    vehicleDisplay = `${appointment.vehicleMake} ${appointment.vehicleModel}`;
+  } else if (appointment.notes) {
+    const match = appointment.notes.match(/Vehicle:\s*([^|]+)/i);
+    if (match) vehicleDisplay = match[1].trim();
+  }
+
   const appointmentDisplay = {
     id: `#APT-${appointment.id.toString().padStart(6, '0')}`,
     customerName: user?.fullName || appointment.userName || 'Customer',
     service: appointment.serviceType,
     date: date,
     time: time,
-    vehicle: appointment.vehicleMake && appointment.vehicleModel ? `${appointment.vehicleMake} ${appointment.vehicleModel}` : 'No vehicle specified',
+    vehicle: vehicleDisplay,
     phone: user?.phone || appointment.userEmail || 'N/A',
-    paymentMethod: 'Cash', // Default for now
+    paymentMethod: 'Cash',
     total: appointment.estimatedCost || 0,
     status: appointment.status,
     location: appointment.location || 'Service Center',

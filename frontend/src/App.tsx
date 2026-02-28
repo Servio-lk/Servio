@@ -18,6 +18,7 @@ import ActivityPage from './pages/ActivityPage'
 import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
+import AccountPage from './pages/AccountPage'
 
 // Admin pages
 import { AdminAppLayout } from './components/layouts/AdminAppLayout'
@@ -113,12 +114,12 @@ function App() {
             }
           />
 
-          {/* Account page placeholder */}
+          {/* Account page */}
           <Route
             path="/account"
             element={
               <AuthGuard>
-                <HomePage />
+                <AccountPage />
               </AuthGuard>
             }
           />

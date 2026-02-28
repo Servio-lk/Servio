@@ -95,6 +95,29 @@ interface Offer {
   validUntil: string;
 }
 
+// Vehicle Interfaces
+interface VehicleDto {
+  id: number;
+  userId: number;
+  userName: string;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  vin: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+interface VehicleRequest {
+  userId?: number | string;
+  make: string;
+  model: string;
+  year: number;
+  licensePlate: string;
+  vin?: string;
+}
+
 // Service Record Interfaces
 interface ServiceRecord {
   id: number;
@@ -373,6 +396,85 @@ class ApiService {
   async cancelAppointment(id: number): Promise<ApiResponse<AppointmentDto>> {
     return this.updateAppointmentStatus(id, 'CANCELLED');
   }
+
+  // Vehicle Management Endpoints
+  async getMyVehicles(): Promise<ApiResponse<VehicleDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/vehicles/my`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<VehicleDto[]>(response);
+  }
+
+  async createVehicle(data: VehicleRequest): Promise<ApiResponse<VehicleDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/vehicles/my`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<VehicleDto>(response);
+  }
+
+  async updateVehicle(id: number, data: VehicleRequest): Promise<ApiResponse<VehicleDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/vehicles/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(true),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<VehicleDto>(response);
+  }
+
+  async deleteVehicle(id: number): Promise<ApiResponse<void>> {
+    const response = await apiFetch(`${API_BASE_URL}/vehicles/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  // Notification endpoints
+  async getMyNotifications(userId: number): Promise<ApiResponse<NotificationDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<NotificationDto[]>(response);
+  }
+
+  async getUnreadCount(userId: number): Promise<ApiResponse<number>> {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/unread/count`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<number>(response);
+  }
+
+  async markNotificationRead(id: number): Promise<ApiResponse<NotificationDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<NotificationDto>(response);
+  }
+
+  async markAllNotificationsRead(userId: number): Promise<ApiResponse<void>> {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/read-all`, {
+      method: 'PATCH',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<void>(response);
+  }
+}
+
+export interface NotificationDto {
+  id: number;
+  userId: number;
+  userName: string;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  createdAt: string;
 }
 
 export const apiService = new ApiService();
@@ -390,5 +492,7 @@ export type {
   ServiceRecord,
   ServiceRecordRequest,
   AppointmentDto,
-  AppointmentRequest
+  AppointmentRequest,
+  VehicleDto,
+  VehicleRequest,
 };
