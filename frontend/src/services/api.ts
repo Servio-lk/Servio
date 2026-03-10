@@ -142,6 +142,28 @@ interface ServiceRecordRequest {
   cost: number;
 }
 
+// PayHere Interfaces
+interface PayHereInitiateResponse {
+  merchantId: string;
+  orderId: string;
+  amount: string;
+  currency: string;
+  hash: string;
+  returnUrl: string;
+  cancelUrl: string;
+  notifyUrl: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  address: string;
+  city: string;
+  country: string;
+  items: string;
+  checkoutUrl: string;
+  sandboxMode: boolean;
+}
+
 // Appointment Interfaces
 interface AppointmentDto {
   id: number;
@@ -394,7 +416,29 @@ class ApiService {
   }
 
   async cancelAppointment(id: number): Promise<ApiResponse<AppointmentDto>> {
-    return this.updateAppointmentStatus(id, 'CANCELLED');
+    // Uses the ownership-verified /cancel endpoint — users can only cancel their own appointments
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/cancel`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<AppointmentDto>(response);
+  }
+
+  /**
+   * Requests the backend to generate PayHere checkout form data (including
+   * the secure hash).  The merchant_secret never leaves the server.
+   */
+  async initiatePayHerePayment(
+    appointmentId: number,
+    currency: string = 'LKR',
+    serviceId?: string,
+  ): Promise<ApiResponse<PayHereInitiateResponse>> {
+    const response = await apiFetch(`${API_BASE_URL}/payments/payhere/initiate`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ appointmentId, currency, serviceId }),
+    });
+    return this.handleResponse<PayHereInitiateResponse>(response);
   }
 
   // Vehicle Management Endpoints
@@ -495,4 +539,5 @@ export type {
   AppointmentRequest,
   VehicleDto,
   VehicleRequest,
+  PayHereInitiateResponse,
 };

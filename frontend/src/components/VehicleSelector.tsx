@@ -171,7 +171,7 @@ function DropdownContent({
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleManualEntry();
           }}
-          placeholder="Search vehicles or type new…"
+          placeholder="Search vehicles or add new…"
           className="flex-1 text-sm outline-none bg-transparent placeholder:text-black/30"
         />
         {search && (

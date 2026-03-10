@@ -262,6 +262,43 @@ public class AppointmentService {
         appointmentRepository.deleteById(id);
     }
 
+    /**
+     * Cancels an appointment, verifying that the requester is the owner.
+     * Used by the customer when they dismiss the PayHere payment modal, so the
+     * reserved time slot is immediately released back for booking.
+     */
+    @Transactional
+    public AppointmentDto cancelOwnAppointment(Long id, Authentication authentication) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Appointment not found: " + id));
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new SecurityException("Authentication required");
+        }
+
+        String userId = authentication.getPrincipal().toString();
+        boolean isOwner = false;
+        try {
+            UUID profileId = UUID.fromString(userId);
+            isOwner = appointment.getProfile() != null
+                    && profileId.equals(appointment.getProfile().getId());
+        } catch (IllegalArgumentException e) {
+            try {
+                Long localUserId = Long.parseLong(userId);
+                isOwner = appointment.getUser() != null
+                        && localUserId.equals(appointment.getUser().getId());
+            } catch (NumberFormatException ignored) {}
+        }
+
+        if (!isOwner) {
+            throw new SecurityException("You can only cancel your own appointments");
+        }
+
+        appointment.setStatus("CANCELLED");
+        appointment = appointmentRepository.save(appointment);
+        return convertToDto(appointment);
+    }
+
     @Transactional(readOnly = true)
     public List<String> getBookedSlotsForDate(LocalDate date) {
         LocalDateTime startOfDay = date.atStartOfDay();

@@ -150,4 +150,30 @@ public class AppointmentController {
                                 .message("Appointment deleted successfully")
                                 .build());
         }
+
+        /**
+         * Lets a customer cancel their own appointment (e.g. after dismissing the
+         * PayHere modal).  Verifies ownership — users cannot cancel other people's
+         * appointments.
+         */
+        @PostMapping("/{id}/cancel")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<AppointmentDto>> cancelOwnAppointment(
+                        @PathVariable Long id,
+                        Authentication authentication) {
+                try {
+                        AppointmentDto appointment = appointmentService.cancelOwnAppointment(id, authentication);
+                        return ResponseEntity.ok(ApiResponse.<AppointmentDto>builder()
+                                        .success(true)
+                                        .message("Appointment cancelled successfully")
+                                        .data(appointment)
+                                        .build());
+                } catch (SecurityException e) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                        .body(ApiResponse.<AppointmentDto>builder()
+                                                        .success(false)
+                                                        .message(e.getMessage())
+                                                        .build());
+                }
+        }
 }

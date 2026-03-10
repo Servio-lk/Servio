@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, Calendar, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Coins, CreditCard, Calendar, Clock, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ export default function BookingPage() {
   const [selectedTime, setSelectedTime] = useState('9:00 AM - 9:30 AM');
   const [isBooking, setIsBooking] = useState(false);
   const [currentStep, setCurrentStep] = useState<'time' | 'checkout'>('time');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'payhere'>('cash');
 
   // Feature 1: track booked slots for the selected date
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
@@ -206,6 +207,7 @@ export default function BookingPage() {
 
     setIsBooking(true);
     try {
+      // Step 1: Create the appointment (same for both payment methods)
       const appointmentDateTime = convertToDateTime(selectedDateObj.fullDate, selectedTime);
       const vehicleNote = vehicleName.trim() ? `Vehicle: ${vehicleName.trim()}` : '';
       const baseNote = isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`;
@@ -221,11 +223,81 @@ export default function BookingPage() {
       };
 
       const response = await apiService.createAppointment(appointmentRequest);
-      if (response.success && response.data) {
-        toast.success('Appointment booked successfully!');
-        navigate(`/confirmed/${response.data.id}`);
-      } else {
+      if (!response.success || !response.data) {
         toast.error(response.message || 'Failed to book appointment');
+        return;
+      }
+
+      const appointmentId = response.data.id;
+
+      // Step 2: Handle chosen payment method
+      if (paymentMethod === 'cash') {
+        toast.success('Appointment booked successfully!');
+        navigate(`/confirmed/${appointmentId}`);
+      } else {
+        // PayHere JS SDK — modal popup, no redirect
+        const payRes = await apiService.initiatePayHerePayment(
+          appointmentId,
+          'LKR',
+          serviceId ?? undefined,
+        );
+        if (!payRes.success || !payRes.data) {
+          toast.error(payRes.message || 'Failed to initiate PayHere payment');
+          setIsBooking(false);
+          return;
+        }
+        const d = payRes.data;
+
+        // Guard: ensure the PayHere JS SDK has loaded
+        if (!window.payhere || typeof window.payhere.startPayment !== 'function') {
+          toast.error('Payment gateway failed to load. Please refresh the page and try again.');
+          // Release the slot by cancelling the appointment (use .catch to ignore backend 404s if not restarted yet)
+          await apiService.cancelAppointment(appointmentId).catch(() => {/* ignore */});
+          setIsBooking(false);
+          return;
+        }
+
+        // Register callbacks before calling startPayment
+        window.payhere.onCompleted = (_orderId: string) => {
+          toast.success('Payment successful! Your appointment is confirmed.');
+          navigate(`/confirmed/${appointmentId}`);
+        };
+
+        window.payhere.onDismissed = () => {
+          toast.info('Payment cancelled. The time slot has been released.');
+          // Free the slot so other users or the same user can book again
+          apiService.cancelAppointment(appointmentId).catch(() => {/* best-effort */});
+          setIsBooking(false);
+        };
+
+        window.payhere.onError = (error: string) => {
+          toast.error(`Payment failed: ${error}. The time slot has been released.`);
+          apiService.cancelAppointment(appointmentId).catch(() => {/* best-effort */});
+          setIsBooking(false);
+        };
+
+        // Open in-page modal — user never leaves this page
+        window.payhere.startPayment({
+          sandbox:     d.sandboxMode,
+          merchant_id: d.merchantId,
+          return_url:  undefined,  // not used with JS SDK
+          cancel_url:  undefined,  // not used with JS SDK
+          notify_url:  d.notifyUrl,
+          order_id:    d.orderId,
+          items:       d.items,
+          amount:      d.amount,
+          currency:    d.currency,
+          hash:        d.hash,
+          first_name:  d.firstName,
+          last_name:   d.lastName,
+          email:       d.email,
+          phone:       d.phone,
+          address:     d.address,
+          city:        d.city,
+          country:     d.country,
+        });
+        // Callbacks handle setIsBooking(false) — skip the finally block
+        return;
       }
     } catch (error: any) {
       let errorMessage = 'Failed to book appointment. ';
@@ -378,9 +450,38 @@ export default function BookingPage() {
           <Phone className="w-5 h-5 flex-shrink-0" />
           <span className="flex-1 text-left text-sm font-medium text-black/70">{user?.phone || '+94 72 4523 299'}</span>
         </div>
-        <div className="bg-white rounded-lg p-4 flex items-center gap-3">
-          <Coins className="w-5 h-5 flex-shrink-0" />
-          <span className="flex-1 text-left text-sm font-medium text-black/70">Cash</span>
+        {/* Payment method selector */}
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-black/50 px-1">Payment Method</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPaymentMethod('cash')}
+              className={`flex-1 p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                paymentMethod === 'cash'
+                  ? 'border-[#ff5d2e] bg-[#ffe7df]'
+                  : 'bg-white border-black/10 hover:border-[#ff5d2e]/50'
+              }`}
+            >
+              <Coins className={`w-4 h-4 ${paymentMethod === 'cash' ? 'text-[#ff5d2e]' : 'text-black/40'}`} />
+              <span className={`text-sm font-medium ${paymentMethod === 'cash' ? 'text-[#ff5d2e]' : 'text-black/60'}`}>Cash</span>
+            </button>
+            <button
+              onClick={() => setPaymentMethod('payhere')}
+              className={`flex-1 p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                paymentMethod === 'payhere'
+                  ? 'border-[#ff5d2e] bg-[#ffe7df]'
+                  : 'bg-white border-black/10 hover:border-[#ff5d2e]/50'
+              }`}
+            >
+              <CreditCard className={`w-4 h-4 ${paymentMethod === 'payhere' ? 'text-[#ff5d2e]' : 'text-black/40'}`} />
+              <span className={`text-sm font-medium ${paymentMethod === 'payhere' ? 'text-[#ff5d2e]' : 'text-black/60'}`}>Card</span>
+            </button>
+          </div>
+          <div className="mt-2 flex justify-center">
+            <a href="https://www.payhere.lk" target="_blank" rel="noopener noreferrer">
+              <img src="https://www.payhere.lk/downloads/images/payhere_short_banner.png" alt="PayHere" width="250"/>
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -546,9 +647,38 @@ export default function BookingPage() {
                     <Phone className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
                     <span className="flex-1 text-left text-sm font-medium text-black">{user?.phone || '+94 72 4523 299'}</span>
                   </div>
-                  <div className="w-full p-3 bg-[#fff7f5] rounded-lg flex items-center gap-3">
-                    <Coins className="w-5 h-5 text-[#ff5d2e] flex-shrink-0" />
-                    <span className="flex-1 text-left text-sm font-medium text-black">Pay by Cash</span>
+                  {/* Payment method selector */}
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-medium text-black/50">Payment Method</p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setPaymentMethod('cash')}
+                        className={`flex-1 p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                          paymentMethod === 'cash'
+                            ? 'border-[#ff5d2e] bg-[#ffe7df]'
+                            : 'bg-white border-black/10 hover:border-[#ff5d2e]/50'
+                        }`}
+                      >
+                        <Coins className={`w-4 h-4 ${paymentMethod === 'cash' ? 'text-[#ff5d2e]' : 'text-black/40'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'cash' ? 'text-[#ff5d2e]' : 'text-black/60'}`}>Cash</span>
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('payhere')}
+                        className={`flex-1 p-3 rounded-lg border-2 flex items-center gap-2 transition-all ${
+                          paymentMethod === 'payhere'
+                            ? 'border-[#ff5d2e] bg-[#ffe7df]'
+                            : 'bg-white border-black/10 hover:border-[#ff5d2e]/50'
+                        }`}
+                      >
+                        <CreditCard className={`w-4 h-4 ${paymentMethod === 'payhere' ? 'text-[#ff5d2e]' : 'text-black/40'}`} />
+                        <span className={`text-sm font-medium ${paymentMethod === 'payhere' ? 'text-[#ff5d2e]' : 'text-black/60'}`}>Card</span>
+                      </button>
+                    </div>
+                    <div className="mt-2 flex justify-center">
+                      <a href="https://www.payhere.lk" target="_blank" rel="noopener noreferrer">
+                        <img src="https://www.payhere.lk/downloads/images/payhere_short_banner.png" alt="PayHere" width="250"/>
+                      </a>
+                    </div>
                   </div>
                   {vehicleName.trim() && (
                     <div className="mt-1 p-3 bg-[#fff7f5] rounded-lg border border-[#ffe7df]">
@@ -565,7 +695,9 @@ export default function BookingPage() {
                   disabled={isBooking}
                   className="w-full bg-[#ff5d2e] text-white py-4 rounded-xl font-semibold shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] hover:bg-[#e54d1e] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isBooking ? 'Booking...' : 'Confirm Booking'}
+                  {isBooking
+                    ? (paymentMethod === 'payhere' ? 'Processing...' : 'Booking...')
+                    : (paymentMethod === 'payhere' ? 'Pay Now' : 'Confirm Booking')}
                 </button>
 
                 <button
@@ -595,7 +727,9 @@ export default function BookingPage() {
                 disabled={isBooking}
                 className="w-full bg-[#ff5d2e] text-white py-4 rounded-xl font-semibold shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50"
               >
-                {isBooking ? 'Booking...' : 'Confirm Booking'}
+                {isBooking
+                  ? (paymentMethod === 'payhere' ? 'Processing...' : 'Booking...')
+                  : (paymentMethod === 'payhere' ? 'Pay Now' : 'Confirm Booking')}
               </button>
               <button
                 onClick={() => navigate(-1)}

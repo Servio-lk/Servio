@@ -69,4 +69,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         List<Appointment> findUpcomingAppointmentsInWindow(
                         @Param("windowStart") LocalDateTime windowStart,
                         @Param("windowEnd") LocalDateTime windowEnd);
+
+        // Appointments stuck in PENDING_PAYMENT that were created before a given cutoff
+        // — used by the expiry scheduler to auto-release time slots after 10 minutes.
+        @Query("SELECT a FROM Appointment a WHERE a.status = 'PENDING_PAYMENT' AND a.createdAt < :cutoff")
+        List<Appointment> findExpiredPendingPayments(@Param("cutoff") LocalDateTime cutoff);
 }
