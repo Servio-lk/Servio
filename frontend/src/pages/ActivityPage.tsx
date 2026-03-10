@@ -7,6 +7,50 @@ import type { AppointmentDto } from '@/services/api';
 import { toast } from 'sonner';
 import { useWebSocket } from '@/hooks/useWebSocket';
 
+// Map service type names (from API) to /public/service images/
+const serviceImageMap: Record<string, string> = {
+  'Washing Packages': '/service images/Washing Packages.jpg',
+  'Washing Package': '/service images/Washing Packages.jpg',
+  'Lube Services': '/service images/Lubricant Service.jpg',
+  'Lubricant Service': '/service images/Lubricant Service.jpg',
+  'Lubricant Services': '/service images/Lubricant Service.jpg',
+  'Exterior & Interior Detailing': '/service images/Exterior Detailing.jpg',
+  'Exterior Detailing': '/service images/Exterior Detailing.jpg',
+  'Interior Detailing': '/service images/Interior detailing.jpg',
+  'Interior detailing': '/service images/Interior detailing.jpg',
+  'Engine Tune ups': '/service images/Mechanical Repair.jpg',
+  'Mechanical Repair': '/service images/Mechanical Repair.jpg',
+  'Inspection Reports': '/service images/Mulipoint Inspection Report.jpg',
+  'Multipoint Inspection Report': '/service images/Mulipoint Inspection Report.jpg',
+  'Tyre Services': '/service images/Mechanical Repair.jpg',
+  'Waxing': '/service images/Exterior Detailing.jpg',
+  'Undercarriage Degreasing': '/service images/Exterior Detailing.jpg',
+  'Windscreen Treatments': '/service images/Exterior Detailing.jpg',
+  'Battery Services': '/service images/Electrical & Electronic.jpg',
+  'Electrical & Electronic': '/service images/Electrical & Electronic.jpg',
+  'Nano Coating Packages': '/service images/Exterior Detailing.jpg',
+  'Nano Coating Treatments': '/service images/Exterior Detailing.jpg',
+  'Insurance Claims': '/service images/General Collision Repair.jpg',
+  'General Collision Repair': '/service images/General Collision Repair.jpg',
+  'Wheel Alignment': '/service images/Mechanical Repair.jpg',
+  'Full Paints': '/service images/Complete Paint.jpg',
+  'Complete Paint': '/service images/Complete Paint.jpg',
+  'Part Replacements': '/service images/Mechanical Repair.jpg',
+  'Periodic Maintenance': '/service images/Periodic Maintenance.jpg',
+  'AC Repair and Service': '/service images/AC Repair and Service.jpg',
+};
+
+function getServiceImage(serviceType: string): string {
+  // Direct match first
+  if (serviceImageMap[serviceType]) return serviceImageMap[serviceType];
+  // Partial match fallback
+  const key = Object.keys(serviceImageMap).find(k =>
+    serviceType.toLowerCase().includes(k.toLowerCase()) ||
+    k.toLowerCase().includes(serviceType.toLowerCase())
+  );
+  return key ? serviceImageMap[key] : '/service images/Mechanical Repair.jpg';
+}
+
 export default function ActivityPage() {
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -120,17 +164,17 @@ export default function ActivityPage() {
           <div className="lg:col-span-2 flex flex-col gap-6">
             {/* Upcoming Service */}
             <div className="flex flex-col gap-4">
-              <p className="text-lg font-semibold text-black">Upcoming Service</p>
+              <p className="text-lg font-semibold text-black text-left">Upcoming Service</p>
               
               {nextUpcoming ? (
                 <div className="border border-[#ffe7df] rounded-2xl overflow-hidden bg-white">
                   {/* Service Image */}
-                  <div className="h-[185px] lg:h-[220px] bg-gradient-to-br from-[#ffe7df] to-[#fff7f5] relative">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-16 h-16 bg-[#ff5d2e]/20 rounded-full flex items-center justify-center">
-                        <Calendar className="w-8 h-8 text-[#ff5d2e]" />
-                      </div>
-                    </div>
+                  <div className="h-[185px] lg:h-[220px] relative overflow-hidden bg-[#ffe7df]">
+                    <img
+                      src={getServiceImage(nextUpcoming.serviceType)}
+                      alt={nextUpcoming.serviceType}
+                      className="w-full h-full object-cover"
+                    />
                     <div className={`absolute top-3 right-3 text-white text-xs font-medium px-2 py-1 rounded-full ${
                       nextUpcoming.status === 'CONFIRMED' ? 'bg-green-500' :
                       nextUpcoming.status === 'PENDING' ? 'bg-yellow-500' :
@@ -212,10 +256,12 @@ export default function ActivityPage() {
                       key={service.id}
                       className="bg-white rounded-lg shadow-sm p-3 lg:p-4 flex items-center gap-3"
                     >
-                      <div className="bg-[#ffe7df] p-2 lg:p-3 rounded">
-                        <div className="w-10 h-10 rounded bg-[#ff5d2e]/20 flex items-center justify-center">
-                          <Clock className="w-5 h-5 text-[#ff5d2e]" />
-                        </div>
+                      <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                        <img
+                          src={getServiceImage(service.serviceType)}
+                          alt={service.serviceType}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-base font-medium text-black truncate">{service.serviceType}</p>

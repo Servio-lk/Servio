@@ -1,22 +1,54 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/services_providers.dart';
+import '../services/models/service_model.dart';
 
-class HomeScreen extends StatelessWidget {
+// ─── ICON MAPPING ────────────────────────────────────────────────────────────
+
+const _suggestionIconMap = <String, String>{
+  'Washing Packages': 'assets/service icons/Washing Packages.png',
+  'Lube Services': 'assets/service icons/Lube Services.png',
+  'Exterior & Interior Detailing':
+      'assets/service icons/Exterior & Interior Detailing.png',
+  'Engine Tune ups': 'assets/service icons/Engine Tune ups.png',
+  'Inspection Reports': 'assets/service icons/Inspection Reports.png',
+  'Tyre Services': 'assets/service icons/Tyre Services.png',
+  'Waxing': 'assets/service icons/Waxing.png',
+  'Undercarriage Degreasing':
+      'assets/service icons/Undercarriage Degreasing.png',
+  'Windscreen Treatments': 'assets/service icons/Windscreen Treatments.png',
+  'Battery Services': 'assets/service icons/Battery Services.png',
+  'Packages': 'assets/service icons/Nano Coating Packages.png',
+  'Treatments': 'assets/service icons/Nano Coating Treatments.png',
+  'Insurance Claims': 'assets/service icons/Insurance Claims.png',
+  'Wheel Alignment': 'assets/service icons/Wheel Alignment.png',
+  'Full Paints': 'assets/service icons/Full Paints.png',
+  'Part Replacements': 'assets/service icons/Part Replacements.png',
+};
+
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Get user name from Supabase auth
+    final user = Supabase.instance.client.auth.currentUser;
+    final fullName = user?.userMetadata?['full_name'] as String? ?? '';
+    final firstName = fullName.isNotEmpty ? fullName.split(' ').first : 'there';
+
+    // Watch featured services
+    final featuredAsync = ref.watch(featuredServicesProvider);
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFFFF7F5),
-            Color(0xFFFBFBFB),
-          ],
+          colors: [Color(0xFFFFF7F5), Color(0xFFFBFBFB)],
         ),
       ),
       child: SafeArea(
@@ -26,22 +58,22 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                // Greeting
-                _GreetingSection(),
-                SizedBox(height: 16),
+              children: [
+                // Greeting — now uses real name
+                _GreetingSection(name: firstName),
+                const SizedBox(height: 16),
                 // Search + Service Center
-                _SearchContainer(),
-                SizedBox(height: 16),
-                _ServiceCenterContainer(),
+                const _SearchContainer(),
+                const SizedBox(height: 16),
+                const _ServiceCenterContainer(),
                 // Suggestions Header
-                _SuggestionsHeader(),
-                // Suggestions List
-                _SuggestionsList(),
-                SizedBox(height: 16),
+                const _SuggestionsHeader(),
+                // Suggestions List — from Supabase
+                _SuggestionsListLive(featuredAsync: featuredAsync),
+                const SizedBox(height: 16),
                 // Offers horizontal list
-                _OffersSection(),
-                SizedBox(height: 16),
+                const _OffersSection(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -54,20 +86,62 @@ class HomeScreen extends StatelessWidget {
 // ─── GREETING ────────────────────────────────────────────────────────────────
 
 class _GreetingSection extends StatelessWidget {
-  const _GreetingSection();
+  final String name;
+  const _GreetingSection({required this.name});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, top: 16),
       child: Text(
-        'Hello, Cham!',
+        'Hello, $name!',
         style: GoogleFonts.instrumentSans(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.black,
         ),
       ),
+    );
+  }
+}
+
+// ─── SUGGESTIONS LIST (live from Supabase) ───────────────────────────────────
+
+class _SuggestionsListLive extends StatelessWidget {
+  final AsyncValue<List<ServiceModel>> featuredAsync;
+  const _SuggestionsListLive({required this.featuredAsync});
+
+  @override
+  Widget build(BuildContext context) {
+    return featuredAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (services) {
+        if (services.isEmpty) return const SizedBox.shrink();
+        final items = services.take(4).toList();
+        return Column(
+          children: items.asMap().entries.map((entry) {
+            final index = entry.key;
+            final svc = entry.value;
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: index < items.length - 1 ? 8 : 0,
+              ),
+              child: _SuggestionItem(
+                title: svc.name,
+                iconPath:
+                    _suggestionIconMap[svc.name] ??
+                    'assets/service icons/Lube Services.png',
+              ),
+            );
+          }).toList(),
+        );
+      },
     );
   }
 }
@@ -243,44 +317,13 @@ class _SuggestionsHeader extends StatelessWidget {
   }
 }
 
-// ─── SUGGESTIONS LIST ────────────────────────────────────────────────────────
-
-class _SuggestionsList extends StatelessWidget {
-  const _SuggestionsList();
-
-  static const _suggestions = [
-    {'title': 'Lube Services', 'iconPath': 'assets/service icons/Lube Services.png'},
-    {'title': 'Washing Packages', 'iconPath': 'assets/service icons/Washing Packages.png'},
-    {'title': 'Exterior & Interior Detailing', 'iconPath': 'assets/service icons/Exterior & Interior Detailing.png'},
-    {'title': 'Engine Tune ups', 'iconPath': 'assets/service icons/Engine Tune ups.png'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: _suggestions.asMap().entries.map((entry) {
-        final index = entry.key;
-        final item = entry.value;
-        return Padding(
-          padding: EdgeInsets.only(bottom: index < _suggestions.length - 1 ? 8 : 0),
-          child: _SuggestionItem(
-            title: item['title'] as String,
-            iconPath: item['iconPath'] as String,
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
+// ─── SUGGESTION ITEM ─────────────────────────────────────────────────────────
 
 class _SuggestionItem extends StatelessWidget {
   final String title;
   final String iconPath;
 
-  const _SuggestionItem({
-    required this.title,
-    required this.iconPath,
-  });
+  const _SuggestionItem({required this.title, required this.iconPath});
 
   @override
   Widget build(BuildContext context) {
@@ -312,11 +355,8 @@ class _SuggestionItem extends StatelessWidget {
             child: Image.asset(
               iconPath,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.build,
-                size: 24,
-                color: Color(0xFFFF5D2E),
-              ),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.build, size: 24, color: Color(0xFFFF5D2E)),
             ),
           ),
           const SizedBox(width: 12),
@@ -355,11 +395,7 @@ class _OffersSection extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         clipBehavior: Clip.none,
-        children: const [
-          _OfferCard(),
-          SizedBox(width: 16),
-          _OfferCard(),
-        ],
+        children: const [_OfferCard(), SizedBox(width: 16), _OfferCard()],
       ),
     );
   }

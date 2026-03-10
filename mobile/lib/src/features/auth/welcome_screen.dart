@@ -15,9 +15,9 @@ class WelcomeScreen extends StatelessWidget {
             const SizedBox(height: 20),
             Text(
               'Welcome to Servio',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             FilledButton(

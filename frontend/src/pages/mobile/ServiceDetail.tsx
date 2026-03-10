@@ -25,7 +25,11 @@ export default function ServiceDetail() {
 
       {/* Service Image */}
       <div className="w-full aspect-[375/185] overflow-hidden p-2 relative">
-        <div className="w-full h-full bg-gray-200 rounded" />
+        <img
+          src="/service images/Lubricant Service.jpg"
+          alt="Lubricant Service"
+          className="w-full h-full object-cover rounded"
+        />
         <button className="absolute top-2 left-2 bg-white w-10 h-10 rounded-lg flex items-center justify-center">
           <ArrowLeft className="w-6 h-6" />
         </button>

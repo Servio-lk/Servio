@@ -61,12 +61,18 @@ class _SignInScreenState extends State<SignInScreen> {
           String errorMessage = 'Invalid email or password. Please try again.';
 
           // Check for specific error types
-          if (e.toString().contains('Invalid login credentials')) {
+          final errorStr = e.toString();
+          if (errorStr.contains('Invalid login credentials')) {
             errorMessage = 'Invalid email or password.';
-          } else if (e.toString().contains('Email not confirmed')) {
+          } else if (errorStr.contains('Email not confirmed')) {
             errorMessage = 'Please verify your email address first.';
-          } else if (e.toString().contains('Network')) {
-            errorMessage = 'Network error. Please check your connection.';
+          } else if (errorStr.contains('Network') ||
+              errorStr.contains('SocketException') ||
+              errorStr.contains('Failed host lookup') ||
+              errorStr.contains('ClientException') ||
+              errorStr.contains('AuthRetryableFetchException')) {
+            errorMessage =
+                'Unable to connect to the server. Please check your internet connection and try again.';
           }
 
           _showSnackBar(errorMessage);
@@ -214,7 +220,11 @@ class _SignInScreenState extends State<SignInScreen> {
                               borderRadius: BorderRadius.circular(8),
                               onTap: () => context.go('/welcome'),
                               child: const Center(
-                                child: Icon(Icons.close, size: 24, color: Colors.black),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 24,
+                                  color: Colors.black,
+                                ),
                               ),
                             ),
                           ),
@@ -297,7 +307,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                       ? []
                                       : [
                                           BoxShadow(
-                                            color: const Color(0xFFFF5D2E).withOpacity(0.5),
+                                            color: const Color(
+                                              0xFFFF5D2E,
+                                            ).withOpacity(0.5),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
@@ -317,16 +329,21 @@ class _SignInScreenState extends State<SignInScreen> {
                                                 width: 20,
                                                 child: CircularProgressIndicator(
                                                   strokeWidth: 2,
-                                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation<
+                                                        Color
+                                                      >(Colors.white),
                                                 ),
                                               )
                                             : Text(
                                                 'Log In',
-                                                style: GoogleFonts.instrumentSans(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
+                                                style:
+                                                    GoogleFonts.instrumentSans(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                    ),
                                               ),
                                       ),
                                     ),
@@ -338,7 +355,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             // Forgot Password
                             Center(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
                                 child: GestureDetector(
                                   onTap: _handleForgotPassword,
                                   child: Text(
@@ -358,7 +377,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             // Don't have account
                             Center(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
                                 child: GestureDetector(
                                   onTap: () => context.go('/signup'),
                                   child: Text(
@@ -386,7 +407,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                     ),
                                   ),
                                   const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8),
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
                                     child: Text(
                                       'or',
                                       style: TextStyle(
@@ -491,7 +514,9 @@ class _SignInScreenState extends State<SignInScreen> {
               if (isPassword)
                 IconButton(
                   icon: Icon(
-                    _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                    _isPasswordVisible
+                        ? Icons.visibility
+                        : Icons.visibility_off,
                     size: 20,
                     color: Colors.black.withOpacity(0.5),
                   ),

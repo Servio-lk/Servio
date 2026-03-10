@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'choose_a_time_screen.dart';
 
 // ─── SERVICE DETAIL DATA MODEL ───────────────────────────────────────────────
 
@@ -59,7 +60,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   int? _parseLKR(String price) {
     // Remove currency prefix, plus sign, and decimal part, then parse
     // e.g. 'LKR 1,500.00' → '1500', '+LKR 4,000' → '4000'
-    final withoutDecimal = price.contains('.') ? price.substring(0, price.lastIndexOf('.')) : price;
+    final withoutDecimal = price.contains('.')
+        ? price.substring(0, price.lastIndexOf('.'))
+        : price;
     final digitsOnly = withoutDecimal.replaceAll(RegExp(r'[^0-9]'), '');
     if (digitsOnly.isEmpty) return null;
     return int.tryParse(digitsOnly);
@@ -106,7 +109,8 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                         description: widget.data.description,
                         showFull: _showFullDescription,
                         onToggle: () => setState(
-                            () => _showFullDescription = !_showFullDescription),
+                          () => _showFullDescription = !_showFullDescription,
+                        ),
                       ),
 
                       // Oil / Options section (only if options exist)
@@ -135,7 +139,10 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             ),
 
             // ── Sticky bottom button ──
-            _BottomButtonSection(totalPrice: _totalPrice),
+            _BottomButtonSection(
+              totalPrice: _totalPrice,
+              serviceType: widget.data.title,
+            ),
           ],
         ),
       ),
@@ -161,8 +168,7 @@ class _ServiceImageSection extends StatelessWidget {
               ? Image.asset(
                   imagePath!,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _placeholder(),
+                  errorBuilder: (context, error, stackTrace) => _placeholder(),
                 )
               : _placeholder(),
 
@@ -195,15 +201,15 @@ class _ServiceImageSection extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-        color: const Color(0xFFFFE7DF),
-        child: const Center(
-          child: PhosphorIcon(
-            PhosphorIconsBold.wrench,
-            size: 48,
-            color: Color(0xFFFF5D2E),
-          ),
-        ),
-      );
+    color: const Color(0xFFFFE7DF),
+    child: const Center(
+      child: PhosphorIcon(
+        PhosphorIconsBold.wrench,
+        size: 48,
+        color: Color(0xFFFF5D2E),
+      ),
+    ),
+  );
 }
 
 // ─── DESCRIPTION SECTION ─────────────────────────────────────────────────────
@@ -228,8 +234,9 @@ class _DescriptionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLong = description.length > _previewLength;
-    final displayText =
-        (!showFull && isLong) ? '${description.substring(0, _previewLength)}…' : description;
+    final displayText = (!showFull && isLong)
+        ? '${description.substring(0, _previewLength)}…'
+        : description;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -426,9 +433,7 @@ class _OptionItem extends StatelessWidget {
                       ? PhosphorIconsRegular.checkSquare
                       : PhosphorIconsRegular.square,
                   size: 24,
-                  color: isSelected
-                      ? const Color(0xFFFF5D2E)
-                      : Colors.black,
+                  color: isSelected ? const Color(0xFFFF5D2E) : Colors.black,
                 ),
               ),
             ),
@@ -507,7 +512,11 @@ class _SpecialInstructionsSection extends StatelessWidget {
 
 class _BottomButtonSection extends StatelessWidget {
   final String totalPrice;
-  const _BottomButtonSection({required this.totalPrice});
+  final String serviceType;
+  const _BottomButtonSection({
+    required this.totalPrice,
+    required this.serviceType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -516,10 +525,22 @@ class _BottomButtonSection extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
+          padding: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 12,
+            bottom: 12,
+          ),
           child: GestureDetector(
             onTap: () {
-              // TODO: navigate to booking flow
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ChooseATimeScreen(
+                    serviceType: serviceType,
+                    estimatedCostStr: totalPrice,
+                  ),
+                ),
+              );
             },
             child: Container(
               height: 48,

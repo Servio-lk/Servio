@@ -88,10 +88,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           height: 13,
                           decoration: ShapeDecoration(
                             shape: RoundedRectangleBorder(
-                              side: BorderSide(
-                                width: 1,
-                                color: Colors.black,
-                              ),
+                              side: BorderSide(width: 1, color: Colors.black),
                               borderRadius: BorderRadius.circular(4.30),
                             ),
                           ),
@@ -167,10 +164,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                 ),
-                                child: const Icon(
-                                  Icons.close,
-                                  size: 24,
-                                ),
+                                child: const Icon(Icons.close, size: 24),
                               ),
                             ),
                           ],
@@ -268,7 +262,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 isPasswordVisible: _isConfirmPasswordVisible,
                                 onToggleVisibility: () {
                                   setState(() {
-                                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                                    _isConfirmPasswordVisible =
+                                        !_isConfirmPasswordVisible;
                                   });
                                 },
                                 validator: (value) {
@@ -306,7 +301,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   blurRadius: 8,
                                   offset: Offset(0, 4),
                                   spreadRadius: 0,
-                                )
+                                ),
                               ],
                             ),
                             child: const Text(
@@ -412,9 +407,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             Container(
               width: double.infinity,
               height: 34,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-              ),
+              decoration: const BoxDecoration(color: Colors.white),
               child: Center(
                 child: Container(
                   width: 144,
@@ -445,17 +438,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: ShapeDecoration(
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            side: BorderSide(
-              width: 1,
-              color: Colors.black.withOpacity(0.10),
-            ),
+            side: BorderSide(width: 1, color: Colors.black.withOpacity(0.10)),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -498,17 +485,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 8,
-          vertical: 8,
-        ),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         decoration: ShapeDecoration(
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            side: BorderSide(
-              width: 1,
-              color: Colors.black.withOpacity(0.10),
-            ),
+            side: BorderSide(width: 1, color: Colors.black.withOpacity(0.10)),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -570,10 +551,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         decoration: ShapeDecoration(
           color: Colors.white,
           shape: RoundedRectangleBorder(
-            side: const BorderSide(
-              width: 1,
-              color: Color(0xFFFFE7DF),
-            ),
+            side: const BorderSide(width: 1, color: Color(0xFFFFE7DF)),
             borderRadius: BorderRadius.circular(8),
           ),
         ),
@@ -587,11 +565,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 color: iconBackground,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Icon(
-                icon,
-                size: 20,
-                color: iconColor,
-              ),
+              child: Icon(icon, size: 20, color: iconColor),
             ),
             const SizedBox(width: 8),
             Text(

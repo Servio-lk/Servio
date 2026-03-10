@@ -21,8 +21,13 @@ public class Payment {
     private Appointment appointment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
+
+    /** Set for Supabase-authenticated users (mutually exclusive with user). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "profile_id", nullable = true)
+    private Profile profile;
 
     @Column(nullable = false)
     private BigDecimal amount;

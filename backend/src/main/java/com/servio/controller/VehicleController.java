@@ -5,6 +5,8 @@ import com.servio.service.VehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +18,33 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+
+    /** Returns vehicles for the currently logged-in user (from JWT). */
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<List<VehicleDto>>> getMyVehicles(Authentication authentication) {
+        List<VehicleDto> vehicles = vehicleService.getMyVehicles(authentication);
+        return ResponseEntity.ok(ApiResponse.<List<VehicleDto>>builder()
+                .success(true)
+                .message("My vehicles retrieved successfully")
+                .data(vehicles)
+                .build());
+    }
+
+    /** Creates a vehicle for the currently logged-in user (from JWT). */
+    @PostMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<VehicleDto>> createMyVehicle(
+            @RequestBody VehicleRequest request,
+            Authentication authentication) {
+        VehicleDto vehicle = vehicleService.createMyVehicle(request, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.<VehicleDto>builder()
+                        .success(true)
+                        .message("Vehicle created successfully")
+                        .data(vehicle)
+                        .build());
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<VehicleDto>> createVehicle(@RequestBody VehicleRequest request) {

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'service_detail_screen.dart';
+import 'models/service_model.dart';
+import 'services_providers.dart';
 
-// ─── SERVICE ITEM MODEL ──────────────────────────────────────────────────────
+// ─── LOCAL UI MODEL (unchanged — used by existing UI widgets) ────────────────
 
 class ServiceItem {
   final String title;
@@ -25,138 +28,64 @@ class ServiceItem {
   });
 }
 
-// ─── SERVICE DATA ────────────────────────────────────────────────────────────
+// ─── ASSET MAPPINGS (service name → local asset path) ────────────────────────
 
-final List<ServiceItem> _periodicMaintenanceItems = const [
-  ServiceItem(
-    title: 'Washing Packages',
-    iconPath: 'assets/service icons/Washing Packages.png',
-    imagePath: 'assets/service images/Washing Packages.jpg',
-    basePrice: 'LKR 1,500.00',
-    description: 'Keep your vehicle spotless with our comprehensive washing packages. Choose from basic exterior wash to full interior-exterior detailing.',
-  ),
-  ServiceItem(
-    title: 'Lube Services',
-    iconPath: 'assets/service icons/Lube Services.png',
-    imagePath: 'assets/service images/Lubricant Service.jpg',
-    basePrice: 'LKR 1,500.00',
-    description: 'Protect your engine and maintain peak performance with our professional oil change service. We only use high-quality lubricants and filters, ensuring your vehicle runs smoothly and efficiently.',
-    optionsTitle: 'Pricing and Oil Selection',
-    options: [
-      ServiceOption(name: 'Standard/Conventional Oil', price: '+LKR 4,000'),
-      ServiceOption(name: 'Synthetic Blend Oil', price: '+LKR 6,000'),
-      ServiceOption(name: 'Full Synthetic Oil', price: '+LKR 8,000'),
-    ],
-  ),
-  ServiceItem(
-    title: 'Exterior & Interior Detailing',
-    iconPath: 'assets/service icons/Exterior & Interior Detailing.png',
-    imagePath: 'assets/service images/Exterior Detailing.jpg',
-    basePrice: 'LKR 5,000.00',
-    description: 'Give your vehicle a showroom finish with our professional exterior and interior detailing service using premium products.',
-  ),
-  ServiceItem(
-    title: 'Engine Tune ups',
-    iconPath: 'assets/service icons/Engine Tune ups.png',
-    imagePath: 'assets/service images/Mechanical Repair.jpg',
-    basePrice: 'LKR 3,500.00',
-    description: 'Restore your engine\'s power and efficiency with a full tune-up including spark plugs, filters, and system checks.',
-  ),
-  ServiceItem(
-    title: 'Inspection Reports',
-    iconPath: 'assets/service icons/Inspection Reports.png',
-    imagePath: 'assets/service images/Mulipoint Inspection Report.jpg',
-    basePrice: 'LKR 2,000.00',
-    description: 'Comprehensive multi-point vehicle inspection covering all critical systems with a detailed digital report.',
-  ),
-  ServiceItem(
-    title: 'Tyre Services',
-    iconPath: 'assets/service icons/Tyre Services.png',
-    imagePath: 'assets/service images/Periodic Maintenance.jpg',
-    basePrice: 'LKR 500.00',
-    description: 'Full tyre services including rotation, balancing, inflation checks and replacement recommendations.',
-  ),
-  ServiceItem(
-    title: 'Waxing',
-    iconPath: 'assets/service icons/Waxing.png',
-    basePrice: 'LKR 2,500.00',
-    description: 'Protect your paintwork and restore shine with a professional hand wax application.',
-  ),
-  ServiceItem(
-    title: 'Undercarriage Degreasing',
-    iconPath: 'assets/service icons/Undercarriage Degreasing.png',
-    basePrice: 'LKR 1,800.00',
-    description: 'Deep clean the undercarriage to remove grease, grime and road debris that can cause corrosion.',
-  ),
-  ServiceItem(
-    title: 'Windscreen Treatments',
-    iconPath: 'assets/service icons/Windscreen Treatments.png',
-    basePrice: 'LKR 1,200.00',
-    description: 'Hydrophobic coating and chip repair services to keep your windscreen clear and safe in all conditions.',
-  ),
-  ServiceItem(
-    title: 'Battery Services',
-    iconPath: 'assets/service icons/Battery Services.png',
-    imagePath: 'assets/service images/Electrical & Electronic.jpg',
-    basePrice: 'LKR 500.00',
-    description: 'Battery health check, terminal cleaning and replacement service for all vehicle makes and models.',
-  ),
-];
+const _iconMap = <String, String>{
+  'Washing Packages': 'assets/service icons/Washing Packages.png',
+  'Lube Services': 'assets/service icons/Lube Services.png',
+  'Exterior & Interior Detailing':
+      'assets/service icons/Exterior & Interior Detailing.png',
+  'Engine Tune ups': 'assets/service icons/Engine Tune ups.png',
+  'Inspection Reports': 'assets/service icons/Inspection Reports.png',
+  'Tyre Services': 'assets/service icons/Tyre Services.png',
+  'Waxing': 'assets/service icons/Waxing.png',
+  'Undercarriage Degreasing':
+      'assets/service icons/Undercarriage Degreasing.png',
+  'Windscreen Treatments': 'assets/service icons/Windscreen Treatments.png',
+  'Battery Services': 'assets/service icons/Battery Services.png',
+  'Packages': 'assets/service icons/Nano Coating Packages.png',
+  'Treatments': 'assets/service icons/Nano Coating Treatments.png',
+  'Insurance Claims': 'assets/service icons/Insurance Claims.png',
+  'Wheel Alignment': 'assets/service icons/Wheel Alignment.png',
+  'Full Paints': 'assets/service icons/Full Paints.png',
+  'Part Replacements': 'assets/service icons/Part Replacements.png',
+};
 
-final List<ServiceItem> _nanoCoatingItems = const [
-  ServiceItem(
-    title: 'Packages',
-    iconPath: 'assets/service icons/Nano Coating Packages.png',
-    basePrice: 'LKR 25,000.00',
-    description: 'Complete nano ceramic coating package providing long-lasting protection against UV rays, scratches and contaminants.',
-  ),
-  ServiceItem(
-    title: 'Treatments',
-    iconPath: 'assets/service icons/Nano Coating Treatments.png',
-    basePrice: 'LKR 12,000.00',
-    description: 'Targeted nano coating treatment for specific panels or surfaces to restore and protect your vehicle\'s finish.',
-  ),
-];
+const _imageMap = <String, String>{
+  'Washing Packages': 'assets/service images/Washing Packages.jpg',
+  'Lube Services': 'assets/service images/Lubricant Service.jpg',
+  'Exterior & Interior Detailing':
+      'assets/service images/Exterior Detailing.jpg',
+  'Engine Tune ups': 'assets/service images/Mechanical Repair.jpg',
+  'Inspection Reports': 'assets/service images/Mulipoint Inspection Report.jpg',
+  'Tyre Services': 'assets/service images/Periodic Maintenance.jpg',
+  'Battery Services': 'assets/service images/Electrical & Electronic.jpg',
+  'Insurance Claims': 'assets/service images/General Collision Repair.jpg',
+  'Full Paints': 'assets/service images/Complete Paint.jpg',
+};
 
-final List<ServiceItem> _collisionRepairsItems = const [
-  ServiceItem(
-    title: 'Insurance Claims',
-    iconPath: 'assets/service icons/Insurance Claims.png',
-    imagePath: 'assets/service images/General Collision Repair.jpg',
-    basePrice: 'Free consultation',
-    description: 'We work directly with all major insurance providers to handle your claim from assessment to repair completion.',
-  ),
-  ServiceItem(
-    title: 'Wheel Alignment',
-    iconPath: 'assets/service icons/Wheel Alignment.png',
-    basePrice: 'LKR 2,500.00',
-    description: 'Computer-aided wheel alignment to restore handling, reduce tyre wear and improve fuel efficiency.',
-  ),
-  ServiceItem(
-    title: 'Full Paints',
-    iconPath: 'assets/service icons/Full Paints.png',
-    imagePath: 'assets/service images/Complete Paint.jpg',
-    basePrice: 'LKR 45,000.00',
-    description: 'Factory-quality full vehicle respray using premium automotive paint with colour matching technology.',
-  ),
-  ServiceItem(
-    title: 'Part Replacements',
-    iconPath: 'assets/service icons/Part Replacements.png',
-    basePrice: 'Price varies',
-    description: 'Genuine and aftermarket part sourcing and replacement for all vehicle makes with fitment warranty.',
-  ),
-];
+ServiceItem _toServiceItem(ServiceModel m) => ServiceItem(
+  title: m.name,
+  iconPath: _iconMap[m.name] ?? 'assets/service icons/Lube Services.png',
+  imagePath: _imageMap[m.name],
+  basePrice: m.formattedBasePrice,
+  description: m.description,
+  optionsTitle: 'Pricing and Options',
+  options: m.options
+      .map((o) => ServiceOption(name: o.name, price: o.formattedPrice))
+      .toList(),
+);
 
 // ─── SERVICES SCREEN ─────────────────────────────────────────────────────────
 
-class ServicesScreen extends StatefulWidget {
+class ServicesScreen extends ConsumerStatefulWidget {
   const ServicesScreen({super.key});
 
   @override
-  State<ServicesScreen> createState() => _ServicesScreenState();
+  ConsumerState<ServicesScreen> createState() => _ServicesScreenState();
 }
 
-class _ServicesScreenState extends State<ServicesScreen> {
+class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
@@ -169,8 +98,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
   List<ServiceItem> _filter(List<ServiceItem> items) {
     if (_searchQuery.isEmpty) return items;
     return items
-        .where((item) =>
-            item.title.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .where(
+          (item) =>
+              item.title.toLowerCase().contains(_searchQuery.toLowerCase()),
+        )
         .toList();
   }
 
@@ -198,12 +129,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final periodicFiltered = _filter(_periodicMaintenanceItems);
-    final nanoFiltered = _filter(_nanoCoatingItems);
-    final collisionFiltered = _filter(_collisionRepairsItems);
-    final noResults = periodicFiltered.isEmpty &&
-        nanoFiltered.isEmpty &&
-        collisionFiltered.isEmpty;
+    final categoriesAsync = ref.watch(serviceCategoriesProvider);
 
     return Container(
       decoration: const BoxDecoration(
@@ -226,60 +152,118 @@ class _ServicesScreenState extends State<ServicesScreen> {
             ),
             // ── Scrollable Content ──
             Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 16, right: 16, top: 8, bottom: 16,
-                  ),
-                  child: noResults
-                      ? Padding(
-                          padding: const EdgeInsets.only(top: 64),
-                          child: Center(
+              child: categoriesAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
+                ),
+                error: (err, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const PhosphorIcon(
+                          PhosphorIconsRegular.wifiSlash,
+                          size: 48,
+                          color: Colors.black26,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Could not load services.\n$err',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 15,
+                            color: Colors.black54,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () =>
+                              ref.invalidate(serviceCategoriesProvider),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF5D2E),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             child: Text(
-                              'No services found for "$_searchQuery"',
-                              textAlign: TextAlign.center,
+                              'Retry',
                               style: GoogleFonts.instrumentSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black54,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                        )
-                      : Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (periodicFiltered.isNotEmpty)
-                              _ServiceSection(
-                                title: 'Periodic Maintenance',
-                                items: periodicFiltered,
-                                onItemTap: (item) =>
-                                    _openDetail(context, item),
-                              ),
-                            if (periodicFiltered.isNotEmpty &&
-                                (nanoFiltered.isNotEmpty ||
-                                    collisionFiltered.isNotEmpty))
-                              const SizedBox(height: 16),
-                            if (nanoFiltered.isNotEmpty)
-                              _ServiceSection(
-                                title: 'Nano Coating',
-                                items: nanoFiltered,
-                                onItemTap: (item) =>
-                                    _openDetail(context, item),
-                              ),
-                            if (nanoFiltered.isNotEmpty &&
-                                collisionFiltered.isNotEmpty)
-                              const SizedBox(height: 16),
-                            if (collisionFiltered.isNotEmpty)
-                              _ServiceSection(
-                                title: 'Collision Repairs',
-                                items: collisionFiltered,
-                                onItemTap: (item) =>
-                                    _openDetail(context, item),
-                              ),
-                          ],
                         ),
+                      ],
+                    ),
+                  ),
                 ),
+                data: (categories) {
+                  debugPrint(
+                    '🟢 [ServicesScreen] data callback: ${categories.length} categories',
+                  );
+                  for (final cat in categories) {
+                    debugPrint(
+                      '   📁 ${cat.name}: ${cat.services.length} services',
+                    );
+                  }
+                  // Map each Supabase category → list of ServiceItem
+                  final sections = categories
+                      .map((cat) {
+                        final items = _filter(
+                          cat.services.map(_toServiceItem).toList(),
+                        );
+                        return (title: cat.name, items: items);
+                      })
+                      .where((s) => s.items.isNotEmpty)
+                      .toList();
+
+                  final noResults = sections.isEmpty && _searchQuery.isNotEmpty;
+
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        top: 8,
+                        bottom: 16,
+                      ),
+                      child: noResults
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 64),
+                              child: Center(
+                                child: Text(
+                                  'No services found for "$_searchQuery"',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                for (int i = 0; i < sections.length; i++) ...[
+                                  if (i > 0) const SizedBox(height: 16),
+                                  _ServiceSection(
+                                    title: sections[i].title,
+                                    items: sections[i].items,
+                                    onItemTap: (item) =>
+                                        _openDetail(context, item),
+                                  ),
+                                ],
+                              ],
+                            ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
