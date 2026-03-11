@@ -27,6 +27,10 @@ public class AppointmentDto {
     private String notes;
     private BigDecimal estimatedCost;
     private BigDecimal actualCost;
+    /** Sum of all completed payments for this appointment (0 if unpaid). */
+    private BigDecimal paidAmount;
+    /** Payment method of the most recent completed payment (CASH, CREDIT_CARD, etc.), null if unpaid. */
+    private String paymentMethod;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

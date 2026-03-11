@@ -74,4 +74,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         // — used by the expiry scheduler to auto-release time slots after 10 minutes.
         @Query("SELECT a FROM Appointment a WHERE a.status = 'PENDING_PAYMENT' AND a.createdAt < :cutoff")
         List<Appointment> findExpiredPendingPayments(@Param("cutoff") LocalDateTime cutoff);
+
+        // CONFIRMED or IN_PROGRESS appointments that have no completed payment yet
+        // — used to identify appointments needing cash collection.
+        @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle " +
+               "WHERE a.status IN ('CONFIRMED', 'IN_PROGRESS') " +
+               "AND NOT EXISTS (SELECT p FROM Payment p WHERE p.appointment = a AND p.paymentStatus = 'COMPLETED') " +
+               "ORDER BY a.appointmentDate ASC")
+        List<Appointment> findAppointmentsNeedingPayment();
 }

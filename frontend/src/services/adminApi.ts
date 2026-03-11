@@ -1,4 +1,3 @@
-// Admin API Service — all endpoints require auth, so all calls go through apiFetch()
 import { apiFetch } from './apiFetch';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -82,6 +81,25 @@ class AdminApiService {
     });
     return response.json();
   }
+
+  async updateAppointmentStatus(id: number, status: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${id}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status })
+    });
+    return response.json();
+  }
+
+  async recordPayment(id: number, amount: number, paymentMethod: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${id}/payments`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ amount, paymentMethod })
+    });
+    return response.json();
+  }
 }
 
 export const adminApi = new AdminApiService();
+
