@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api')
   .replace('/api', '')
   .replace(/^http/, 'ws');
-const WS_URL = `${BASE_URL}/ws/websocket`;
+const WS_URL = `${BASE_URL}/ws`;
 
 export function useNotifications() {
   const { user } = useAuth();

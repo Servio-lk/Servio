@@ -157,21 +157,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const syncBackendToken = async () => {
       if (!session || !user || isBackendTokenReady) return;
 
+      // Mark ready immediately to prevent any re-trigger before the async
+      // work completes. We use the token already in the session object —
+      // calling refreshSession() here would fire TOKEN_REFRESHED → update
+      // session state → re-run this effect → infinite loop.
+      setIsBackendTokenReady(true);
+
       try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-
-        // Refresh Supabase session to guarantee a fresh access_token.
-        // TOKEN_REFRESHED won't re-trigger this effect because isBackendTokenReady
-        // is set to true in the finally block before any state update fires.
-        let accessToken = session.access_token;
-        try {
-          const { session: freshSession } = await supabaseAuth.refreshSession();
-          if (freshSession?.access_token) {
-            accessToken = freshSession.access_token;
-          }
-        } catch {
-          // proceed with existing token if refresh fails
-        }
+        const accessToken = session.access_token;
 
         console.log('[Auth] Exchanging Supabase token for backend token...');
 
@@ -204,8 +198,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('[Auth] Backend token exchange network error:', error);
-      } finally {
-        setIsBackendTokenReady(true);
       }
     };
 
