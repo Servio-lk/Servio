@@ -3,7 +3,10 @@ package com.servio.controller;
 import com.servio.dto.ApiResponse;
 import com.servio.dto.AppointmentDto;
 import com.servio.dto.admin.AppointmentUpdateRequest;
+import com.servio.dto.admin.PaymentCollectionRequest;
 import com.servio.entity.Appointment;
+import com.servio.entity.Payment;
+import com.servio.repository.PaymentRepository;
 import com.servio.service.AdminAppointmentService;
 import com.servio.service.AppointmentService;
 import jakarta.validation.Valid;
@@ -12,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,6 +27,7 @@ public class AdminAppointmentController {
 
     private final AdminAppointmentService adminAppointmentService;
     private final AppointmentService appointmentService;
+    private final PaymentRepository paymentRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
@@ -31,7 +36,6 @@ public class AdminAppointmentController {
                 ? adminAppointmentService.getAppointmentsByStatus(status)
                 : adminAppointmentService.getAllAppointments();
 
-        // Convert to DTOs to avoid lazy loading issues
         List<AppointmentDto> appointmentDtos = appointments.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -55,12 +59,21 @@ public class AdminAppointmentController {
         return ResponseEntity.ok(ApiResponse.success("Appointment updated successfully", appointmentDto));
     }
 
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<ApiResponse<AppointmentDto>> recordPayment(
+            @PathVariable Long id,
+            @Valid @RequestBody PaymentCollectionRequest request) {
+        adminAppointmentService.recordPayment(id, request);
+        Appointment appointment = adminAppointmentService.getAppointmentById(id);
+        AppointmentDto appointmentDto = convertToDto(appointment);
+        return ResponseEntity.ok(ApiResponse.success("Payment recorded successfully", appointmentDto));
+    }
+
     private AppointmentDto convertToDto(Appointment appointment) {
         Long userId = null;
         String userName = null;
         String userEmail = null;
 
-        // Check if this is a profile-based appointment (Supabase) or user-based (local)
         if (appointment.getProfile() != null) {
             userName = appointment.getProfile().getFullName();
             userEmail = appointment.getProfile().getEmail();
@@ -69,6 +82,12 @@ public class AdminAppointmentController {
             userName = appointment.getUser().getFullName();
             userEmail = appointment.getUser().getEmail();
         }
+
+        List<Payment> completedPayments = paymentRepository.findCompletedPaymentsByAppointmentId(appointment.getId());
+        BigDecimal paidAmount = completedPayments.stream()
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        String paymentMethod = completedPayments.isEmpty() ? null : completedPayments.get(0).getPaymentMethod();
 
         return AppointmentDto.builder()
                 .id(appointment.getId())
@@ -85,8 +104,11 @@ public class AdminAppointmentController {
                 .notes(appointment.getNotes())
                 .estimatedCost(appointment.getEstimatedCost())
                 .actualCost(appointment.getActualCost())
+                .paidAmount(paidAmount)
+                .paymentMethod(paymentMethod)
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 .build();
     }
 }
+

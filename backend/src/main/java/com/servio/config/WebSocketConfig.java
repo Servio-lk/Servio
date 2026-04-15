@@ -20,9 +20,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // The WebSocket handshake endpoint; SockJS is the fallback for browsers
-        // that don't support native WebSocket
+        // Pure WebSocket endpoint (ideal for @stomp/stompjs natively in React)
         registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*");
+                
+        // Fallback SockJS endpoint (if needed)
+        registry.addEndpoint("/ws-sockjs")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }

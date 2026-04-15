@@ -15,7 +15,7 @@ const adminNavItems = [
 
 function AdminDesktopSidebar() {
     const location = useLocation();
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
 
     return (
         <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">

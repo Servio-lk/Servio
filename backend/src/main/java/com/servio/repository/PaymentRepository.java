@@ -32,4 +32,16 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     @Query("SELECT p FROM Payment p WHERE p.user.id = :userId ORDER BY p.paymentDate DESC")
     List<Payment> findUserPaymentsOrderByDate(@Param("userId") Long userId);
+
+    /** Returns all completed payments for a given appointment, newest first. */
+    @Query("SELECT p FROM Payment p WHERE p.appointment.id = :appointmentId AND p.paymentStatus = 'COMPLETED' ORDER BY p.paymentDate DESC, p.createdAt DESC")
+    List<Payment> findCompletedPaymentsByAppointmentId(@Param("appointmentId") Long appointmentId);
+
+    /** Sum of completed payments for a given appointment (0 if none). */
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.appointment.id = :appointmentId AND p.paymentStatus = 'COMPLETED'")
+    BigDecimal getPaidAmountForAppointment(@Param("appointmentId") Long appointmentId);
+
+    /** Revenue from completed payments whose method is in the supplied list (e.g., card methods or cash). */
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p WHERE p.paymentStatus = 'COMPLETED' AND p.paymentMethod IN :methods")
+    BigDecimal getRevenueByPaymentMethods(@Param("methods") List<String> methods);
 }

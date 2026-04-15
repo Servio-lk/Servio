@@ -50,7 +50,7 @@ public class SecurityConfig {
                         // PayHere server-to-server payment notification (no JWT, verified by md5sig)
                         .requestMatchers("/api/payments/payhere/notify").permitAll()
                         // WebSocket handshake and SockJS fallback endpoints
-                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/ws", "/ws/**", "/ws-sockjs/**").permitAll()
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()

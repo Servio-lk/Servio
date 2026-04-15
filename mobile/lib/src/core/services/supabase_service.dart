@@ -85,4 +85,19 @@ class SupabaseService {
   Future<UserResponse> updateUserProfile({Map<String, dynamic>? data}) async {
     return await client.auth.updateUser(UserAttributes(data: data));
   }
+
+  // Fetch full user profile from profiles table
+  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+    try {
+      final response = await client
+          .from('profiles')
+          .select()
+          .eq('id', userId)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      print('Error fetching user profile: $e');
+      return null;
+    }
+  }
 }

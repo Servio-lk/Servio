@@ -1,4 +1,3 @@
-// Admin API Service — all endpoints require auth, so all calls go through apiFetch()
 import { apiFetch } from './apiFetch';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -93,3 +92,4 @@ class AdminApiService {
 }
 
 export const adminApi = new AdminApiService();
+

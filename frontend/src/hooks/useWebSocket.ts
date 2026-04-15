@@ -2,11 +2,11 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import type { IMessage } from '@stomp/stompjs';
 
-// Spring SockJS endpoint also accepts native WebSocket at /ws/websocket
+// We now have a pure WebSocket endpoint on the backend at /ws
 const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api')
   .replace('/api', '')
   .replace(/^http/, 'ws');
-const WS_URL = `${BASE_URL}/ws/websocket`;
+const WS_URL = `${BASE_URL}/ws`;
 
 export interface AppointmentEvent {
   type: 'CREATED' | 'UPDATED' | 'CANCELLED' | 'DELETED';
