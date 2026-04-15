@@ -100,18 +100,31 @@ export function AdminAppointments() {
     }
   };
 
-  const handleStatusChange = async (id: number, newStatus: string) => {
-    setUpdatingId(id);
-    setOpenDropdownId(null);
+  const handleStatusChange = async (appointmentId: number, newStatus: string) => {
     try {
-      await adminApi.updateAppointmentStatus(id, newStatus);
-      toast.success(`Status updated to ${newStatus.replace(/_/g, ' ')}`);
-      await loadAppointments();
-    } catch {
-      toast.error('Failed to update status');
-    } finally {
-      setUpdatingId(null);
+      await adminApi.updateAppointmentStatus(appointmentId, newStatus);
+      toast.success('Appointment status updated successfully');
+      // Update the local state
+      setAppointments(prev =>
+        prev.map(apt =>
+          apt.id === appointmentId ? { ...apt, status: newStatus } : apt
+        )
+      );
+    } catch (error) {
+      console.error('Failed to update appointment status:', error);
+      toast.error('Failed to update appointment status');
     }
+  };
+
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      CONFIRMED: 'bg-blue-50 text-blue-700 border-blue-200',
+      IN_PROGRESS: 'bg-purple-50 text-purple-700 border-purple-200',
+      COMPLETED: 'bg-green-50 text-green-700 border-green-200',
+      CANCELLED: 'bg-red-50 text-red-700 border-red-200',
+    };
+    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const openCashModal = (appointment: any) => {
@@ -372,21 +385,49 @@ export function AdminAppointments() {
                             </button>
                           )}
                         </div>
-                      </td>
-
-                      {/* Cost */}
-                      <td className="px-4 py-4 text-sm">
-                        {appt.actualCost ? (
-                          <span className="font-semibold text-black">Rs. {Number(appt.actualCost).toLocaleString()}</span>
-                        ) : appt.estimatedCost ? (
-                          <span className="text-gray-500">~Rs. {Number(appt.estimatedCost).toLocaleString()}</span>
-                        ) : (
-                          <span className="text-gray-400">TBD</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-black font-medium">
+                      {appointment.serviceType}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Clock className="w-4 h-4 text-gray-400" />
+                        {formatDateTime(appointment.appointmentDate)}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        value={appointment.status}
+                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
+                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#ff5d2e] focus:ring-offset-1 transition-all ${getStatusColor(
+                          appointment.status
+                        )}`}
+                      >
+                        <option value="PENDING">Pending</option>
+                        <option value="CONFIRMED">Confirmed</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-black">
+                      <div className="flex items-center gap-1">
+                        <CreditCard className="w-3 h-3 text-gray-400" />
+                        {appointment.actualCost
+                          ? `Rs. ${appointment.actualCost.toLocaleString()}`
+                          : appointment.estimatedCost
+                            ? `~Rs. ${appointment.estimatedCost.toLocaleString()}`
+                            : 'TBD'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button className="text-gray-400 hover:text-black transition-colors p-1 rounded-full hover:bg-gray-100">
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
