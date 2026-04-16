@@ -83,8 +83,14 @@ export default function HomePage() {
 
       // Load featured services (for popular services section)
       const servicesResponse = await apiService.getFeaturedServices();
-      if (servicesResponse.success && servicesResponse.data) {
+      if (servicesResponse.success && servicesResponse.data && servicesResponse.data.length > 0) {
         setFeaturedServices(servicesResponse.data.slice(0, 4)); // Show top 4
+      } else {
+        // Fallback: if no services are marked featured in DB, show first services.
+        const allServicesResponse = await apiService.getAllServices();
+        if (allServicesResponse.success && allServicesResponse.data) {
+          setFeaturedServices(allServicesResponse.data.slice(0, 4));
+        }
       }
 
       // Load active offers

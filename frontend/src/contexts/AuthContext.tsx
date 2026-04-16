@@ -74,11 +74,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.data.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
         }
+        setIsBackendTokenReady(true);
         console.log('[Auth] Backend token refreshed successfully');
         return true;
       }
+
+      setIsBackendTokenReady(false);
       return false;
     } catch {
+      setIsBackendTokenReady(false);
       return false;
     }
   }, []);
@@ -113,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setSession(currentSession);
           setSupabaseUser(currentSession.user);
           setUser(mapSupabaseUser(currentSession.user));
+          await refreshBackendToken();
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -148,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [refreshBackendToken]);
 
   // ---------------------------------------------------------------------------
   // Exchange the Supabase access_token for a backend JWT once per session.
@@ -156,12 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const syncBackendToken = async () => {
       if (!session || !user || isBackendTokenReady) return;
-
-      // Mark ready immediately to prevent any re-trigger before the async
-      // work completes. We use the token already in the session object —
-      // calling refreshSession() here would fire TOKEN_REFRESHED → update
-      // session state → re-run this effect → infinite loop.
-      setIsBackendTokenReady(true);
 
       try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -189,14 +188,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (data.data.user) {
               localStorage.setItem('user', JSON.stringify(data.data.user));
             }
+            setIsBackendTokenReady(true);
             console.log('[Auth] Backend token stored successfully');
           } else {
+            setIsBackendTokenReady(false);
             console.warn('[Auth] supabase-login did not return a token:', data);
           }
         } catch {
+          setIsBackendTokenReady(false);
           console.warn('[Auth] Could not parse supabase-login response:', text);
         }
       } catch (error) {
+        setIsBackendTokenReady(false);
         console.error('[Auth] Backend token exchange network error:', error);
       }
     };

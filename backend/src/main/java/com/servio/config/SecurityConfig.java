@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
@@ -40,20 +41,31 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/supabase-login",
-                                "/api/health", "/error")
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/auth/signup"),
+                                new AntPathRequestMatcher("/api/auth/login"),
+                                new AntPathRequestMatcher("/api/auth/supabase-login"),
+                                new AntPathRequestMatcher("/api/health"),
+                                new AntPathRequestMatcher("/error"))
                         .permitAll()
-                        .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
-                        .requestMatchers("/api/dashboard/**").permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/api/services/**"),
+                                new AntPathRequestMatcher("/api/offers/**"))
+                        .permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/dashboard/**")).permitAll()
                         // Public availability endpoint — no auth needed to check free slots
-                        .requestMatchers("/api/appointments/booked-slots").permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/appointments/booked-slots")).permitAll()
                         // PayHere server-to-server payment notification (no JWT, verified by md5sig)
-                        .requestMatchers("/api/payments/payhere/notify").permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/payments/payhere/notify")).permitAll()
                         // WebSocket handshake and SockJS fallback endpoints
-                        .requestMatchers("/ws", "/ws/**", "/ws-sockjs/**").permitAll()
+                        .requestMatchers(
+                                new AntPathRequestMatcher("/ws"),
+                                new AntPathRequestMatcher("/ws/**"),
+                                new AntPathRequestMatcher("/ws-sockjs/**"))
+                        .permitAll()
                         // Updated Role-Based Access Control
-                        .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
-                        .requestMatchers("/api/servicerecords/**").authenticated()
+                        .requestMatchers(new AntPathRequestMatcher("/api/admin/**")).hasAuthority("ADMIN")
+                        .requestMatchers(new AntPathRequestMatcher("/api/servicerecords/**")).authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
