@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthGuard, GuestGuard } from '@/components/AuthGuard'
 import { AdminGuard } from '@/components/AdminGuard'
+import { useAuth } from '@/contexts/AuthContext'
 
 // Auth pages
 import Login from './pages/Login'
@@ -30,6 +31,35 @@ import { AdminCustomers } from './pages/admin/Customers'
 import AdminCalendar from './pages/admin/AdminCalendar'
 
 import './App.css'
+
+// Smart redirect component: routes authenticated users to their appropriate dashboard
+function RootRedirect() {
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-[#fff7f5]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-[#ff5d2e] border-t-transparent rounded-full animate-spin" />
+          <p className="text-base font-medium text-black/70">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated, go to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated and admin, go to admin dashboard
+  if (isAdmin) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  // If authenticated and regular user, go to home
+  return <Navigate to="/home" replace />;
+}
 
 function App() {
   return (
@@ -151,9 +181,11 @@ function App() {
           <Route path="/mobile/confirmed" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/welcome" element={<Navigate to="/login" replace />} />
 
-          {/* Default: redirect root and unknown routes to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* Smart root redirect: routes authenticated users to their appropriate dashboard */}
+          <Route path="/" element={<RootRedirect />} />
+          
+          {/* Default: redirect unknown routes based on auth status (via root redirect) */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

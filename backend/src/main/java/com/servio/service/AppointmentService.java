@@ -219,15 +219,6 @@ public class AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDto> getMyAppointments(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            return List.of();
-        }
-        String userId = authentication.getPrincipal().toString();
-        return getUserAppointments(userId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getMyAppointments(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
             throw new RuntimeException("User not authenticated");
         }
 

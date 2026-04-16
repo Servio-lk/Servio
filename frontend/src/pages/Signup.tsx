@@ -72,10 +72,12 @@ function EmailInput({
 
 function PhoneInput({ 
   value, 
-  onChange 
+  onChange,
+  error
 }: { 
   value: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void 
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string;
 }) {
   return (
     <div className="w-full">
@@ -83,9 +85,14 @@ function PhoneInput({
         type="tel"
         value={value}
         onChange={onChange}
-        placeholder="Phone Number"
-        className="h-11 md:h-12 lg:h-[59px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+        placeholder="Phone Number (10 digits)"
+        className={`h-11 md:h-12 lg:h-[59px] rounded-lg border px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E] ${
+          error ? 'border-red-500 bg-red-50' : 'border-gray-200'
+        }`}
       />
+      {error && (
+        <p className="text-red-600 text-xs md:text-sm mt-1.5">{error}</p>
+      )}
     </div>
   );
 }
@@ -253,9 +260,41 @@ function SignupForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const navigate = useNavigate();
 
+  // Validate phone number format (10 digits only if provided)
+  const validatePhone = (phoneNumber: string): string => {
+    if (!phoneNumber) {
+      return ""; // Phone is optional
+    }
+    // Check if phone contains only digits
+    const digitsOnly = phoneNumber.replace(/\D/g, '');
+    if (digitsOnly.length !== 10) {
+      return "Please enter a valid phone number (10 digits)";
+    }
+    return "";
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setPhone(value);
+    // Clear error when user is typing
+    if (phoneError) {
+      setPhoneError("");
+    }
+  };
+
   const handleSignup = async () => {
+    // Validate phone number
+    const phoneValidationError = validatePhone(phone);
+    if (phoneValidationError) {
+      setPhoneError(phoneValidationError);
+      setError(phoneValidationError);
+      toast.error(phoneValidationError);
+      return;
+    }
+
     // Validation
     if (!name || !email || !password || !confirmPassword) {
       const errorMsg = "Please fill in all required fields";
@@ -329,7 +368,11 @@ function SignupForm() {
         <div className="flex flex-col gap-2.5 md:gap-3 lg:gap-4 mt-3 md:mt-4 lg:mt-6">
           <NameInput value={name} onChange={(e) => setName(e.target.value)} />
           <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} />
-          <PhoneInput value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <PhoneInput 
+            value={phone} 
+            onChange={handlePhoneChange}
+            error={phoneError}
+          />
           <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
           <PasswordInput value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm Password" />
         </div>
