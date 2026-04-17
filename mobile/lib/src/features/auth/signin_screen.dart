@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -180,7 +181,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    if (!EmailValidator.isValid(email)) {
       _showSnackBar('Please enter a valid email address first.');
       return;
     }
@@ -317,7 +318,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your email';
                                 }
-                                if (!value.contains('@')) {
+                                if (!EmailValidator.isValid(value)) {
                                   return 'Please enter a valid email';
                                 }
                                 return null;

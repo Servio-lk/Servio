@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'appointments_providers.dart';
 import 'models/appointment_model.dart';
 
@@ -11,18 +12,22 @@ const _serviceImageMap = <String, String>{
   'Washing Packages': 'assets/service images/Washing Packages.jpg',
   'Lube Services': 'assets/service images/Lubricant Service.jpg',
   'Lubricant Service': 'assets/service images/Lubricant Service.jpg',
-  'Exterior & Interior Detailing': 'assets/service images/Exterior Detailing.jpg',
+  'Exterior & Interior Detailing':
+      'assets/service images/Exterior Detailing.jpg',
   'Exterior Detailing': 'assets/service images/Exterior Detailing.jpg',
   'Interior Detailing': 'assets/service images/Interior detailing.jpg',
   'Engine Tune ups': 'assets/service images/Mechanical Repair.jpg',
   'Inspection Reports': 'assets/service images/Mulipoint Inspection Report.jpg',
-  'Multipoint Inspection Report': 'assets/service images/Mulipoint Inspection Report.jpg',
+  'Multipoint Inspection Report':
+      'assets/service images/Mulipoint Inspection Report.jpg',
   'Tyre Services': 'assets/service images/Periodic Maintenance.jpg',
   'Periodic Maintenance': 'assets/service images/Periodic Maintenance.jpg',
   'Battery Services': 'assets/service images/Electrical & Electronic.jpg',
-  'Electrical & Electronic': 'assets/service images/Electrical & Electronic.jpg',
+  'Electrical & Electronic':
+      'assets/service images/Electrical & Electronic.jpg',
   'Insurance Claims': 'assets/service images/General Collision Repair.jpg',
-  'General Collision Repair': 'assets/service images/General Collision Repair.jpg',
+  'General Collision Repair':
+      'assets/service images/General Collision Repair.jpg',
   'Full Paints': 'assets/service images/Complete Paint.jpg',
   'Complete Paint': 'assets/service images/Complete Paint.jpg',
   'AC Repair and Service': 'assets/service images/AC Repair and Service.jpg',
@@ -34,9 +39,12 @@ const _serviceIconMap = <String, String>{
   'Washing Packages': 'assets/service icons/Washing Packages.png',
   'Lube Services': 'assets/service icons/Lube Services.png',
   'Lubricant Service': 'assets/service icons/Lube Services.png',
-  'Exterior & Interior Detailing': 'assets/service icons/Exterior & Interior Detailing.png',
-  'Exterior Detailing': 'assets/service icons/Exterior & Interior Detailing.png',
-  'Interior Detailing': 'assets/service icons/Exterior & Interior Detailing.png',
+  'Exterior & Interior Detailing':
+      'assets/service icons/Exterior & Interior Detailing.png',
+  'Exterior Detailing':
+      'assets/service icons/Exterior & Interior Detailing.png',
+  'Interior Detailing':
+      'assets/service icons/Exterior & Interior Detailing.png',
   'Engine Tune ups': 'assets/service icons/Engine Tune ups.png',
   'Inspection Reports': 'assets/service icons/Inspection Reports.png',
   'Tyre Services': 'assets/service icons/Tyre Services.png',
@@ -44,14 +52,14 @@ const _serviceIconMap = <String, String>{
   'Insurance Claims': 'assets/service icons/Insurance Claims.png',
   'Full Paints': 'assets/service icons/Full Paints.png',
   'Waxing': 'assets/service icons/Waxing.png',
-  'Undercarriage Degreasing': 'assets/service icons/Undercarriage Degreasing.png',
+  'Undercarriage Degreasing':
+      'assets/service icons/Undercarriage Degreasing.png',
   'Windscreen Treatments': 'assets/service icons/Windscreen Treatments.png',
   'Wheel Alignment': 'assets/service icons/Wheel Alignment.png',
   'Part Replacements': 'assets/service icons/Part Replacements.png',
 };
 
-String? _imageForService(String serviceType) =>
-    _serviceImageMap[serviceType];
+String? _imageForService(String serviceType) => _serviceImageMap[serviceType];
 
 String _iconForService(String serviceType) =>
     _serviceIconMap[serviceType] ?? 'assets/service icons/Lube Services.png';
@@ -63,7 +71,8 @@ class ActivityScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final appointmentsAsync = ref.watch(userAppointmentsProvider);
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final appointmentsAsync = ref.watch(userAppointmentsProvider(userId));
 
     return Container(
       decoration: const BoxDecoration(
@@ -84,13 +93,16 @@ class ActivityScreen extends ConsumerWidget {
                   child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
                 ),
                 error: (err, _) => _ErrorView(
-                  onRetry: () => ref.invalidate(userAppointmentsProvider),
+                  onRetry: () =>
+                      ref.invalidate(userAppointmentsProvider(userId)),
                 ),
                 data: (appointments) {
-                  final upcoming =
-                      appointments.where((a) => a.isUpcoming).toList();
-                  final past =
-                      appointments.where((a) => !a.isUpcoming).toList();
+                  final upcoming = appointments
+                      .where((a) => a.isUpcoming)
+                      .toList();
+                  final past = appointments
+                      .where((a) => !a.isUpcoming)
+                      .toList();
 
                   if (appointments.isEmpty) {
                     return const _EmptyView();
@@ -284,10 +296,7 @@ class _UpcomingServiceSection extends StatelessWidget {
           width: double.infinity,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFFFE7DF),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
           ),
           padding: const EdgeInsets.all(8),
           child: Column(
@@ -401,12 +410,12 @@ class _UpcomingServiceSection extends StatelessWidget {
   }
 
   Widget _imagePlaceholder() => const Center(
-        child: PhosphorIcon(
-          PhosphorIconsRegular.wrench,
-          size: 48,
-          color: Color(0xFFFF5D2E),
-        ),
-      );
+    child: PhosphorIcon(
+      PhosphorIconsRegular.wrench,
+      size: 48,
+      color: Color(0xFFFF5D2E),
+    ),
+  );
 }
 
 // ─── PAST SERVICES SECTION ───────────────────────────────────────────────────
@@ -482,7 +491,7 @@ class _PastServiceItem extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.only(top: 4, bottom: 4, left:8, right: 8),
+      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
       child: Row(
         children: [
           // Icon Container (bg: #FFE7DF, p: 8, rounded: 4, image 40x40)

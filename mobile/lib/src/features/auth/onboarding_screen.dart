@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -64,8 +65,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       image: 'assets/Onboarding/2.png',
       title: 'Effortless booking',
-      subtitle:
-          'Booking the most trusted mechanics has\nnever been smoother.',
+      subtitle: 'Booking the most trusted mechanics has\nnever been smoother.',
     ),
     _OnboardingPageData(
       image: 'assets/Onboarding/3.png',
@@ -101,13 +101,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       duration: const Duration(milliseconds: 420),
     );
 
-    _signInSlideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _signInController,
-      curve: Curves.easeOutCubic,
-    ));
+    _signInSlideAnimation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _signInController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
 
   @override
@@ -171,8 +171,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         if (response.user != null && mounted) {
           _showSnackBar('Welcome back!', isError: false);
 
-          final profile =
-              await _supabaseService.getUserProfile(response.user!.id);
+          final profile = await _supabaseService.getUserProfile(
+            response.user!.id,
+          );
           if (!mounted) return;
 
           final role = profile != null
@@ -281,15 +282,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    if (!EmailValidator.isValid(email)) {
       _showSnackBar('Please enter a valid email address first.');
       return;
     }
     try {
       await _supabaseService.resetPasswordForEmail(email);
       if (mounted) {
-        _showSnackBar('Password reset email sent! Check your inbox.',
-            isError: false);
+        _showSnackBar(
+          'Password reset email sent! Check your inbox.',
+          isError: false,
+        );
       }
     } catch (e) {
       if (mounted) _showSnackBar('Failed to send password reset email.');
@@ -374,8 +377,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 return GestureDetector(
                   onTap: _hideSignInOverlay,
                   child: Container(
-                    color: Colors.black
-                        .withValues(alpha: _signInController.value * 0.45),
+                    color: Colors.black.withValues(
+                      alpha: _signInController.value * 0.45,
+                    ),
                   ),
                 );
               },
@@ -419,8 +423,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   color: const Color(0xFFFFF7F5),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.car_repair,
-                    size: 80, color: _primaryColor),
+                child: const Icon(
+                  Icons.car_repair,
+                  size: 80,
+                  color: _primaryColor,
+                ),
               ),
             ),
           ),
@@ -500,9 +507,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ? _primaryColor.withValues(alpha: 0.6)
               : _primaryColor,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           boxShadow: isLoading
               ? []
               : [
@@ -527,8 +532,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : Text(
@@ -592,8 +598,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       borderRadius: BorderRadius.circular(8),
                       onTap: _hideSignInOverlay,
                       child: const Center(
-                        child:
-                            Icon(Icons.close, size: 24, color: Colors.black),
+                        child: Icon(Icons.close, size: 24, color: Colors.black),
                       ),
                     ),
                   ),
@@ -643,7 +648,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!value.contains('@')) {
+                        if (!EmailValidator.isValid(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
@@ -774,8 +779,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border:
-              Border.all(color: Colors.black.withValues(alpha: 0.1)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(8),

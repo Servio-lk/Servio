@@ -1,16 +1,17 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/vehicle_model.dart';
+
 class VehiclesRepository {
   SupabaseClient get _client => Supabase.instance.client;
-  Future<List<VehicleModel>> getUserVehicles() async {
-    final user = _client.auth.currentUser;
-    if (user == null) return [];
+  Future<List<VehicleModel>> getUserVehicles({String? profileId}) async {
+    final activeProfileId = profileId ?? _client.auth.currentUser?.id;
+    if (activeProfileId == null) return [];
     try {
       final response = await _client
           .from('vehicles')
           .select()
-          .eq('profile_id', user.id)
+          .eq('profile_id', activeProfileId)
           .order('created_at', ascending: false);
       final data = response as List<dynamic>;
       return data
@@ -21,6 +22,7 @@ class VehiclesRepository {
       rethrow;
     }
   }
+
   Future<VehicleModel> createVehicle({
     required String make,
     required String model,
@@ -29,7 +31,13 @@ class VehiclesRepository {
     String? vin,
   }) async {
     final user = _client.auth.currentUser;
+    final session = _client.auth.currentSession;
     if (user == null) throw Exception('User not authenticated');
+    if (session == null) {
+      throw Exception(
+        'No active session. Please verify your email and sign in again.',
+      );
+    }
     final payload = <String, dynamic>{
       'profile_id': user.id,
       'make': make,
@@ -40,14 +48,18 @@ class VehiclesRepository {
       if (vin != null && vin.isNotEmpty) 'vin': vin,
     };
     try {
-      final response =
-          await _client.from('vehicles').insert(payload).select().single();
+      final response = await _client
+          .from('vehicles')
+          .insert(payload)
+          .select()
+          .single();
       return VehicleModel.fromJson(response);
     } catch (e) {
       debugPrint('Error creating vehicle: $e');
       rethrow;
     }
   }
+
   Future<VehicleModel> updateVehicle({
     required int vehicleId,
     required String make,
@@ -79,6 +91,7 @@ class VehiclesRepository {
       rethrow;
     }
   }
+
   Future<void> deleteVehicle(int vehicleId) async {
     final user = _client.auth.currentUser;
     if (user == null) throw Exception('User not authenticated');

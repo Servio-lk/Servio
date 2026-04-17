@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'features/auth/splash_screen.dart';
 import 'features/auth/onboarding_screen.dart';
 import 'features/auth/signin_screen.dart';
-import 'features/auth/signup_screen.dart';
+import 'features/auth/signup_step1_screen.dart';
+import 'features/auth/signup_otp_screen.dart';
+import 'features/auth/signup_step2_screen.dart';
+import 'features/auth/signup_step3_screen.dart';
 import 'shared/main_navigation_screen.dart';
 import 'features/worker/worker_dashboard_screen.dart';
 import 'features/admin/admin_dashboard_screen.dart';
@@ -26,10 +29,36 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/signin',
         builder: (context, state) => const SignInScreen(),
       ),
+      // ── Sign-up flow (4 steps) ──────────────────────────────────────
       GoRoute(
         path: '/signup',
-        builder: (context, state) => const SignUpScreen(),
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>?;
+          return SignUpStep1Screen(extras: extras);
+        },
       ),
+      GoRoute(
+        path: '/signup/otp',
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>?;
+          return SignUpOtpScreen(extras: extras);
+        },
+      ),
+      GoRoute(
+        path: '/signup/vehicle',
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>?;
+          return SignUpStep2Screen(extras: extras);
+        },
+      ),
+      GoRoute(
+        path: '/signup/mileage',
+        builder: (context, state) {
+          final extras = state.extra as Map<String, dynamic>?;
+          return SignUpStep3Screen(extras: extras);
+        },
+      ),
+      // ── Main app ───────────────────────────────────────────────────
       GoRoute(
         path: '/home',
         builder: (context, state) => const MainNavigationScreen(),
