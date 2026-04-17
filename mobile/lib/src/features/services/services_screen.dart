@@ -76,10 +76,40 @@ ServiceItem _toServiceItem(ServiceModel m) => ServiceItem(
       .toList(),
 );
 
+class ServicesSearchRequest {
+  final String query;
+  final bool focusKeyboard;
+
+  const ServicesSearchRequest({
+    required this.query,
+    required this.focusKeyboard,
+  });
+}
+
+class ServicesScreenController extends ChangeNotifier {
+  ServicesSearchRequest? _pendingRequest;
+
+  void openSearch({String query = '', bool focusKeyboard = false}) {
+    _pendingRequest = ServicesSearchRequest(
+      query: query,
+      focusKeyboard: focusKeyboard,
+    );
+    notifyListeners();
+  }
+
+  ServicesSearchRequest? consumePendingRequest() {
+    final request = _pendingRequest;
+    _pendingRequest = null;
+    return request;
+  }
+}
+
 // ─── SERVICES SCREEN ─────────────────────────────────────────────────────────
 
 class ServicesScreen extends ConsumerStatefulWidget {
-  const ServicesScreen({super.key});
+  final ServicesScreenController? controller;
+
+  const ServicesScreen({super.key, this.controller});
 
   @override
   ConsumerState<ServicesScreen> createState() => _ServicesScreenState();
@@ -87,12 +117,53 @@ class ServicesScreen extends ConsumerStatefulWidget {
 
 class _ServicesScreenState extends ConsumerState<ServicesScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
   String _searchQuery = '';
 
   @override
+  void initState() {
+    super.initState();
+    widget.controller?.addListener(_handleExternalSearchRequest);
+    _handleExternalSearchRequest();
+  }
+
+  @override
+  void didUpdateWidget(covariant ServicesScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller?.removeListener(_handleExternalSearchRequest);
+      widget.controller?.addListener(_handleExternalSearchRequest);
+      _handleExternalSearchRequest();
+    }
+  }
+
+  @override
   void dispose() {
+    widget.controller?.removeListener(_handleExternalSearchRequest);
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
+  }
+
+  void _handleExternalSearchRequest() {
+    final request = widget.controller?.consumePendingRequest();
+    if (request == null || !mounted) return;
+
+    _searchController.text = request.query;
+    _searchController.selection = TextSelection.collapsed(
+      offset: request.query.length,
+    );
+
+    setState(() => _searchQuery = request.query);
+
+    if (request.focusKeyboard) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _searchFocusNode.requestFocus();
+      });
+    } else {
+      _searchFocusNode.unfocus();
+    }
   }
 
   List<ServiceItem> _filter(List<ServiceItem> items) {
@@ -146,6 +217,7 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
             // ── Fixed Header: Title + Search ──
             _HeaderSection(
               controller: _searchController,
+              focusNode: _searchFocusNode,
               onChanged: (value) => setState(() => _searchQuery = value),
               onClear: _clearSearch,
               hasQuery: _searchQuery.isNotEmpty,
@@ -277,12 +349,14 @@ class _ServicesScreenState extends ConsumerState<ServicesScreen> {
 
 class _HeaderSection extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
   final bool hasQuery;
 
   const _HeaderSection({
     required this.controller,
+    required this.focusNode,
     required this.onChanged,
     required this.onClear,
     required this.hasQuery,
@@ -309,6 +383,7 @@ class _HeaderSection extends StatelessWidget {
           const SizedBox(height: 4),
           _SearchBar(
             controller: controller,
+            focusNode: focusNode,
             onChanged: onChanged,
             onClear: onClear,
             hasQuery: hasQuery,
@@ -323,12 +398,14 @@ class _HeaderSection extends StatelessWidget {
 
 class _SearchBar extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
   final bool hasQuery;
 
   const _SearchBar({
     required this.controller,
+    required this.focusNode,
     required this.onChanged,
     required this.onClear,
     required this.hasQuery,
@@ -356,6 +433,7 @@ class _SearchBar extends StatelessWidget {
           Expanded(
             child: TextField(
               controller: controller,
+              focusNode: focusNode,
               onChanged: onChanged,
               style: GoogleFonts.instrumentSans(
                 fontSize: 16,

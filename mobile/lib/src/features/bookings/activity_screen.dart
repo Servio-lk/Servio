@@ -448,7 +448,7 @@ class _PastServicesSection extends StatelessWidget {
           final appointment = entry.value;
           return Padding(
             padding: EdgeInsets.only(
-              bottom: index < appointments.length - 1 ? 8 : 0,
+              bottom: index < appointments.length - 1 ? 16 : 0,
             ),
             child: _PastServiceItem(appointment: appointment),
           );
@@ -482,7 +482,7 @@ class _PastServiceItem extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.only(top: 4, bottom: 4, left:8, right: 8),
       child: Row(
         children: [
           // Icon Container (bg: #FFE7DF, p: 8, rounded: 4, image 40x40)

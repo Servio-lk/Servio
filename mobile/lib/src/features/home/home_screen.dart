@@ -1,38 +1,21 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import '../services/services_providers.dart';
-import '../services/models/service_model.dart';
 
-// ─── ICON MAPPING ────────────────────────────────────────────────────────────
+class _SuggestionUiItem {
+  final String title;
+  final String iconPath;
 
-const _suggestionIconMap = <String, String>{
-  'Washing Packages': 'assets/service icons/Washing Packages.png',
-  'Lube Services': 'assets/service icons/Lube Services.png',
-  'Exterior & Interior Detailing':
-      'assets/service icons/Exterior & Interior Detailing.png',
-  'Engine Tune ups': 'assets/service icons/Engine Tune ups.png',
-  'Inspection Reports': 'assets/service icons/Inspection Reports.png',
-  'Tyre Services': 'assets/service icons/Tyre Services.png',
-  'Waxing': 'assets/service icons/Waxing.png',
-  'Undercarriage Degreasing':
-      'assets/service icons/Undercarriage Degreasing.png',
-  'Windscreen Treatments': 'assets/service icons/Windscreen Treatments.png',
-  'Battery Services': 'assets/service icons/Battery Services.png',
-  'Packages': 'assets/service icons/Nano Coating Packages.png',
-  'Treatments': 'assets/service icons/Nano Coating Treatments.png',
-  'Insurance Claims': 'assets/service icons/Insurance Claims.png',
-  'Wheel Alignment': 'assets/service icons/Wheel Alignment.png',
-  'Full Paints': 'assets/service icons/Full Paints.png',
-  'Part Replacements': 'assets/service icons/Part Replacements.png',
-};
+  const _SuggestionUiItem({required this.title, required this.iconPath});
+}
 
 class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+  final VoidCallback? onSearchTap;
+  final ValueChanged<String>? onSuggestionTap;
+
+  const HomeScreen({super.key, this.onSearchTap, this.onSuggestionTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,9 +23,6 @@ class HomeScreen extends ConsumerWidget {
     final user = Supabase.instance.client.auth.currentUser;
     final fullName = user?.userMetadata?['full_name'] as String? ?? '';
     final firstName = fullName.isNotEmpty ? fullName.split(' ').first : 'there';
-
-    // Watch featured services
-    final featuredAsync = ref.watch(featuredServicesProvider);
 
     return Container(
       decoration: const BoxDecoration(
@@ -64,13 +44,13 @@ class HomeScreen extends ConsumerWidget {
                 _GreetingSection(name: firstName),
                 const SizedBox(height: 16),
                 // Search + Service Center
-                const _SearchContainer(),
+                _SearchContainer(onTap: onSearchTap),
                 const SizedBox(height: 16),
                 const _ServiceCenterContainer(),
                 // Suggestions Header
                 const _SuggestionsHeader(),
-                // Suggestions List — from Supabase
-                _SuggestionsListLive(featuredAsync: featuredAsync),
+                // Suggestions List — temporary static list (will be personalized later)
+                _SuggestionsListStatic(onItemTap: onSuggestionTap),
                 const SizedBox(height: 16),
                 // Offers horizontal list
                 const _OffersSection(),
@@ -106,43 +86,47 @@ class _GreetingSection extends StatelessWidget {
   }
 }
 
-// ─── SUGGESTIONS LIST (live from Supabase) ───────────────────────────────────
+// ─── SUGGESTIONS LIST (static for current UI) ───────────────────────────────
 
-class _SuggestionsListLive extends StatelessWidget {
-  final AsyncValue<List<ServiceModel>> featuredAsync;
-  const _SuggestionsListLive({required this.featuredAsync});
+class _SuggestionsListStatic extends StatelessWidget {
+  final ValueChanged<String>? onItemTap;
+
+  const _SuggestionsListStatic({this.onItemTap});
+
+  static const List<_SuggestionUiItem> _items = [
+    _SuggestionUiItem(
+      title: 'Lube Services',
+      iconPath: 'assets/service icons/Lube Services.png',
+    ),
+    _SuggestionUiItem(
+      title: 'Washing Packages',
+      iconPath: 'assets/service icons/Washing Packages.png',
+    ),
+    _SuggestionUiItem(
+      title: 'Exterior & Interior Detailing',
+      iconPath: 'assets/service icons/Exterior & Interior Detailing.png',
+    ),
+    _SuggestionUiItem(
+      title: 'Engine Tune ups',
+      iconPath: 'assets/service icons/Engine Tune ups.png',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    return featuredAsync.when(
-      loading: () => const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(
-          child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
-        ),
-      ),
-      error: (_, __) => const SizedBox.shrink(),
-      data: (services) {
-        if (services.isEmpty) return const SizedBox.shrink();
-        final items = services.take(4).toList();
-        return Column(
-          children: items.asMap().entries.map((entry) {
-            final index = entry.key;
-            final svc = entry.value;
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: index < items.length - 1 ? 8 : 0,
-              ),
-              child: _SuggestionItem(
-                title: svc.name,
-                iconPath:
-                    _suggestionIconMap[svc.name] ??
-                    'assets/service icons/Lube Services.png',
-              ),
-            );
-          }).toList(),
+    return Column(
+      children: _items.asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        return Padding(
+          padding: EdgeInsets.only(bottom: index < _items.length - 1 ? 8 : 0),
+          child: _SuggestionItem(
+            title: item.title,
+            iconPath: item.iconPath,
+            onTap: () => onItemTap?.call(item.title),
+          ),
         );
-      },
+      }).toList(),
     );
   }
 }
@@ -150,11 +134,15 @@ class _SuggestionsListLive extends StatelessWidget {
 // ─── SEARCH CONTAINER ────────────────────────────────────────────────────────
 
 class _SearchContainer extends StatelessWidget {
-  const _SearchContainer();
+  final VoidCallback? onTap;
+
+  const _SearchContainer({this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       width: double.infinity,
       decoration: BoxDecoration(
         color: const Color(0xFFFFE7DF),
@@ -185,31 +173,31 @@ class _SearchContainer extends StatelessWidget {
             Container(
               width: 1,
               height: 24,
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
             ),
             const SizedBox(width: 8),
-            // Later button
+            // Emergency button
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFFFF5D2E),
                 borderRadius: BorderRadius.circular(8),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const PhosphorIcon(
-                    PhosphorIconsFill.calendarDots,
+                    PhosphorIconsFill.warning,
                     size: 24,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 8),
                   Text(
-                    'Later',
+                    'Emergency',
                     style: GoogleFonts.instrumentSans(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -217,6 +205,7 @@ class _SearchContainer extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -249,7 +238,7 @@ class _ServiceCenterContainer extends StatelessWidget {
             child: PhosphorIcon(
               PhosphorIconsFill.garage,
               size: 24,
-              color: Colors.black.withOpacity(0.8),
+              color: Colors.black.withValues(alpha: 0.8),
             ),
           ),
           const SizedBox(width: 8),
@@ -263,7 +252,7 @@ class _ServiceCenterContainer extends StatelessWidget {
                   style: GoogleFonts.instrumentSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black.withOpacity(0.7),
+                    color: Colors.black.withValues(alpha: 0.7),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -323,62 +312,73 @@ class _SuggestionsHeader extends StatelessWidget {
 class _SuggestionItem extends StatelessWidget {
   final String title;
   final String iconPath;
+  final VoidCallback? onTap;
 
-  const _SuggestionItem({required this.title, required this.iconPath});
+  const _SuggestionItem({
+    required this.title,
+    required this.iconPath,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          // Service icon from assets
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF0EC),
-              borderRadius: BorderRadius.circular(4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.04),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
-            padding: const EdgeInsets.all(8),
-            child: Image.asset(
-              iconPath,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.build, size: 24, color: Color(0xFFFF5D2E)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Title
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.instrumentSans(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.black,
+          ],
+        ),
+        padding: const EdgeInsets.only(left: 4, right: 8, top: 4, bottom: 4),
+        child: Row(
+          children: [
+            // Service icon from assets
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF0EC),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(
+                iconPath,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                  Icons.build,
+                  size: 24,
+                  color: Color(0xFFFF5D2E),
+                ),
               ),
             ),
-          ),
-          // Caret right
-          PhosphorIcon(
-            PhosphorIconsBold.caretRight,
-            size: 24,
-            color: Colors.black.withOpacity(0.5),
-          ),
-        ],
+            const SizedBox(width: 12),
+            // Title
+            Expanded(
+              child: Text(
+                title,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            // Caret right
+            PhosphorIcon(
+              PhosphorIconsBold.caretRight,
+              size: 24,
+              color: Colors.black.withValues(alpha: 0.5),
+            ),
+          ],
+        ),
       ),
     );
   }
