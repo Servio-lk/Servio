@@ -33,7 +33,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
             onPressed: () async {
               await SupabaseService().signOut();
               if (context.mounted) {
-                context.go('/welcome');
+                context.go('/signin');
               }
             },
             icon: const PhosphorIcon(

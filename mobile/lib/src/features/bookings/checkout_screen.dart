@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'appointment_confirmed_screen.dart';
 import 'appointments_repository.dart';
 
@@ -11,6 +12,9 @@ class CheckoutScreen extends StatefulWidget {
   final String selectedTime;
   final String serviceType;
   final String estimatedCostStr;
+  final String basePriceStr;
+  final String? optionName;
+  final String? optionPriceStr;
 
   const CheckoutScreen({
     super.key,
@@ -18,6 +22,9 @@ class CheckoutScreen extends StatefulWidget {
     required this.selectedTime,
     required this.serviceType,
     required this.estimatedCostStr,
+    required this.basePriceStr,
+    this.optionName,
+    this.optionPriceStr,
   });
 
   @override
@@ -27,6 +34,21 @@ class CheckoutScreen extends StatefulWidget {
 class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _isBooking = false;
   final AppointmentsRepository _repository = AppointmentsRepository();
+
+  String get _customerName {
+    final user = Supabase.instance.client.auth.currentUser;
+    final fullName = user?.userMetadata?['full_name'] as String?;
+    if (fullName != null && fullName.trim().isNotEmpty) {
+      return fullName.trim();
+    }
+
+    final email = user?.email;
+    if (email != null && email.isNotEmpty) {
+      return email.split('@').first;
+    }
+
+    return 'User';
+  }
 
   Future<void> _handleBook() async {
     setState(() => _isBooking = true);
@@ -68,8 +90,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         MaterialPageRoute(
           builder: (_) => AppointmentConfirmedScreen(
             appointmentId: appointment.id.toString(),
+            customerName: _customerName,
             serviceType: widget.serviceType,
             formattedDate: '${_formatDate(dt)} · ${widget.selectedTime}',
+            totalPrice: appointment.formattedCost,
           ),
         ),
       );
@@ -144,6 +168,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         // Price Breakdown
                         _PriceBreakdownSection(
                           estimatedCostStr: widget.estimatedCostStr,
+                          basePriceStr: widget.basePriceStr,
+                          optionName: widget.optionName,
+                          optionPriceStr: widget.optionPriceStr,
                         ),
 
                         const SizedBox(height: 16),
@@ -377,7 +404,16 @@ class _SectionDivider extends StatelessWidget {
 
 class _PriceBreakdownSection extends StatelessWidget {
   final String estimatedCostStr;
-  const _PriceBreakdownSection({required this.estimatedCostStr});
+  final String basePriceStr;
+  final String? optionName;
+  final String? optionPriceStr;
+
+  const _PriceBreakdownSection({
+    required this.estimatedCostStr,
+    required this.basePriceStr,
+    this.optionName,
+    this.optionPriceStr,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -407,21 +443,23 @@ class _PriceBreakdownSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
-                  const _PriceLineItem(
+                  _PriceLineItem(
                     label: 'Service Fee',
-                    amount: '+LKR 1,500',
+                    amount: '+${basePriceStr}',
                     isBoldLabel: false,
                   ),
                   const SizedBox(height: 4),
-                  const _PriceLineItem(
-                    label: 'Standard/Conventional Oil',
-                    amount: '+LKR 4,000',
-                    isBoldLabel: false,
-                  ),
-                  const SizedBox(height: 4),
-                  const _PriceLineItem(
+                  if (optionName != null && optionPriceStr != null) ...[
+                    _PriceLineItem(
+                      label: optionName!,
+                      amount: '+${optionPriceStr!}',
+                      isBoldLabel: false,
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  _PriceLineItem(
                     label: 'Total',
-                    amount: 'LKR 5,500',
+                    amount: estimatedCostStr,
                     isBoldLabel: true,
                   ),
                 ],

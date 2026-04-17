@@ -695,6 +695,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                         ),
                       ),
                     ),
+                    const SizedBox(height: 8),
+
+                    // Sign up prompt
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => context.go('/signup'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            "Don't have an account? Sign Up",
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black.withValues(alpha: 0.7),
+                              height: 22 / 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 16),
 
                     // Divider with "or"
@@ -704,8 +724,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     // Google
                     _buildSocialLoginButton(
                       label: 'Log In with Google',
-                      icon: const Icon(Icons.g_mobiledata,
-                          size: 24, color: Colors.black),
+                      icon: Image.asset(
+                        'assets/icons/google.png',
+                        width: 24,
+                        height: 24,
+                      ),
                       onTap: _handleGoogleSignIn,
                     ),
                     const SizedBox(height: 16),
@@ -713,8 +736,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     // Facebook
                     _buildSocialLoginButton(
                       label: 'Log In with Facebook',
-                      icon: const Icon(Icons.facebook,
-                          size: 24, color: Color(0xFF1877F2)),
+                      icon: Image.asset(
+                        'assets/icons/facebook.png',
+                        width: 24,
+                        height: 24,
+                      ),
                       onTap: _handleFacebookSignIn,
                     ),
 

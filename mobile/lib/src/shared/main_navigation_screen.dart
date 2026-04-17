@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../features/home/home_screen.dart';
@@ -9,7 +8,9 @@ import '../features/bookings/activity_screen.dart';
 import '../features/profile/profile_screen.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
-  const MainNavigationScreen({super.key});
+  final int initialIndex;
+
+  const MainNavigationScreen({super.key, this.initialIndex = 0});
 
   @override
   ConsumerState<MainNavigationScreen> createState() =>
@@ -17,7 +18,7 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 }
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _screens = const [
     HomeScreen(),
@@ -25,6 +26,13 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     ActivityScreen(),
     ProfileScreen(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex =
+        widget.initialIndex.clamp(0, _screens.length - 1).toInt();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +50,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           top: BorderSide(color: Color.fromRGBO(0, 0, 0, 0.2), width: 0.4),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 4),
       child: SafeArea(
         top: false,
         child: Row(
@@ -119,7 +127,7 @@ class _TabBarItem extends StatelessWidget {
                 size: 24,
                 color: isSelected
                     ? Colors.black
-                    : Colors.black.withOpacity(0.5),
+                    : Colors.black.withAlpha(128),
               ),
               const SizedBox(height: 8),
               // Label
@@ -131,7 +139,7 @@ class _TabBarItem extends StatelessWidget {
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   color: isSelected
                       ? Colors.black
-                      : Colors.black.withOpacity(0.5),
+                      : Colors.black.withAlpha(128),
                   height: 22 / 12,
                 ),
               ),

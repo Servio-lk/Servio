@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../services/services_providers.dart';
 import '../services/models/service_model.dart';
 
@@ -422,36 +423,20 @@ class _OfferCard extends StatelessWidget {
       clipBehavior: Clip.hardEdge,
       child: Stack(
         children: [
-          // Star decoration (top right)
+          // Image Graphic (bottom right with some top padding)
           Positioned(
-            right: -40,
-            top: -7,
-            child: CustomPaint(
-              size: const Size(224, 224),
-              painter: _StarPainter(),
-            ),
-          ),
-          // Mechanic icon placeholder (on top of star)
-          Positioned(
-            right: 35,
-            top: 54,
-            child: Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF5D2E).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: const PhosphorIcon(
-                PhosphorIconsBold.engine,
-                size: 48,
-                color: Color(0xFFFF5D2E),
-              ),
+            right: 0,
+            bottom: 0,
+            top: 16,
+            child: Image.asset(
+              'assets/icons/Offer Image Container.png',
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomRight,
             ),
           ),
           // Content
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -504,47 +489,3 @@ class _OfferCard extends StatelessWidget {
   }
 }
 
-// ─── STAR PAINTER (for offer card decoration) ────────────────────────────────
-
-class _StarPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topRight,
-        end: Alignment.bottomLeft,
-        colors: [Colors.white, Color(0xFFFFBBA7)],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    final strokePaint = Paint()
-      ..color = Colors.black.withOpacity(0.02)
-      ..strokeWidth = 4
-      ..style = PaintingStyle.stroke;
-
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final outerR = size.width * 0.48;
-    final innerR = size.width * 0.38;
-    const points = 12;
-
-    final path = Path();
-    for (int i = 0; i < points * 2; i++) {
-      final angle = (i * math.pi / points) - math.pi / 2;
-      final r = i.isEven ? outerR : innerR;
-      final x = cx + r * math.cos(angle);
-      final y = cy + r * math.sin(angle);
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-    path.close();
-
-    canvas.drawPath(path, paint);
-    canvas.drawPath(path, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

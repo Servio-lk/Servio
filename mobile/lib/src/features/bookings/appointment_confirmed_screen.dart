@@ -2,19 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../shared/main_navigation_screen.dart';
 
 // ─── APPOINTMENT CONFIRMED SCREEN ────────────────────────────────────────────
 
 class AppointmentConfirmedScreen extends StatelessWidget {
   final String appointmentId;
+  final String customerName;
   final String serviceType;
   final String formattedDate;
+  final String totalPrice;
 
   const AppointmentConfirmedScreen({
     super.key,
     required this.appointmentId,
+    required this.customerName,
     required this.serviceType,
     required this.formattedDate,
+    required this.totalPrice,
   });
 
   @override
@@ -40,8 +45,10 @@ class AppointmentConfirmedScreen extends StatelessWidget {
                 child: SingleChildScrollView(
                   child: _AppointmentCard(
                     appointmentId: appointmentId,
+                    customerName: customerName,
                     serviceType: serviceType,
                     formattedDate: formattedDate,
+                    totalPrice: totalPrice,
                   ),
                 ),
               ),
@@ -106,13 +113,17 @@ class _HeaderSection extends StatelessWidget {
 
 class _AppointmentCard extends StatelessWidget {
   final String appointmentId;
+  final String customerName;
   final String serviceType;
   final String formattedDate;
+  final String totalPrice;
 
   const _AppointmentCard({
     required this.appointmentId,
+    required this.customerName,
     required this.serviceType,
     required this.formattedDate,
+    required this.totalPrice,
   });
 
   @override
@@ -123,7 +134,10 @@ class _AppointmentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // ── QR Code Container ──
-          _QrCodeSection(appointmentId: appointmentId),
+          _QrCodeSection(
+            appointmentId: appointmentId,
+            customerName: customerName,
+          ),
 
           const SizedBox(height: 24),
 
@@ -134,6 +148,11 @@ class _AppointmentCard extends StatelessWidget {
 
           // ── Date & Time Card ──
           _DateTimeCard(formattedDate: formattedDate),
+
+          const SizedBox(height: 24),
+
+          // ── Total to Pay Card ──
+          _TotalToPayCard(totalPrice: totalPrice),
 
           const SizedBox(height: 24),
 
@@ -149,8 +168,12 @@ class _AppointmentCard extends StatelessWidget {
 
 class _QrCodeSection extends StatelessWidget {
   final String appointmentId;
+  final String customerName;
 
-  const _QrCodeSection({required this.appointmentId});
+  const _QrCodeSection({
+    required this.appointmentId,
+    required this.customerName,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +183,7 @@ class _QrCodeSection extends StatelessWidget {
         children: [
           // Customer name (18px Bold, black, center, leading 22)
           Text(
-            'Chamal Dissanayake',
+            customerName,
             textAlign: TextAlign.center,
             style: GoogleFonts.instrumentSans(
               fontSize: 18,
@@ -366,6 +389,48 @@ class _DateTimeCard extends StatelessWidget {
   }
 }
 
+// ─── TOTAL TO PAY CARD ────────────────────────────────────────────────────────
+
+class _TotalToPayCard extends StatelessWidget {
+  final String totalPrice;
+
+  const _TotalToPayCard({required this.totalPrice});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF7F5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Total to pay',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF4B4B4B),
+            ),
+          ),
+          Text(
+            totalPrice,
+            style: GoogleFonts.instrumentSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ─── INFO ITEMS LIST ─────────────────────────────────────────────────────────
 
 class _InfoItemsList extends StatelessWidget {
@@ -449,29 +514,63 @@ class _BottomButtonSection extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.only(left: 16, right: 16, top: 16),
-        child: GestureDetector(
-          onTap: () {
-            // Handle add to calendar action
-          },
-          child: Container(
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Center(
-              child: Text(
-                'Add to calendar',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
+        child: Column(
+          children: [
+            GestureDetector(
+              onTap: () {
+                // Handle add to calendar action
+              },
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Center(
+                  child: Text(
+                    'Add to calendar',
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const MainNavigationScreen(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5D2E),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFF5D2E), width: 1),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Center(
+                  child: Text(
+                    'Go to activity',
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

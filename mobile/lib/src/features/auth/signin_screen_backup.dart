@@ -153,7 +153,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             ),
                             // Close button
                             GestureDetector(
-                              onTap: () => context.go('/welcome'),
+                              onTap: () => context.go('/signin'),
                               child: Container(
                                 width: 44,
                                 height: 44,

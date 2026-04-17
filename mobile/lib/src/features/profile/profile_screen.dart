@@ -73,7 +73,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSigningOut = true);
     try {
       await Supabase.instance.client.auth.signOut();
-      if (mounted) context.go('/welcome');
+      if (mounted) context.go('/signin');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
