@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
+import { apiService } from '../../services/api';
 import { Package, Plus, Search, Edit, Trash2, Filter, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -12,14 +13,40 @@ export function AdminServices() {
     loadServices();
   }, []);
 
+  const normalizeFallbackServices = (items: any[]) => {
+    return items.map((service) => ({
+      ...service,
+      // Public /api/services only returns active services, but has no isActive field.
+      isActive: service.isActive ?? true,
+      // Admin table expects category.name; fallback returns categoryName.
+      category: service.category ?? { name: service.categoryName || 'Uncategorized' },
+    }));
+  };
+
   const loadServices = async () => {
     try {
       setLoading(true);
       const response = await adminApi.getAllServices();
-      setServices(response.data || []);
+      const adminServices = Array.isArray(response?.data) ? response.data : [];
+
+      if (adminServices.length > 0) {
+        setServices(adminServices);
+        return;
+      }
+
+      const fallbackResponse = await apiService.getAllServices();
+      const fallbackServices = Array.isArray(fallbackResponse?.data) ? fallbackResponse.data : [];
+      setServices(normalizeFallbackServices(fallbackServices));
     } catch (error) {
       console.error('Failed to load services:', error);
-      toast.error('Failed to load services');
+      try {
+        const fallbackResponse = await apiService.getAllServices();
+        const fallbackServices = Array.isArray(fallbackResponse?.data) ? fallbackResponse.data : [];
+        setServices(normalizeFallbackServices(fallbackServices));
+      } catch (fallbackError) {
+        console.error('Fallback services load failed:', fallbackError);
+        toast.error('Failed to load services');
+      }
     } finally {
       setLoading(false);
     }

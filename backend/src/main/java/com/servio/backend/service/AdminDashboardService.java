@@ -4,9 +4,13 @@ import com.servio.dto.AppointmentDto;
 import com.servio.dto.admin.DashboardStatsDto;
 import com.servio.entity.Appointment;
 import com.servio.entity.Payment;
+import com.servio.entity.Role;
+import com.servio.entity.User;
 import com.servio.repository.AppointmentRepository;
 import com.servio.repository.PaymentRepository;
 import com.servio.repository.ProfileRepository;
+import com.servio.backend.repository.ServiceRepository;
+import com.servio.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -22,10 +26,14 @@ public class AdminDashboardService {
     private final AppointmentRepository appointmentRepository;
     private final ProfileRepository profileRepository;
     private final PaymentRepository paymentRepository;
+        private final ServiceRepository serviceRepository;
+        private final UserRepository userRepository;
 
     public DashboardStatsDto getDashboardStats() {
-        long totalCustomers = profileRepository.count();
+                long totalCustomers = profileRepository.count() + countNonAdminUsersWithoutProfiles();
         long totalAppointments = appointmentRepository.count();
+                long totalServices = serviceRepository.count();
+                long activeServices = serviceRepository.findByIsActiveTrueOrderByNameAsc().size();
 
         // Payments table is the authoritative revenue source
         BigDecimal totalRevenue = paymentRepository.getTotalRevenue();
@@ -50,8 +58,8 @@ public class AdminDashboardService {
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
 
-        List<Appointment> upcomingEntities = appointmentRepository.findUpcomingAppointments();
-        List<AppointmentDto> upcomingAppointments = upcomingEntities.stream()
+        List<Appointment> recentEntities = appointmentRepository.findRecentAppointments();
+        List<AppointmentDto> recentAppointments = recentEntities.stream()
                 .limit(5)
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -59,13 +67,30 @@ public class AdminDashboardService {
         return DashboardStatsDto.builder()
                 .totalCustomers(totalCustomers)
                 .totalAppointments(totalAppointments)
+                .totalServices(totalServices)
+                .activeServices(activeServices)
                 .totalRevenue(totalRevenue)
                 .cardRevenue(cardRevenue)
                 .cashRevenue(cashRevenue)
                 .pendingCashRevenue(pendingCashRevenue)
-                .upcomingAppointments(upcomingAppointments)
+                .upcomingAppointments(recentAppointments)
+                .recentAppointments(recentAppointments)
                 .pendingCashAppointments(pendingCashAppointments)
                 .build();
+    }
+
+    private long countNonAdminUsersWithoutProfiles() {
+        java.util.Set<String> profileEmails = profileRepository.findAll().stream()
+                .map(profile -> profile.getEmail())
+                .filter(email -> email != null && !email.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+
+        return userRepository.findAll().stream()
+                .filter(user -> user.getRole() != Role.ADMIN)
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .filter(email -> !profileEmails.contains(email))
+                .count();
     }
 
     AppointmentDto convertToDto(Appointment appointment) {

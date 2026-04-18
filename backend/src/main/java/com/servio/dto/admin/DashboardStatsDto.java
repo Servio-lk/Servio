@@ -12,6 +12,8 @@ import java.util.List;
 public class DashboardStatsDto {
     private long totalCustomers;
     private long totalAppointments;
+    private long totalServices;
+    private long activeServices;
     private BigDecimal totalRevenue;
     /** Revenue from card-based payments (PayHere / credit / debit). */
     private BigDecimal cardRevenue;
@@ -20,6 +22,7 @@ public class DashboardStatsDto {
     /** Estimated value of appointments still awaiting cash collection. */
     private BigDecimal pendingCashRevenue;
     private List<AppointmentDto> upcomingAppointments;
+    private List<AppointmentDto> recentAppointments;
     /** Confirmed / in-progress appointments with no completed payment — need cash collection. */
     private List<AppointmentDto> pendingCashAppointments;
 }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import {
   Package, Calendar, Users, Clock, ArrowUpRight,
   DollarSign, CreditCard, Banknote, AlertCircle, X, CheckCircle,
@@ -25,11 +26,7 @@ export function AdminDashboard() {
   const [cashAmount, setCashAmount] = useState('');
   const [cashLoading, setCashLoading] = useState(false);
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const dashboardRes = await adminApi.getDashboardStats();
       if (dashboardRes?.success) {
@@ -38,27 +35,35 @@ export function AdminDashboard() {
           ...prev,
           pendingAppointments: data.totalAppointments || 0,
           totalCustomers: data.totalCustomers || 0,
+          totalServices: data.totalServices || 0,
+          activeServices: data.activeServices || 0,
           totalRevenue: data.totalRevenue || 0,
           cardRevenue: data.cardRevenue || 0,
           cashRevenue: data.cashRevenue || 0,
           pendingCashRevenue: data.pendingCashRevenue || 0,
         }));
-        if (data.upcomingAppointments) setUpcomingAppointments(data.upcomingAppointments);
+        if (data.recentAppointments) setUpcomingAppointments(data.recentAppointments);
+        else if (data.upcomingAppointments) setUpcomingAppointments(data.upcomingAppointments);
         if (data.pendingCashAppointments) setPendingCashAppointments(data.pendingCashAppointments);
-
-        const services = await adminApi.getAllServices();
-        setStats(prev => ({
-          ...prev,
-          totalServices: services?.data?.length || 0,
-          activeServices: services?.data?.filter((s: any) => s.isActive).length || 0,
-        }));
       }
     } catch (error) {
       console.error('Failed to load dashboard stats:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  // Keep dashboard cards and recent activity fresh as soon as bookings change.
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => {
+      loadStats();
+    }, [loadStats]),
+  );
 
   const statCards = [
     {
