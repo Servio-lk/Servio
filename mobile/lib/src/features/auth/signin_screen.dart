@@ -50,7 +50,22 @@ class _SignInScreenState extends State<SignInScreen> {
         if (response.user != null && mounted) {
           print('Sign in successful!');
           _showSnackBar('Welcome back!', isError: false);
-          context.go('/home');
+
+          final profile = await _supabaseService.getUserProfile(
+            response.user!.id,
+          );
+          if (!mounted) return;
+
+          final role = profile != null
+              ? profile['role']?.toString().toUpperCase()
+              : 'CUSTOMER';
+          if (role == 'MECHANIC') {
+            context.go('/worker');
+          } else if (role == 'ADMIN') {
+            context.go('/admin');
+          } else {
+            context.go('/home');
+          }
         } else if (mounted) {
           print('Sign in failed: No user returned');
           _showSnackBar('Login failed. Please check your credentials.');
@@ -92,7 +107,24 @@ class _SignInScreenState extends State<SignInScreen> {
       final success = await _supabaseService.signInWithGoogle();
       if (success && mounted) {
         _showSnackBar('Signed in with Google!', isError: false);
-        context.go('/home');
+        final user = _supabaseService.currentUser;
+        if (user != null) {
+          final profile = await _supabaseService.getUserProfile(user.id);
+          if (!mounted) return;
+
+          final role = profile != null
+              ? profile['role']?.toString().toUpperCase()
+              : 'CUSTOMER';
+          if (role == 'MECHANIC') {
+            context.go('/worker');
+          } else if (role == 'ADMIN') {
+            context.go('/admin');
+          } else {
+            context.go('/home');
+          }
+        } else {
+          context.go('/home');
+        }
       } else if (mounted) {
         _showSnackBar('Google sign-in cancelled or failed.');
       }
@@ -114,7 +146,24 @@ class _SignInScreenState extends State<SignInScreen> {
       final success = await _supabaseService.signInWithFacebook();
       if (success && mounted) {
         _showSnackBar('Signed in with Facebook!', isError: false);
-        context.go('/home');
+        final user = _supabaseService.currentUser;
+        if (user != null) {
+          final profile = await _supabaseService.getUserProfile(user.id);
+          if (!mounted) return;
+
+          final role = profile != null
+              ? profile['role']?.toString().toUpperCase()
+              : 'CUSTOMER';
+          if (role == 'MECHANIC') {
+            context.go('/worker');
+          } else if (role == 'ADMIN') {
+            context.go('/admin');
+          } else {
+            context.go('/home');
+          }
+        } else {
+          context.go('/home');
+        }
       } else if (mounted) {
         _showSnackBar('Facebook sign-in cancelled or failed.');
       }

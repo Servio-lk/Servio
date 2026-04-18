@@ -131,6 +131,7 @@ public class AppointmentController {
         }
 
         @PatchMapping("/{id}/status")
+
         public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentStatus(
                         @PathVariable Long id,
                         @RequestParam String status) {
