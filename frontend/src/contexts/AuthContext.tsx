@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { supabaseAuth } from '@/services/supabaseAuth';
 import { registerAuthHandlers } from '@/services/apiFetch';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
@@ -43,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBackendTokenReady, setIsBackendTokenReady] = useState(false);
+  const isSyncingBackend = useRef(false);
 
   // ---------------------------------------------------------------------------
   // refreshBackendToken
@@ -155,13 +156,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const syncBackendToken = async () => {
-      if (!session || !user || isBackendTokenReady) return;
+      if (!session || !user || isBackendTokenReady || isSyncingBackend.current) return;
 
-      // Mark ready immediately to prevent any re-trigger before the async
-      // work completes. We use the token already in the session object —
-      // calling refreshSession() here would fire TOKEN_REFRESHED → update
-      // session state → re-run this effect → infinite loop.
-      setIsBackendTokenReady(true);
+      isSyncingBackend.current = true;
 
       try {
         const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -198,6 +195,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('[Auth] Backend token exchange network error:', error);
+      } finally {
+        setIsBackendTokenReady(true);
+        isSyncingBackend.current = false;
       }
     };
 
