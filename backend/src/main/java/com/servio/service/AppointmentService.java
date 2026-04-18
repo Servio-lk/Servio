@@ -212,18 +212,6 @@ public class AppointmentService {
         }
     }
 
-    /**
-     * Returns appointments for the currently authenticated user by reading
-     * the user ID directly from the JWT — no need for the frontend to pass it.
-     */
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getMyAppointments(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            return List.of();
-        }
-        String userId = authentication.getPrincipal().toString();
-        return getUserAppointments(userId);
-    }
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getMyAppointments(Authentication authentication) {

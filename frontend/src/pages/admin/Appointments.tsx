@@ -385,50 +385,23 @@ export function AdminAppointments() {
                             </button>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-black font-medium">
-                      {appointment.serviceType}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Clock className="w-4 h-4 text-gray-400" />
-                        {formatDateTime(appointment.appointmentDate)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <select
-                        value={appointment.status}
-                        onChange={(e) => handleStatusChange(appointment.id, e.target.value)}
-                        className={`px-2.5 py-1 text-xs font-medium rounded-lg border cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#ff5d2e] focus:ring-offset-1 transition-all ${getStatusColor(
-                          appointment.status
-                        )}`}
-                      >
-                        <option value="PENDING">Pending</option>
-                        <option value="CONFIRMED">Confirmed</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="CANCELLED">Cancelled</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-black">
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="w-3 h-3 text-gray-400" />
-                        {appointment.actualCost
-                          ? `Rs. ${appointment.actualCost.toLocaleString()}`
-                          : appointment.estimatedCost
-                            ? `~Rs. ${appointment.estimatedCost.toLocaleString()}`
-                            : 'TBD'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <button className="text-gray-400 hover:text-black transition-colors p-1 rounded-full hover:bg-gray-100">
-                        <MoreVertical className="w-4 h-4" />
-                      </button>
-                    </td>
+                      </td>
+
+                      {/* Cost */}
+                      <td className="px-4 py-4 text-sm font-medium text-black">
+                        <div className="flex items-center gap-1">
+                          <CreditCard className="w-3 h-3 text-gray-400" />
+                          {appt.actualCost
+                            ? `Rs. ${appt.actualCost.toLocaleString()}`
+                            : appt.estimatedCost
+                              ? `~Rs. ${appt.estimatedCost.toLocaleString()}`
+                              : 'TBD'}
+                        </div>
+                      </td>
                   </tr>
-                ))
-              )}
+                );
+              })
+            )}
             </tbody>
           </table>
         </div>

@@ -82,6 +82,15 @@ class AdminApiService {
     return response.json();
   }
 
+  async recordPayment(appointmentId: number, amount: number, paymentMethod: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/payments`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ amount, paymentMethod }),
+    });
+    return response.json();
+  }
+
   async updateAppointmentStatus(id: number, status: string) {
     const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/status?status=${status}`, {
       method: 'PATCH',

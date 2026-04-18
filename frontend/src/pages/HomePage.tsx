@@ -27,11 +27,17 @@ export default function HomePage() {
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  // Load public data (services, offers, providers) immediately — no token needed
   useEffect(() => {
-    // Wait for auth (including backend token exchange) to fully complete before
-    // calling getUserAppointments(), so localStorage.getItem('user') is ready
-    if (!authLoading) {
-      loadHomeData();
+    loadPublicData();
+  }, []);
+
+  // Load user appointments ONLY after auth (including backend token exchange) completes
+  useEffect(() => {
+    if (!authLoading && user) {
+      loadUserAppointments();
+    } else if (!authLoading && !user) {
+      setAppointmentsLoading(false);
     }
   }, [user, authLoading]);
 
@@ -77,14 +83,14 @@ export default function HomePage() {
     useCallback(() => { refreshAppointments(); }, [refreshAppointments]),
   );
 
-  const loadHomeData = async () => {
+  const loadPublicData = async () => {
     try {
       setLoading(true);
 
       // Load featured services (for popular services section)
       const servicesResponse = await apiService.getFeaturedServices();
       if (servicesResponse.success && servicesResponse.data) {
-        setFeaturedServices(servicesResponse.data.slice(0, 4)); // Show top 4
+        setFeaturedServices(servicesResponse.data.slice(0, 4));
       }
 
       // Load active offers
@@ -98,51 +104,47 @@ export default function HomePage() {
       if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
         setLastServiceProvider(providersResponse.data[0]);
       }
-
-      // Load user's recent appointments
-      if (user) {
-        try {
-          setAppointmentsLoading(true);
-          const appointmentsResponse = await apiService.getUserAppointments();
-          if (appointmentsResponse.success && appointmentsResponse.data) {
-            const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
-              .sort((a, b) => {
-                // Sort by creation time (newest booking first); fall back to appointment date
-                const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
-                const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
-                return tB - tA;
-              })
-              .slice(0, 5)
-              .map(app => {
-                // Prefer linked vehicle entity; fall back to parsing notes ("Vehicle: Toyota Premio | ...")
-                let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
-                if (!vehicle && app.notes) {
-                  const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
-                  if (match) vehicle = match[1].trim();
-                }
-                return {
-                  id: app.id,
-                  name: app.serviceType,
-                  date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-                  vehicle: vehicle || '',
-                };
-              });
-            setRecentServices(mappedServices);
-          }
-        } catch (err) {
-          console.error('[HomePage] Failed to load appointments:', err);
-        } finally {
-          setAppointmentsLoading(false);
-        }
-      } else {
-        setAppointmentsLoading(false);
-      }
     } catch (error) {
       console.error('Error loading home page data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  const loadUserAppointments = async () => {
+    try {
+      setAppointmentsLoading(true);
+      const appointmentsResponse = await apiService.getUserAppointments();
+      if (appointmentsResponse.success && appointmentsResponse.data) {
+        const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
+          .sort((a, b) => {
+            const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
+            const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
+            return tB - tA;
+          })
+          .slice(0, 5)
+          .map(app => {
+            let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
+            if (!vehicle && app.notes) {
+              const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
+              if (match) vehicle = match[1].trim();
+            }
+            return {
+              id: app.id,
+              name: app.serviceType,
+              date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+              vehicle: vehicle || '',
+            };
+          });
+        setRecentServices(mappedServices);
+      }
+    } catch (err) {
+      console.error('[HomePage] Failed to load appointments:', err);
+    } finally {
+      setAppointmentsLoading(false);
+    }
+  };
+
 
   if (loading) {
     return (
