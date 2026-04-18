@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:gotrue/gotrue.dart' show OtpType;
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/services/supabase_service.dart';
 import 'signup_widgets.dart';
@@ -20,7 +18,7 @@ class SignUpOtpScreen extends StatefulWidget {
 }
 
 class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
-  static const int _otpLength = 4;
+  static const int _otpLength = 6;
 
   final _supabaseService = SupabaseService();
   final List<TextEditingController> _otpControllers = List.generate(
@@ -36,11 +34,13 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
   int _resendCountdown = 60;
   Timer? _timer;
   late String _email;
+  late String _password;
 
   @override
   void initState() {
     super.initState();
     _email = (widget.extras?['email'] as String?) ?? '';
+    _password = (widget.extras?['password'] as String?) ?? '';
     _startCountdown();
   }
 
@@ -91,11 +91,27 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _supabaseService.client.auth.verifyOTP(
-        type: OtpType.signup,
+      final response = await _supabaseService.verifyEmailOtp(
         email: _email,
-        token: code,
+        otp: code,
       );
+
+      // OTP login creates/opens a session; set password so future login can use email+password.
+      if (response.user != null && _password.isNotEmpty) {
+        await _supabaseService.setPassword(_password);
+
+        final phone = (widget.extras?['phone'] as String?)?.trim() ?? '';
+        if (phone.isNotEmpty) {
+          try {
+            await _supabaseService.client
+                .from('profiles')
+                .update({'phone': phone})
+                .eq('id', response.user!.id);
+          } catch (e) {
+            debugPrint('Error updating phone in profile: $e');
+          }
+        }
+      }
 
       if (!mounted) return;
 
@@ -123,10 +139,7 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
     }
 
     try {
-      await _supabaseService.client.auth.resend(
-        type: OtpType.signup,
-        email: _email,
-      );
+      await _supabaseService.resendEmailOtp(email: _email);
       if (mounted) {
         _showSnackBar('Verification code resent!', isError: false);
         _startCountdown();

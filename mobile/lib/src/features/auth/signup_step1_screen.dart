@@ -63,49 +63,34 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
         await _supabaseService.signOut();
       }
 
-      // Sign up with Supabase Auth
-      final response = await _supabaseService.signUpWithEmail(
+      // Use /auth/v1/otp instead of /auth/v1/signup to avoid strict email caps.
+      await _supabaseService.requestSignupOtp(
         email: email,
-        password: password,
-        data: {'full_name': name, 'display_name': name},
+        data: {
+          'full_name': name,
+          'display_name': name,
+          'phone': phone,
+          'signup_flow': 'otp',
+        },
       );
 
       if (!mounted) return;
 
-      if (response.user != null) {
-        // Update phone in profiles table
-        if (phone.isNotEmpty) {
-          try {
-            await _supabaseService.client
-                .from('profiles')
-                .update({'phone': phone})
-                .eq('id', response.user!.id);
-          } catch (e) {
-            debugPrint('Error updating phone in profile: $e');
-            // Non-blocking — profile trigger may not have fired yet
-          }
-        }
+      _showSnackBar(
+        'Verification code sent. Please check your email.',
+        isError: false,
+      );
 
-        _showSnackBar(
-          'Account created! Please verify your email.',
-          isError: false,
-        );
-
-        // Navigate to OTP / email verification screen
-        if (mounted) {
-          context.go(
-            '/signup/otp',
-            extra: {
-              ...?widget.extras,
-              'email': email,
-              'name': name,
-              'phone': phone,
-            },
-          );
-        }
-      } else if (mounted) {
-        _showSnackBar('Sign up failed. Please try again.');
-      }
+      context.go(
+        '/signup/otp',
+        extra: {
+          ...?widget.extras,
+          'email': email,
+          'name': name,
+          'phone': phone,
+          'password': password,
+        },
+      );
     } catch (e) {
       if (mounted) {
         String errorMessage = 'Sign up failed. Please try again.';
@@ -113,8 +98,8 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
         if (errorStr.contains('User already registered')) {
           errorMessage = 'An account with this email already exists.';
-        } else if (errorStr.contains('Password should be at least')) {
-          errorMessage = 'Password must be at least 8 characters.';
+        } else if (errorStr.contains('For security purposes, you can only request this after')) {
+          errorMessage = 'Please wait 60 seconds before requesting a new code.';
         } else if (errorStr.contains('Network') ||
             errorStr.contains('SocketException') ||
             errorStr.contains('Failed host lookup') ||

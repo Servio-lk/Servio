@@ -40,6 +40,37 @@ class SupabaseService {
     );
   }
 
+  // Request email OTP via /auth/v1/otp (higher default rate limit).
+  Future<void> requestSignupOtp({
+    required String email,
+    Map<String, dynamic>? data,
+  }) async {
+    await client.auth.signInWithOtp(
+      email: email,
+      shouldCreateUser: true,
+      data: data,
+    );
+  }
+
+  Future<AuthResponse> verifyEmailOtp({
+    required String email,
+    required String otp,
+  }) async {
+    return await client.auth.verifyOTP(
+      type: OtpType.email,
+      email: email,
+      token: otp,
+    );
+  }
+
+  Future<void> resendEmailOtp({required String email}) async {
+    await client.auth.resend(type: OtpType.email, email: email);
+  }
+
+  Future<UserResponse> setPassword(String password) async {
+    return await client.auth.updateUser(UserAttributes(password: password));
+  }
+
   // Sign in with Google
   Future<bool> signInWithGoogle() async {
     try {

@@ -38,10 +38,13 @@ class VehiclesRepository {
         'No active session. Please verify your email and sign in again.',
       );
     }
+    final nowIso = DateTime.now().toIso8601String();
     final payload = <String, dynamic>{
       'profile_id': user.id,
       'make': make,
       'model': model,
+      'created_at': nowIso,
+      'updated_at': nowIso,
       if (year != null) 'year': year,
       if (licensePlate != null && licensePlate.isNotEmpty)
         'license_plate': licensePlate,
@@ -76,6 +79,7 @@ class VehiclesRepository {
       'year': year,
       'license_plate': licensePlate,
       'vin': vin,
+      'updated_at': DateTime.now().toIso8601String(),
     };
     try {
       final response = await _client
