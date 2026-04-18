@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'appointment_confirmed_screen.dart';
+import 'appointments_providers.dart';
 import 'appointments_repository.dart';
 
 // ─── CHECKOUT SCREEN ─────────────────────────────────────────────────────────
 
-class CheckoutScreen extends StatefulWidget {
+class CheckoutScreen extends ConsumerStatefulWidget {
   final DateTime selectedDate;
   final String selectedTime;
   final String serviceType;
@@ -28,10 +30,10 @@ class CheckoutScreen extends StatefulWidget {
   });
 
   @override
-  State<CheckoutScreen> createState() => _CheckoutScreenState();
+  ConsumerState<CheckoutScreen> createState() => _CheckoutScreenState();
 }
 
-class _CheckoutScreenState extends State<CheckoutScreen> {
+class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   bool _isBooking = false;
   final AppointmentsRepository _repository = AppointmentsRepository();
 
@@ -84,6 +86,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         appointmentDate: appointmentDate,
         estimatedCost: parsedCost,
       );
+
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      ref.invalidate(userAppointmentsProvider(userId));
 
       if (!mounted) return;
       Navigator.of(context).push(
