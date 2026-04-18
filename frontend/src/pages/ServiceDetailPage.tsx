@@ -283,8 +283,9 @@ export default function ServiceDetailPage() {
     { id: 'full-synthetic', name: 'Full Synthetic Oil', price: 7000, description: 'Maximum protection for high-performance engines' },
   ];
 
+  const isLubeService = id === '2';
   const selectedOilOption = oilOptions.find(o => o.id === selectedOil);
-  const totalPrice = service.basePrice + (selectedOilOption?.price || 0);
+  const totalPrice = service.basePrice + (isLubeService ? (selectedOilOption?.price || 0) : 0);
 
   return (
     <AppLayout showNav={false}>
@@ -433,7 +434,7 @@ export default function ServiceDetailPage() {
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {service.basePrice.toLocaleString()}</span>
                   </div>
-                  {id === '2' && selectedOilOption && (
+                  {isLubeService && selectedOilOption && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-black/70">{selectedOilOption.name}</span>
                       <span className="font-medium text-black">LKR {selectedOilOption.price.toLocaleString()}</span>
