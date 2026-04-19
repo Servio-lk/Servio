@@ -1,7 +1,64 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { supabaseAuth } from '@/services/supabaseAuth';
 import { registerAuthHandlers } from '@/services/apiFetch';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
+
+const getApiBaseCandidates = () => {
+  const host = window.location.hostname;
+  const candidates = [
+    import.meta.env.VITE_API_URL,
+    `http://${host}:3001/api`,
+    'http://localhost:3001/api',
+    'http://127.0.0.1:3001/api',
+  ].filter((url): url is string => Boolean(url));
+
+  return Array.from(new Set(candidates));
+};
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 10000) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+async function exchangeSupabaseToken(payload: {
+  accessToken: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+}) {
+  for (const apiBase of getApiBaseCandidates()) {
+    try {
+      const response = await fetchWithTimeout(
+        `${apiBase}/auth/supabase-login`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+        5000,
+      );
+
+      const data = await response.json();
+      if (data?.success && data?.data?.token) {
+        return data;
+      }
+
+      // Server responded but did not issue token, do not keep trying other hosts.
+      return null;
+    } catch {
+      // Try next host candidate.
+    }
+  }
+
+  return null;
+}
 
 interface User {
   id: string;
@@ -21,6 +78,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   supabaseUser: SupabaseUser | null;
   refreshBackendToken: () => Promise<boolean>;
+  isBackendTokenReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,33 +101,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isBackendTokenReady, setIsBackendTokenReady] = useState(false);
+  const attemptedTokenExchange = useRef<Set<string>>(new Set());
 
-  // ---------------------------------------------------------------------------
-  // refreshBackendToken
-  // Refreshes the Supabase session and exchanges it for a new backend JWT.
-  // Returns true on success, false on failure.
-  // Also called automatically by apiFetch whenever a 401 is received.
-  // ---------------------------------------------------------------------------
   const refreshBackendToken = useCallback(async (): Promise<boolean> => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
       const { session: freshSession } = await supabaseAuth.refreshSession();
       if (!freshSession?.access_token) return false;
 
-      const response = await fetch(`${API_URL}/auth/supabase-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accessToken: freshSession.access_token,
-          email: freshSession.user.email,
-          fullName: freshSession.user.user_metadata?.full_name || '',
-          phone: freshSession.user.user_metadata?.phone || '',
-          role: freshSession.user.user_metadata?.role || 'USER',
-        }),
+      const data = await exchangeSupabaseToken({
+        accessToken: freshSession.access_token,
+        email: freshSession.user.email || '',
+        fullName: freshSession.user.user_metadata?.full_name || '',
+        phone: freshSession.user.user_metadata?.phone || '',
+        role: freshSession.user.user_metadata?.role || 'USER',
       });
 
-      const data = await response.json();
-      if (data.success && data.data?.token) {
+      if (data?.success && data.data?.token) {
         localStorage.setItem('token', data.data.token);
         if (data.data.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
@@ -77,34 +124,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('[Auth] Backend token refreshed successfully');
         return true;
       }
+
       return false;
     } catch {
       return false;
     }
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Register refreshBackendToken + force-logout with apiFetch.
-  // Any fetch() call in api.ts / adminApi.ts that uses apiFetch() will
-  // automatically call this if it receives a 401.
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     registerAuthHandlers(
       refreshBackendToken,
       async () => {
         await supabaseAuth.signOut();
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setUser(null);
         setSession(null);
         setSupabaseUser(null);
         setIsBackendTokenReady(false);
-      }
+        attemptedTokenExchange.current.clear();
+      },
     );
   }, [refreshBackendToken]);
 
-  // ---------------------------------------------------------------------------
-  // Initialise auth state from the stored Supabase session.
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -123,25 +165,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initializeAuth();
 
-    // SIGNED_IN  → real login; clear old backend token so we get a fresh one
-    // TOKEN_REFRESHED → Supabase silently rotated access_token; keep backend token
-    // SIGNED_OUT → clear everything
     const { data: authListener } = supabaseAuth.onAuthStateChange((newSession, authEvent) => {
+      setIsLoading(false);
+
       if (authEvent === 'SIGNED_OUT' || !newSession) {
         setUser(null);
         setSession(null);
         setSupabaseUser(null);
         localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setIsBackendTokenReady(false);
-      } else {
-        setSession(newSession);
-        setSupabaseUser(newSession.user);
-        setUser(mapSupabaseUser(newSession.user));
+        attemptedTokenExchange.current.clear();
+        return;
+      }
 
-        if (authEvent === 'SIGNED_IN') {
-          localStorage.removeItem('token');
-          setIsBackendTokenReady(false);
-        }
+      setSession(newSession);
+      setSupabaseUser(newSession.user);
+      setUser(mapSupabaseUser(newSession.user));
+
+      if (authEvent === 'SIGNED_IN') {
+        localStorage.removeItem('token');
+        setIsBackendTokenReady(false);
+        attemptedTokenExchange.current.clear();
       }
     });
 
@@ -150,51 +195,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // Exchange the Supabase access_token for a backend JWT once per session.
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     const syncBackendToken = async () => {
       if (!session || !user || isBackendTokenReady) return;
 
-      // Mark ready immediately to prevent any re-trigger before the async
-      // work completes. We use the token already in the session object —
-      // calling refreshSession() here would fire TOKEN_REFRESHED → update
-      // session state → re-run this effect → infinite loop.
+      const accessToken = session.access_token;
+      if (attemptedTokenExchange.current.has(accessToken)) {
+        setIsBackendTokenReady(true);
+        return;
+      }
+
+      attemptedTokenExchange.current.add(accessToken);
       setIsBackendTokenReady(true);
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-        const accessToken = session.access_token;
-
         console.log('[Auth] Exchanging Supabase token for backend token...');
 
-        const response = await fetch(`${API_URL}/auth/supabase-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            accessToken,
-            email: user.email,
-            fullName: user.fullName,
-            phone: user.phone || '',
-            role: user.role || 'USER',
-          }),
+        const data = await exchangeSupabaseToken({
+          accessToken,
+          email: user.email,
+          fullName: user.fullName,
+          phone: user.phone || '',
+          role: user.role || 'USER',
         });
 
-        const text = await response.text();
-        try {
-          const data = JSON.parse(text);
-          if (data.success && data.data?.token) {
-            localStorage.setItem('token', data.data.token);
-            if (data.data.user) {
-              localStorage.setItem('user', JSON.stringify(data.data.user));
-            }
-            console.log('[Auth] Backend token stored successfully');
-          } else {
-            console.warn('[Auth] supabase-login did not return a token:', data);
+        if (data?.success && data.data?.token) {
+          localStorage.setItem('token', data.data.token);
+          if (data.data.user) {
+            localStorage.setItem('user', JSON.stringify(data.data.user));
           }
-        } catch {
-          console.warn('[Auth] Could not parse supabase-login response:', text);
+          console.log('[Auth] Backend token stored successfully');
+        } else {
+          console.warn('[Auth] supabase-login did not return a token');
         }
       } catch (error) {
         console.error('[Auth] Backend token exchange network error:', error);
@@ -209,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(userSession);
     setSupabaseUser(userSession.user);
     setIsBackendTokenReady(false);
+    attemptedTokenExchange.current.clear();
   };
 
   const logout = async () => {
@@ -219,6 +252,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsBackendTokenReady(false);
+    attemptedTokenExchange.current.clear();
   };
 
   return (
@@ -228,11 +262,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         isAuthenticated: !!session,
         isAdmin: user?.role === 'ADMIN',
-        isLoading: isLoading || (!!session && !!user && !isBackendTokenReady),
+        isLoading,
         login,
         logout,
         supabaseUser,
         refreshBackendToken,
+        isBackendTokenReady,
       }}
     >
       {children}

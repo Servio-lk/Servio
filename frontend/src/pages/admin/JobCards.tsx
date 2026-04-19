@@ -18,7 +18,7 @@ export function AdminJobCards() {
       setLoading(true);
       const url = statusFilter
         ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/status/${statusFilter}`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards';
+        : `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards`;
       
       const response = await fetch(url, {
         headers: {

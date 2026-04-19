@@ -25,7 +25,7 @@ export function AdminWalkInCustomers() {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/walk-in-customers', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/walk-in-customers`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -47,7 +47,7 @@ export function AdminWalkInCustomers() {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/walk-in-customers', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/walk-in-customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

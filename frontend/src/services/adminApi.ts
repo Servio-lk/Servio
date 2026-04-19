@@ -89,6 +89,15 @@ class AdminApiService {
     });
     return response.json();
   }
+
+  async recordPayment(id: number, amount: number, paymentMethod: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${id}/payments`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ amount, paymentMethod }),
+    });
+    return response.json();
+  }
 }
 
 export const adminApi = new AdminApiService();

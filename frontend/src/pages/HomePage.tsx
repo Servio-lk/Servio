@@ -27,6 +27,15 @@ export default function HomePage() {
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  const withTimeout = useCallback(async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms);
+      }),
+    ]);
+  }, []);
+
   useEffect(() => {
     // Wait for auth (including backend token exchange) to fully complete before
     // calling getUserAppointments(), so localStorage.getItem('user') is ready
@@ -81,29 +90,48 @@ export default function HomePage() {
     try {
       setLoading(true);
 
-      // Load featured services (for popular services section)
-      const servicesResponse = await apiService.getFeaturedServices();
-      if (servicesResponse.success && servicesResponse.data) {
-        setFeaturedServices(servicesResponse.data.slice(0, 4)); // Show top 4
+      const [servicesResult, offersResult, providersResult] = await Promise.allSettled([
+        withTimeout(apiService.getFeaturedServices(), 10000, 'Featured services'),
+        withTimeout(apiService.getActiveOffers(), 10000, 'Offers'),
+        withTimeout(apiService.getServiceProviders(), 10000, 'Service providers'),
+      ]);
+
+      if (servicesResult.status === 'fulfilled') {
+        const servicesResponse = servicesResult.value;
+        if (servicesResponse.success && servicesResponse.data) {
+          setFeaturedServices(servicesResponse.data.slice(0, 4));
+        }
+      } else {
+        console.error('[HomePage] Failed to load featured services:', servicesResult.reason);
       }
 
-      // Load active offers
-      const offersResponse = await apiService.getActiveOffers();
-      if (offersResponse.success && offersResponse.data) {
-        setOffers(offersResponse.data);
+      if (offersResult.status === 'fulfilled') {
+        const offersResponse = offersResult.value;
+        if (offersResponse.success && offersResponse.data) {
+          setOffers(offersResponse.data);
+        }
+      } else {
+        console.error('[HomePage] Failed to load offers:', offersResult.reason);
       }
 
-      // Load service providers (use first one as last service location)
-      const providersResponse = await apiService.getServiceProviders();
-      if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
-        setLastServiceProvider(providersResponse.data[0]);
+      if (providersResult.status === 'fulfilled') {
+        const providersResponse = providersResult.value;
+        if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
+          setLastServiceProvider(providersResponse.data[0]);
+        }
+      } else {
+        console.error('[HomePage] Failed to load service providers:', providersResult.reason);
       }
 
       // Load user's recent appointments
       if (user) {
         try {
           setAppointmentsLoading(true);
-          const appointmentsResponse = await apiService.getUserAppointments();
+          const appointmentsResponse = await withTimeout(
+            apiService.getUserAppointments(),
+            10000,
+            'Appointments',
+          );
           if (appointmentsResponse.success && appointmentsResponse.data) {
             const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
               .sort((a, b) => {
