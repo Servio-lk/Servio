@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -170,6 +171,7 @@ class SignUpInputField extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final TextInputType? keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   final String? Function(String?)? validator;
   final bool readOnly;
   final VoidCallback? onTap;
@@ -179,6 +181,7 @@ class SignUpInputField extends StatelessWidget {
     required this.controller,
     required this.hint,
     this.keyboardType,
+    this.inputFormatters,
     this.validator,
     this.readOnly = false,
     this.onTap,
@@ -202,6 +205,7 @@ class SignUpInputField extends StatelessWidget {
             child: TextFormField(
               controller: controller,
               keyboardType: keyboardType,
+              inputFormatters: inputFormatters,
               validator: validator,
               readOnly: readOnly,
               onTap: onTap,
@@ -329,7 +333,6 @@ class SignUpPrimaryButton extends StatelessWidget {
               ? _kPrimaryOrange.withOpacity(0.6)
               : _kPrimaryOrange,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white, width: 1),
           boxShadow: isLoading
               ? []
               : [
