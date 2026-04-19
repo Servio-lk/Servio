@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -180,7 +181,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   Future<void> _handleForgotPassword() async {
     final email = _emailController.text.trim();
-    if (email.isEmpty || !email.contains('@')) {
+    if (!EmailValidator.isValid(email)) {
       _showSnackBar('Please enter a valid email address first.');
       return;
     }
@@ -267,7 +268,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: InkWell(
                               borderRadius: BorderRadius.circular(8),
-                              onTap: () => context.go('/welcome'),
+                              onTap: () => context.go('/signin'),
                               child: const Center(
                                 child: Icon(
                                   Icons.close,
@@ -317,7 +318,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your email';
                                 }
-                                if (!value.contains('@')) {
+                                if (!EmailValidator.isValid(value)) {
                                   return 'Please enter a valid email';
                                 }
                                 return null;
@@ -482,10 +483,10 @@ class _SignInScreenState extends State<SignInScreen> {
                             // Google Login Button
                             _buildSocialLoginButton(
                               label: 'Log In with Google',
-                              icon: const Icon(
-                                Icons.g_mobiledata,
-                                size: 24,
-                                color: Colors.black,
+                              icon: Image.asset(
+                                'assets/icons/google.png',
+                                width: 24,
+                                height: 24,
                               ),
                               onTap: _handleGoogleSignIn,
                             ),
@@ -493,10 +494,10 @@ class _SignInScreenState extends State<SignInScreen> {
                             // Facebook Login Button
                             _buildSocialLoginButton(
                               label: 'Log In with Facebook',
-                              icon: const Icon(
-                                Icons.facebook,
-                                size: 24,
-                                color: Color(0xFF1877F2),
+                              icon: Image.asset(
+                                'assets/icons/facebook.png',
+                                width: 24,
+                                height: 24,
                               ),
                               onTap: _handleFacebookSignIn,
                             ),

@@ -142,6 +142,19 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             _BottomButtonSection(
               totalPrice: _totalPrice,
               serviceType: widget.data.title,
+              onBook: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ChooseATimeScreen(
+                      serviceType: widget.data.title,
+                      estimatedCostStr: _totalPrice,
+                      basePriceStr: widget.data.basePrice,
+                      optionName: widget.data.options.isNotEmpty ? widget.data.options[_selectedOptionIndex].name : null,
+                      optionPriceStr: widget.data.options.isNotEmpty ? widget.data.options[_selectedOptionIndex].price : null,
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -513,9 +526,12 @@ class _SpecialInstructionsSection extends StatelessWidget {
 class _BottomButtonSection extends StatelessWidget {
   final String totalPrice;
   final String serviceType;
+  final VoidCallback onBook;
+
   const _BottomButtonSection({
     required this.totalPrice,
     required this.serviceType,
+    required this.onBook,
   });
 
   @override
@@ -532,16 +548,7 @@ class _BottomButtonSection extends StatelessWidget {
             bottom: 12,
           ),
           child: GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => ChooseATimeScreen(
-                    serviceType: serviceType,
-                    estimatedCostStr: totalPrice,
-                  ),
-                ),
-              );
-            },
+            onTap: onBook,
             child: Container(
               height: 48,
               width: double.infinity,

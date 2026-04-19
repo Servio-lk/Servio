@@ -9,11 +9,17 @@ import '../bookings/checkout_screen.dart';
 class ChooseATimeScreen extends StatefulWidget {
   final String serviceType;
   final String estimatedCostStr;
+  final String basePriceStr;
+  final String? optionName;
+  final String? optionPriceStr;
 
   const ChooseATimeScreen({
     super.key,
     required this.serviceType,
     required this.estimatedCostStr,
+    required this.basePriceStr,
+    this.optionName,
+    this.optionPriceStr,
   });
 
   @override
@@ -219,6 +225,9 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
                 selectedTime: _timeSlots[_selectedTimeIndex],
                 serviceType: widget.serviceType,
                 estimatedCostStr: widget.estimatedCostStr,
+                basePriceStr: widget.basePriceStr,
+                optionName: widget.optionName,
+                optionPriceStr: widget.optionPriceStr,
               ),
             ],
           ),
@@ -552,12 +561,18 @@ class _BottomButtonSection extends StatelessWidget {
   final String selectedTime;
   final String serviceType;
   final String estimatedCostStr;
+  final String basePriceStr;
+  final String? optionName;
+  final String? optionPriceStr;
 
   const _BottomButtonSection({
     required this.selectedDate,
     required this.selectedTime,
     required this.serviceType,
     required this.estimatedCostStr,
+    required this.basePriceStr,
+    this.optionName,
+    this.optionPriceStr,
   });
 
   @override
@@ -578,6 +593,9 @@ class _BottomButtonSection extends StatelessWidget {
                       selectedTime: selectedTime,
                       serviceType: serviceType,
                       estimatedCostStr: estimatedCostStr,
+                      basePriceStr: basePriceStr,
+                      optionName: optionName,
+                      optionPriceStr: optionPriceStr,
                     ),
                   ),
                 );

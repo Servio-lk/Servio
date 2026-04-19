@@ -9,9 +9,11 @@ class AppointmentsRepository {
 
   /// Fetches all appointments for the current authenticated user.
   /// Joins with vehicles table to get make/model.
-  Future<List<AppointmentModel>> getUserAppointments() async {
-    final user = _client.auth.currentUser;
-    if (user == null) return [];
+  Future<List<AppointmentModel>> getUserAppointments({
+    String? profileId,
+  }) async {
+    final activeProfileId = profileId ?? _client.auth.currentUser?.id;
+    if (activeProfileId == null) return [];
 
     final response = await _client
         .from('appointments')
@@ -20,7 +22,7 @@ class AppointmentsRepository {
           status, location, notes, estimated_cost, actual_cost, created_at,
           vehicles ( make, model )
         ''')
-        .eq('profile_id', user.id)
+        .eq('profile_id', activeProfileId)
         .order('appointment_date', ascending: false);
 
     final data = response as List<dynamic>;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../core/utils/email_validator.dart';
 import 'profile_providers.dart';
 import 'vehicles_repository.dart';
 import 'models/vehicle_model.dart';
@@ -73,12 +74,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _isSigningOut = true);
     try {
       await Supabase.instance.client.auth.signOut();
-      if (mounted) context.go('/welcome');
+      if (mounted) context.go('/signin');
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign out: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to sign out: $e')));
       }
     } finally {
       if (mounted) setState(() => _isSigningOut = false);
@@ -134,7 +135,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           TextButton(
             onPressed: () async {
               final newEmail = controller.text.trim();
-              if (newEmail.isEmpty || !newEmail.contains('@')) {
+              if (!EmailValidator.isValid(newEmail)) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Enter a valid email')),
@@ -149,16 +150,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Confirmation sent to $newEmail'),
-                    ),
+                    SnackBar(content: Text('Confirmation sent to $newEmail')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
                 }
               }
             },
@@ -200,8 +199,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             onPressed: () async {
               Navigator.of(ctx).pop();
               try {
-                await Supabase.instance.client.auth
-                    .resetPasswordForEmail(emailAddr);
+                await Supabase.instance.client.auth.resetPasswordForEmail(
+                  emailAddr,
+                );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -211,9 +211,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
                 }
               }
             },
@@ -229,7 +229,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vehiclesAsync = ref.watch(userVehiclesProvider);
+    final userId = _user?.id;
+    final vehiclesAsync = ref.watch(userVehiclesProvider(userId));
 
     return Container(
       decoration: const BoxDecoration(
@@ -270,7 +271,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 // ── My Vehicles ──
                 _MyVehiclesSection(
                   vehiclesAsync: vehiclesAsync,
-                  onRefresh: () => ref.invalidate(userVehiclesProvider),
+                  onRefresh: () => ref.invalidate(userVehiclesProvider(userId)),
                 ),
                 const SizedBox(height: 24),
                 const _SectionDivider(),
@@ -294,10 +295,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 const SizedBox(height: 24),
 
                 // ── Sign Out ──
-                _SignOutButton(
-                  onTap: _handleSignOut,
-                  isLoading: _isSigningOut,
-                ),
+                _SignOutButton(onTap: _handleSignOut, isLoading: _isSigningOut),
                 const SizedBox(height: 16),
 
                 // ── App Version ──
@@ -522,9 +520,7 @@ class _MyVehiclesSection extends StatelessWidget {
     final yearCtrl = TextEditingController(
       text: existing?.year?.toString() ?? '',
     );
-    final plateCtrl = TextEditingController(
-      text: existing?.licensePlate ?? '',
-    );
+    final plateCtrl = TextEditingController(text: existing?.licensePlate ?? '');
     final vinCtrl = TextEditingController(text: existing?.vin ?? '');
     final isEditing = existing != null;
 
@@ -543,8 +539,11 @@ class _MyVehiclesSection extends StatelessWidget {
               const SizedBox(height: 12),
               _buildTextField(modelCtrl, 'Model (e.g. Premio)'),
               const SizedBox(height: 12),
-              _buildTextField(yearCtrl, 'Year (e.g. 2020)',
-                  keyboardType: TextInputType.number),
+              _buildTextField(
+                yearCtrl,
+                'Year (e.g. 2020)',
+                keyboardType: TextInputType.number,
+              ),
               const SizedBox(height: 12),
               _buildTextField(plateCtrl, 'License Plate (e.g. CAR-1234)'),
               const SizedBox(height: 12),
@@ -557,9 +556,7 @@ class _MyVehiclesSection extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.instrumentSans(
-                color: const Color(0xFF4B4B4B),
-              ),
+              style: GoogleFonts.instrumentSans(color: const Color(0xFF4B4B4B)),
             ),
           ),
           TextButton(
@@ -568,9 +565,7 @@ class _MyVehiclesSection extends StatelessWidget {
               final model = modelCtrl.text.trim();
               if (make.isEmpty || model.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Make and Model are required'),
-                  ),
+                  const SnackBar(content: Text('Make and Model are required')),
                 );
                 return;
               }
@@ -607,17 +602,15 @@ class _MyVehiclesSection extends StatelessWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
                 }
               }
             },
             child: Text(
               isEditing ? 'Update' : 'Save',
-              style: GoogleFonts.instrumentSans(
-                color: const Color(0xFFFF5D2E),
-              ),
+              style: GoogleFonts.instrumentSans(color: const Color(0xFFFF5D2E)),
             ),
           ),
         ],
@@ -641,8 +634,10 @@ class _MyVehiclesSection extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: Color(0xFFFF5D2E)),
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
       ),
       style: GoogleFonts.instrumentSans(fontSize: 14),
     );
@@ -665,9 +660,7 @@ class _MyVehiclesSection extends StatelessWidget {
             onPressed: () => Navigator.of(ctx).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.instrumentSans(
-                color: const Color(0xFF4B4B4B),
-              ),
+              style: GoogleFonts.instrumentSans(color: const Color(0xFF4B4B4B)),
             ),
           ),
           TextButton(
@@ -683,17 +676,15 @@ class _MyVehiclesSection extends StatelessWidget {
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed: $e')),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Failed: $e')));
                 }
               }
             },
             child: Text(
               'Delete',
-              style: GoogleFonts.instrumentSans(
-                color: const Color(0xFFEF4444),
-              ),
+              style: GoogleFonts.instrumentSans(color: const Color(0xFFEF4444)),
             ),
           ),
         ],
@@ -779,15 +770,11 @@ class _VehicleCard extends StatelessWidget {
             ),
             if (isPrimary) ...[
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF7F5),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFFFE7DF),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
                 ),
                 child: Text(
                   'Primary',

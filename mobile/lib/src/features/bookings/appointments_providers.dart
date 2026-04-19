@@ -9,8 +9,9 @@ final appointmentsRepositoryProvider = Provider<AppointmentsRepository>(
 );
 
 /// All appointments for the current authenticated user.
-final userAppointmentsProvider = FutureProvider<List<AppointmentModel>>((
-  ref,
-) async {
-  return ref.read(appointmentsRepositoryProvider).getUserAppointments();
-});
+final userAppointmentsProvider =
+    FutureProvider.family<List<AppointmentModel>, String?>((ref, userId) async {
+      return ref
+          .read(appointmentsRepositoryProvider)
+          .getUserAppointments(profileId: userId);
+    });
