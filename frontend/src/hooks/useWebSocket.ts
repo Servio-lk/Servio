@@ -3,7 +3,16 @@ import { Client } from '@stomp/stompjs';
 import type { IMessage } from '@stomp/stompjs';
 
 // We now have a pure WebSocket endpoint on the backend at /ws
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api')
+const apiBase = (() => {
+  const host = window.location.hostname;
+  const sameHostApi = `http://${host}:3001/api`;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return sameHostApi;
+  }
+  return import.meta.env.VITE_API_URL || sameHostApi;
+})();
+
+const BASE_URL = apiBase
   .replace('/api', '')
   .replace(/^http/, 'ws');
 const WS_URL = `${BASE_URL}/ws`;

@@ -1,14 +1,21 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
 const getApiBaseUrl = () => {
-  // If environment variable is set, use it
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+  const host = window.location.hostname;
+  const sameHostApi = `http://${host}:3001/api`;
+  const envApi = import.meta.env.VITE_API_URL;
+
+  // In local dev, always use same host to avoid stale env URLs causing hangs.
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return sameHostApi;
   }
 
-  // For local development and mobile access, use the same host but different port
-  const host = window.location.hostname;
-  return `http://${host}:3001/api`;
+  // In non-local environments, prefer explicit env configuration.
+  if (envApi) {
+    return envApi;
+  }
+
+  return sameHostApi;
 };
 
 const API_BASE_URL = getApiBaseUrl();

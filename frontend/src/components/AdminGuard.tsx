@@ -6,10 +6,10 @@ interface AdminGuardProps {
 }
 
 export function AdminGuard({ children }: AdminGuardProps) {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading, isBackendTokenReady } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && !isBackendTokenReady)) {
     return (
       <div className="flex items-center justify-center h-screen w-full bg-[#fff7f5]">
         <div className="flex flex-col items-center gap-4">
