@@ -3,6 +3,15 @@ import { supabaseAuth } from '@/services/supabaseAuth';
 import { registerAuthHandlers } from '@/services/apiFetch';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  const host = window.location.hostname;
+  return `http://${host}:3001/api`;
+};
+
 interface User {
   id: string;
   fullName: string;
@@ -53,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------------------
   const refreshBackendToken = useCallback(async (): Promise<boolean> => {
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const API_URL = getApiBaseUrl();
       const { session: freshSession } = await supabaseAuth.refreshSession();
       if (!freshSession?.access_token) return false;
 
@@ -161,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isSyncingBackend.current = true;
 
       try {
-        const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+        const API_URL = getApiBaseUrl();
         const accessToken = session.access_token;
 
         console.log('[Auth] Exchanging Supabase token for backend token...');

@@ -4,13 +4,9 @@ import {
   Search, 
   Plus, 
   Trash2, 
-  FileDown, 
   User as UserIcon, 
-  Car, 
   Calculator,
-  ArrowRight,
   Package,
-  AlertCircle,
   CheckCircle2,
   X
 } from 'lucide-react';
@@ -157,7 +153,7 @@ export function AdminBilling() {
 
   const generatePDF = (bill: any) => {
     const doc = new jsPDF();
-    const brandColor = [255, 93, 46]; // #ff5d2e
+    const brandColor: [number, number, number] = [255, 93, 46]; // #ff5d2e
 
     // Header
     doc.setFillColor(250, 250, 250);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { PackageSearch, PackageOpen, AlertTriangle, Filter, Plus, ArrowDownToLine, ArrowUpFromLine, MoreVertical, Search, Edit2, Trash2, X } from 'lucide-react';
+import { PackageSearch, PackageOpen, AlertTriangle, Plus, ArrowDownToLine, ArrowUpFromLine, MoreVertical, Search, Trash2, X } from 'lucide-react';
 import { inventoryApi } from '@/services/inventoryApi';
-import type { InventoryItem, InventoryItemRequest, StockUpdateRequest, StockTransaction } from '@/services/inventoryApi';
+import type { InventoryItem, InventoryItemRequest, StockTransaction } from '@/services/inventoryApi';
 
 export function AdminInventory() {
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -10,7 +10,6 @@ export function AdminInventory() {
 
   // Modals state
   const [addItemModalOpen, setAddItemModalOpen] = useState(false);
-  const [editItemModalOpen, setEditItemModalOpen] = useState(false);
   const [stockModalOpen, setStockModalOpen] = useState(false);
   const [consumeModalOpen, setConsumeModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);

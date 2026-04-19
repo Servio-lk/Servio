@@ -63,7 +63,6 @@ export function AdminAppointments() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [openDropdownId, setOpenDropdownId] = useState<number | null>(null);
   const [cashModal, setCashModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
   const [cashAmount, setCashAmount] = useState('');
@@ -114,17 +113,6 @@ export function AdminAppointments() {
       console.error('Failed to update appointment status:', error);
       toast.error('Failed to update appointment status');
     }
-  };
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      PENDING: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      CONFIRMED: 'bg-blue-50 text-blue-700 border-blue-200',
-      IN_PROGRESS: 'bg-purple-50 text-purple-700 border-purple-200',
-      COMPLETED: 'bg-green-50 text-green-700 border-green-200',
-      CANCELLED: 'bg-red-50 text-red-700 border-red-200',
-    };
-    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const openCashModal = (appointment: any) => {
@@ -275,7 +263,7 @@ export function AdminAppointments() {
                 appointments.map((appt) => {
                   const transitions = STATUS_TRANSITIONS[appt.status] ?? [];
                   const payInfo = getPaymentInfo(appt);
-                  const isUpdating = updatingId === appt.id;
+                  const isUpdating = false;
 
                   return (
                     <tr key={appt.id} className="hover:bg-gray-50/40 transition-colors">
