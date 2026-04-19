@@ -323,44 +323,54 @@ class SignUpPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : onTap,
-      child: Container(
-        height: 48,
-        width: double.infinity,
+    return SizedBox(
+      width: double.infinity,
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: isLoading
-              ? _kPrimaryOrange.withOpacity(0.6)
+              ? _kPrimaryOrange.withValues(alpha: 0.6)
               : _kPrimaryOrange,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           boxShadow: isLoading
               ? []
               : [
                   BoxShadow(
-                    color: _kPrimaryOrange.withOpacity(0.5),
+                    color: _kPrimaryOrange.withValues(alpha: 0.5),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
                 ],
         ),
-        alignment: Alignment.center,
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                label,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: isLoading ? null : onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Center(
+                child: isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : Text(
+                        label,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -31,6 +31,8 @@ You need to set up the database schema on Supabase:
 1. Go to Supabase Dashboard → **SQL Editor**
 2. Copy the contents of `database/init.sql`
 3. Paste and run it in the SQL Editor
+4. Run `database/vehicles-profile-migration.sql` (if not already applied)
+5. Run `database/fix-vehicles-profile-fk-cascade.sql` to ensure profile deletion cascades to vehicles
 
 **OR using psql:**
 
@@ -39,6 +41,17 @@ You need to set up the database schema on Supabase:
 psql "postgresql://postgres:[YOUR_PASSWORD]@db.szgvnurzdglflmdabjol.supabase.co:5432/postgres"
 
 # Then paste the contents of database/init.sql
+```
+
+Then run:
+
+```sql
+-- Add profile_id support + policies
+-- (if not already applied)
+\i database/vehicles-profile-migration.sql
+
+-- Ensure vehicles FK cascades when profiles are deleted
+\i database/fix-vehicles-profile-fk-cascade.sql
 ```
 
 ### Step 3: Update .env.shared File

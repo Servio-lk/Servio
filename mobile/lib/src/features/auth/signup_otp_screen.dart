@@ -78,6 +78,8 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
   String get _otpCode => _otpControllers.map((c) => c.text).join();
 
   Future<void> _handleVerify() async {
+    if (_isLoading) return;
+
     if (_email.isEmpty) {
       _showSnackBar('Email is missing. Please go back and try again.');
       return;
@@ -111,53 +113,59 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
     }
 
     try {
-      // OTP login creates/opens a session; set password so future login can use email+password.
-      if (response.user != null && _password.isNotEmpty) {
-        await _supabaseService.setPassword(_password);
-      }
-
-      final user = response.user;
+      final user = response.user ?? _supabaseService.currentUser;
       if (user == null) {
         throw Exception('No authenticated user found after OTP verification.');
+      }
+
+      var hasFollowUpWarning = false;
+
+      // Password/profile hydration should not block onboarding progression.
+      if (_password.isNotEmpty) {
+        try {
+          await _supabaseService.setPassword(_password);
+        } catch (e) {
+          hasFollowUpWarning = true;
+          debugPrint('setPassword failed after OTP verify: $e');
+        }
       }
 
       final name = (widget.extras?['name'] as String?)?.trim() ?? '';
       final phone = (widget.extras?['phone'] as String?)?.trim() ?? '';
 
-      await _supabaseService.client.from('profiles').upsert({
-        'id': user.id,
-        'email': _email,
-        if (name.isNotEmpty) 'full_name': name,
-        if (phone.isNotEmpty) 'phone': phone,
-      }, onConflict: 'id');
+      try {
+        await _supabaseService.client.from('profiles').upsert({
+          'id': user.id,
+          'email': _email,
+          if (name.isNotEmpty) 'full_name': name,
+          if (phone.isNotEmpty) 'phone': phone,
+        }, onConflict: 'id');
 
-      final profileRow = await _supabaseService.client
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .maybeSingle();
-      if (profileRow == null) {
-        throw Exception('Profile setup failed for the authenticated user.');
+        final profileRow = await _supabaseService.client
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (profileRow == null) {
+          hasFollowUpWarning = true;
+        }
+      } catch (e) {
+        hasFollowUpWarning = true;
+        debugPrint('profile setup failed after OTP verify: $e');
       }
 
       if (!mounted) return;
 
-      _showSnackBar('Email verified!', isError: false);
+      _showSnackBar(
+        hasFollowUpWarning
+            ? 'Email verified. Continue setup; we will complete your profile shortly.'
+            : 'Email verified!',
+        isError: false,
+      );
       context.go('/signup/vehicle', extra: widget.extras);
     } catch (e) {
       if (mounted) {
-        final s = e.toString();
-        if (s.contains('row-level security policy') ||
-            s.contains('permission denied') ||
-            s.contains('42501')) {
-          _showSnackBar(
-            'Email verified, but profile permissions are blocked. Please run the profiles RLS migration.',
-          );
-        } else {
-          _showSnackBar(
-            'Email verified, but profile setup failed. Please try again.',
-          );
-        }
+        _showSnackBar('Email verification failed. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
