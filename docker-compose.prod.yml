@@ -1,0 +1,49 @@
+# =============================================================
+# Servio — Production Docker Compose (EC2 Backend Only)
+# =============================================================
+# Used on AWS EC2 t2.micro to run only the backend.
+# Frontend is deployed separately to S3 + CloudFront.
+#
+# Usage:
+#   docker compose -f docker-compose.prod.yml --env-file .env up -d
+# =============================================================
+
+services:
+  backend:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/servio-backend:latest
+    container_name: servio-backend
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT:-6543}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-postgres}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-604800000}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - PAYHERE_MERCHANT_ID=${PAYHERE_MERCHANT_ID}
+      - PAYHERE_MERCHANT_SECRET=${PAYHERE_MERCHANT_SECRET}
+      - PAYHERE_SANDBOX=${PAYHERE_SANDBOX:-false}
+    ports:
+      - "3001:3001"
+    mem_limit: 700m
+    memswap_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/services"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3

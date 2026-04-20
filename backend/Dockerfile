@@ -1,5 +1,5 @@
 # Build stage
-FROM maven:3.9-eclipse-temurin-17 AS builder
+FROM maven:3.9-eclipse-temurin-17-alpine AS builder
 
 WORKDIR /app
 
@@ -21,19 +21,30 @@ RUN --mount=type=cache,target=/root/.m2 \
         (echo "Build attempt $i failed, retrying..." && sleep 5); \
     done
 
-# Production stage
-FROM eclipse-temurin:17-jre
+# Production stage — Alpine JRE for smaller image (~80MB less)
+FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
-RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
+
+# dumb-init for proper signal handling (Alpine uses apk)
+RUN apk add --no-cache dumb-init curl
 
 COPY --from=builder /app/target/*.jar app.jar
 
-# Create non-root user/group with predictable ids (Debian syntax)
-RUN addgroup --system --gid 1001 appuser \
-  && adduser --system --uid 1001 --ingroup appuser --home /nonexistent --disabled-password appuser
+# Create non-root user (Alpine syntax)
+RUN addgroup -S -g 1001 appuser \
+  && adduser -S -u 1001 -G appuser -h /nonexistent -D appuser
 USER appuser
 
-EXPOSE 8080
+EXPOSE 3001
 
-ENTRYPOINT ["dumb-init", "--", "java", "-jar", "app.jar"]
+# Health check — matches server.port=3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3001/api/services || exit 1
+
+# JVM tuned for AWS t2.micro (1 GB RAM total, ~512 MB for JVM)
+ENTRYPOINT ["dumb-init", "--", "java", \
+  "-Xms128m", "-Xmx384m", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=50.0", \
+  "-jar", "app.jar"]
