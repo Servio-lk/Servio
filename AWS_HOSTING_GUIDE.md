@@ -21,6 +21,7 @@
 13. [Monitoring & Logs](#13-monitoring--logs)
 14. [Cost Optimization](#14-cost-optimization)
 15. [Troubleshooting](#15-troubleshooting)
+16. [Set Up Amazon SES for Supabase Email](#16-set-up-amazon-ses-for-supabase-email)
 
 ---
 
@@ -35,7 +36,7 @@
            │ (HTML, JS, CSS)          │ (REST + WebSocket)
            ▼                          ▼
 ┌──────────────────────┐   ┌──────────────────────────┐
-│   Amazon CloudFront  │   │   EC2 t2.micro           │
+│   Amazon CloudFront  │   │   EC2 t3.micro           │
 │   (CDN)              │   │   ┌──────────────────┐   │
 │         │            │   │   │ Docker           │   │
 │         ▼            │   │   │  ┌────────────┐  │   │
@@ -49,8 +50,8 @@
                                       ▼
                            ┌──────────────────────┐
                            │   Supabase           │
-                           │   (PostgreSQL + Auth) │
-                           └──────────────────────┘
+                           │   (PostgreSQL + Auth)│──────► Amazon SES
+                           └──────────────────────┘       (SMTP Email)
 ```
 
 **Why this architecture?**
@@ -58,9 +59,10 @@
 | Component | Service | Free Tier Limit | Why |
 |---|---|---|---|
 | Frontend | S3 + CloudFront | 5 GB + 1 TB transfer | Static site = no server needed, globally cached |
-| Backend | EC2 t2.micro | 750 hrs/month (12 months) | Spring Boot needs a JVM runtime |
+| Backend | EC2 t3.micro | 750 hrs/month (12 months) | Spring Boot needs a JVM runtime |
 | Backend Image | ECR | 500 MB storage | Docker image registry |
 | Database | Supabase (external) | Free plan | Already using Supabase, no AWS cost |
+| Email (SMTP) | Amazon SES | 3,000 msgs/month (12 months) | Reliable email delivery for auth OTPs & password resets |
 
 ---
 
@@ -101,6 +103,7 @@
    - `AmazonS3FullAccess`
    - `AmazonEC2ContainerRegistryFullAccess`
    - `CloudFrontFullAccess`
+   - `AmazonSESFullAccess` *(only needed if managing SES via CLI; not required for SMTP sending)*
 4. Go to **Security credentials** → **Create access key**
 5. Select **Command Line Interface (CLI)**
 6. Save the **Access Key ID** and **Secret Access Key** — you'll need these for GitHub Secrets
@@ -286,9 +289,9 @@ aws ecr put-lifecycle-policy \
 aws ec2 create-key-pair \
   --key-name servio-key \
   --query "KeyMaterial" \
-  --output text > servio-key.pem
+  --output text > servio-key-new.pem
 
-chmod 400 servio-key.pem
+chmod 400 servio-key-new.pem
 ```
 
 ### 7.2 Create Security Group
@@ -325,7 +328,7 @@ aws ec2 authorize-security-group-ingress \
 ```bash
 aws ec2 run-instances \
   --image-id ami-0f58b397bc5c1f2e8 \
-  --instance-type t2.micro \
+  --instance-type t3.micro \
   --key-name servio-key \
   --security-groups servio-sg \
   --block-device-mappings '[{"DeviceName":"/dev/xvda","Ebs":{"VolumeSize":20,"VolumeType":"gp3"}}]' \
@@ -333,7 +336,13 @@ aws ec2 run-instances \
   --count 1
 ```
 
-> **Note**: The AMI ID `ami-0f58b397bc5c1f2e8` is for Amazon Linux 2023 in `ap-south-1`. If you're using a different region, find the correct AMI ID in the AWS Console under EC2 → Launch Instance.
+> **Note**: `t2.micro` is **no longer free tier eligible** in `ap-south-1`. Use `t3.micro` instead. You can check eligible types with:
+> ```bash
+> aws ec2 describe-instance-types --region ap-south-1 \
+>   --filters Name=free-tier-eligible,Values=true \
+>   --query "InstanceTypes[].InstanceType" --output table
+> ```
+> The AMI ID `ami-0f58b397bc5c1f2e8` is for **Ubuntu 24.04 LTS** in `ap-south-1`. The default SSH username is `ubuntu` (not `ec2-user`). If you're using a different region, find the correct AMI ID in the AWS Console under EC2 → Launch Instance.
 
 ### 7.4 Allocate Elastic IP (Free if associated)
 ```bash
@@ -361,31 +370,27 @@ Save this IP address — it's your backend URL: `http://<ELASTIC_IP>:3001`
 
 ### 8.1 SSH into the Instance
 ```bash
-ssh -i servio-key.pem ec2-user@<ELASTIC_IP>
+ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
 ```
 
 ### 8.2 Install Docker & Docker Compose
 ```bash
 # Update system
-sudo dnf update -y
+sudo apt update && sudo apt upgrade -y
 
-# Install Docker
-sudo dnf install -y docker
+# Install Docker using the official convenience script
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
 # Start and enable Docker
 sudo systemctl start docker
 sudo systemctl enable docker
 
-# Add ec2-user to docker group (avoids needing sudo)
-sudo usermod -aG docker ec2-user
+# Add ubuntu to docker group (avoids needing sudo)
+sudo usermod -aG docker ubuntu
 
-# Install Docker Compose plugin
-sudo mkdir -p /usr/local/lib/docker/cli-plugins
-sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
-  -o /usr/local/lib/docker/cli-plugins/docker-compose
-sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
-
-# Install AWS CLI (already included in Amazon Linux 2023)
+# Install AWS CLI (if not already installed)
+sudo apt install -y awscli
 aws --version
 
 # Log out and back in for group changes
@@ -394,7 +399,7 @@ exit
 
 ```bash
 # SSH back in
-ssh -i servio-key.pem ec2-user@<ELASTIC_IP>
+ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
 
 # Verify
 docker --version
@@ -405,9 +410,9 @@ docker compose version
 
 ## 9. Configure the EC2 Instance
 
-### 9.1 Enable Swap Space (Critical for t2.micro!)
+### 9.1 Enable Swap Space (Critical for t3.micro!)
 
-The t2.micro only has 1 GB RAM. Swap prevents out-of-memory kills.
+The t3.micro only has 1 GB RAM. Swap prevents out-of-memory kills.
 
 ```bash
 # Create 1 GB swap file
@@ -436,17 +441,18 @@ aws configure
 ### 9.3 Set Up the Application Directory
 
 ```bash
-mkdir -p /home/ec2-user/servio
-cd /home/ec2-user/servio
+mkdir -p /home/ubuntu/servio
+cd /home/ubuntu/servio
 ```
 
 ### 9.4 Create the `.env` File
 
 ```bash
 cat > .env << 'EOF'
-# ---- Supabase Database ----
-DB_HOST=aws-0-ap-south-1.pooler.supabase.com
-DB_PORT=6543
+# ---- Supabase Database (Session Pooler — IPv4 compatible) ----
+# Get these from: Supabase Dashboard → Database → Connect → Session Pooler
+DB_HOST=aws-1-ap-south-1.pooler.supabase.com
+DB_PORT=5432
 DB_USER=postgres.your-project-ref
 DB_PASSWORD=your-db-password
 DB_NAME=postgres
@@ -476,12 +482,13 @@ EOF
 ```
 
 > ⚠️ Replace all placeholder values with your actual credentials.
+> **Important:** Do NOT use the direct database connection (`db.xxx.supabase.co`). It resolves to IPv6 only, which EC2 instances typically can't reach. Always use the **Session Pooler** connection from the Supabase Dashboard.
 
 ### 9.5 Copy the Production Compose File
 
 ```bash
 # From your local machine:
-scp -i servio-key.pem docker-compose.prod.yml ec2-user@<ELASTIC_IP>:/home/ec2-user/servio/
+scp -i servio-key-new.pem docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
 ```
 
 ---
@@ -496,8 +503,8 @@ aws ecr get-login-password --region ap-south-1 | \
   docker login --username AWS --password-stdin \
   <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
 
-# Build the backend image
-docker build -t servio-backend ./backend
+# Build the backend image (--platform targets EC2's x86_64, --provenance=false avoids manifest issues)
+docker build --platform linux/amd64 --provenance=false -t servio-backend ./backend
 
 # Tag it
 docker tag servio-backend:latest \
@@ -511,9 +518,9 @@ docker push <AWS_ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com/servio-backend:lat
 
 ```bash
 # SSH into EC2
-ssh -i servio-key.pem ec2-user@<ELASTIC_IP>
+ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
 
-cd /home/ec2-user/servio
+cd /home/ubuntu/servio
 
 # Login to ECR
 aws ecr get-login-password --region ap-south-1 | \
@@ -585,7 +592,7 @@ Add the following secrets:
 | `AWS_SECRET_ACCESS_KEY` | `wJal...` | IAM user secret |
 | `AWS_ACCOUNT_ID` | `123456789012` | Your 12-digit AWS account ID |
 | `EC2_HOST` | `1.2.3.4` | Your EC2 Elastic IP address |
-| `EC2_SSH_KEY` | `-----BEGIN RSA PRIVATE...` | Contents of `servio-key.pem` |
+| `EC2_SSH_KEY` | `-----BEGIN RSA PRIVATE...` | Contents of `servio-key-new.pem` |
 | `SUPABASE_URL` | `https://xxx.supabase.co` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | `eyJ...` | Supabase anonymous key |
 | `VITE_API_URL` | `http://<ELASTIC_IP>:3001/api` | Backend API URL for frontend |
@@ -638,7 +645,7 @@ For a university project, **Option A is perfectly fine**.
 
 ### View Container Logs on EC2
 ```bash
-ssh -i servio-key.pem ec2-user@<ELASTIC_IP>
+ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
 
 # Live logs
 docker compose -f docker-compose.prod.yml logs -f backend
@@ -657,19 +664,19 @@ docker stats
 ### Set Up a Simple Health Check Script
 ```bash
 # On EC2, create a cron job to auto-restart if backend goes down
-cat > /home/ec2-user/health-check.sh << 'SCRIPT'
+cat > /home/ubuntu/health-check.sh << 'SCRIPT'
 #!/bin/bash
 if ! curl -sf http://localhost:3001/api/services > /dev/null 2>&1; then
-  echo "$(date): Backend is down, restarting..." >> /home/ec2-user/health-check.log
-  cd /home/ec2-user/servio
+  echo "$(date): Backend is down, restarting..." >> /home/ubuntu/health-check.log
+  cd /home/ubuntu/servio
   docker compose -f docker-compose.prod.yml restart backend
 fi
 SCRIPT
 
-chmod +x /home/ec2-user/health-check.sh
+chmod +x /home/ubuntu/health-check.sh
 
 # Run every 5 minutes
-(crontab -l 2>/dev/null; echo "*/5 * * * * /home/ec2-user/health-check.sh") | crontab -
+(crontab -l 2>/dev/null; echo "*/5 * * * * /home/ubuntu/health-check.sh") | crontab -
 ```
 
 ---
@@ -680,7 +687,7 @@ chmod +x /home/ec2-user/health-check.sh
 
 | Service | Free Limit | Your Usage | Status |
 |---|---|---|---|
-| EC2 t2.micro | 750 hrs/month | ~730 hrs (24/7) | ✅ Within limit |
+| EC2 t3.micro | 750 hrs/month | ~730 hrs (24/7) | ✅ Within limit |
 | EBS (gp3) | 30 GB | 20 GB | ✅ Within limit |
 | S3 | 5 GB storage | ~50 MB (frontend) | ✅ Within limit |
 | S3 Requests | 20K GET, 2K PUT | Varies | ✅ Likely within limit |
@@ -688,10 +695,11 @@ chmod +x /home/ec2-user/health-check.sh
 | ECR | 500 MB | ~300 MB (3 images max) | ✅ Within limit |
 | Data Transfer | 100 GB out | Low traffic | ✅ Within limit |
 | Elastic IP | Free (if associated) | 1 IP, associated | ✅ Free |
+| SES (Email) | 3,000 msgs/month | Auth emails only | ✅ Within limit |
 
 ### Tips to Stay Within Free Tier
 
-1. **Never run more than 1 EC2 instance** — 750 hrs is for all t2.micro instances combined
+1. **Never run more than 1 EC2 instance** — 750 hrs is for all t3.micro instances combined
 2. **Set ECR lifecycle policy** (already done) to keep only 3 images
 3. **Don't enable CloudWatch Detailed Monitoring** — basic monitoring is free
 4. **Stop the EC2 instance when not needed** (e.g., during semester breaks):
@@ -706,11 +714,12 @@ chmod +x /home/ec2-user/health-check.sh
 ### After Free Tier Expires (12 months)
 
 Estimated monthly cost for this architecture:
-- EC2 t2.micro: ~$8.50/month
+- EC2 t3.micro: ~$7.60/month
 - EBS 20 GB: ~$1.60/month  
 - S3 + CloudFront: ~$0.50/month
 - ECR: ~$0.10/month
-- **Total: ~$10.70/month**
+- SES: ~$0.10/month (at low volume)
+- **Total: ~$9.90/month**
 
 ---
 
@@ -736,7 +745,7 @@ docker stats --no-stream
 CORS_ALLOWED_ORIGINS=https://d1234567890.cloudfront.net
 
 # Restart backend
-cd /home/ec2-user/servio
+cd /home/ubuntu/servio
 docker compose -f docker-compose.prod.yml restart backend
 ```
 
@@ -788,10 +797,10 @@ df -h
 
 ```bash
 # ────── SSH into EC2 ──────
-ssh -i servio-key.pem ec2-user@<ELASTIC_IP>
+ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
 
 # ────── Container Management ──────
-cd /home/ec2-user/servio
+cd /home/ubuntu/servio
 docker compose -f docker-compose.prod.yml up -d       # Start
 docker compose -f docker-compose.prod.yml down         # Stop
 docker compose -f docker-compose.prod.yml restart      # Restart
@@ -812,6 +821,223 @@ aws s3 sync frontend/dist/ s3://servio-frontend --delete
 # GitHub:   https://github.com/<username>/Servio/actions
 # ECR:      AWS Console → ECR → servio-backend
 ```
+
+---
+
+## 16. Set Up Amazon SES for Supabase Email
+
+Supabase's built-in email service has **strict rate limits** (3 emails/hour on the free plan) and sends from a generic `noreply@mail.app.supabase.io` address. For production use — especially signup OTP verification, password resets, and email confirmations — you should configure **Amazon SES** as a custom SMTP provider.
+
+> **Why SES?** You're already on AWS, it's included in the Free Tier (3,000 messages/month for 12 months), and it provides high deliverability with SPF/DKIM authentication.
+
+### 16.1 Choose Your SES Region
+
+Amazon SES is available in specific regions. Pick the one closest to your Supabase project:
+
+| Region | SMTP Endpoint |
+|---|---|
+| Mumbai (ap-south-1) | `email-smtp.ap-south-1.amazonaws.com` |
+| US East (us-east-1) | `email-smtp.us-east-1.amazonaws.com` |
+| EU (eu-west-1) | `email-smtp.eu-west-1.amazonaws.com` |
+| Singapore (ap-southeast-1) | `email-smtp.ap-southeast-1.amazonaws.com` |
+
+> Since your infrastructure is in `ap-south-1`, use the Mumbai endpoint for the lowest latency.
+
+### 16.2 Verify a Sender Identity
+
+SES requires you to verify the email address or domain you'll send from.
+
+#### Option A: Verify an Email Address (Quickest — Good for Testing)
+
+1. Go to **Amazon SES Console** → **Verified identities** → **Create identity**
+2. Select **Email address**
+3. Enter your sender email (e.g., `noreply@servio.lk` or `servio.team@gmail.com`)
+4. Click **Create identity**
+5. Check your inbox and click the verification link from AWS
+
+#### Option B: Verify a Domain (Recommended for Production)
+
+1. Go to **Amazon SES Console** → **Verified identities** → **Create identity**
+2. Select **Domain**
+3. Enter your domain (e.g., `servio.lk`)
+4. Enable **DKIM** (Easy DKIM is recommended)
+5. Click **Create identity**
+6. Add the DNS records AWS provides to your domain registrar:
+
+```
+# Example DNS records SES will ask you to add:
+
+# DKIM (3 CNAME records)
+xxxxxxxx._domainkey.servio.lk  →  xxxxxxxx.dkim.amazonses.com
+yyyyyyyy._domainkey.servio.lk  →  yyyyyyyy.dkim.amazonses.com
+zzzzzzzz._domainkey.servio.lk  →  zzzzzzzz.dkim.amazonses.com
+
+# SPF (TXT record — add to existing or create new)
+servio.lk  TXT  "v=spf1 include:amazonses.com ~all"
+
+# Optional: Custom MAIL FROM domain
+mail.servio.lk  MX   10 feedback-smtp.ap-south-1.amazonses.com
+mail.servio.lk  TXT  "v=spf1 include:amazonses.com ~all"
+```
+
+> ⚠️ DNS propagation can take up to 72 hours, but usually completes within 1–2 hours.
+
+### 16.3 Request Production Access (Exit Sandbox)
+
+By default, new SES accounts are in **Sandbox mode** — you can only send emails to verified addresses. To send to any recipient (i.e., your actual users), you must request production access.
+
+1. Go to **Amazon SES Console** → **Account dashboard**
+2. In the **Sending statistics** section, click **Request production access**
+3. Fill in the request:
+   - **Mail type**: Transactional
+   - **Website URL**: Your application URL
+   - **Use case description**: Example below
+
+```
+We are building Servio, a vehicle service management platform. 
+We need SES for transactional emails only:
+- Signup email OTP verification codes
+- Password reset links
+- Account confirmation emails
+
+Estimated volume: <100 emails/day.
+We have a clear unsubscribe process and do not send marketing emails.
+Bounce/complaint notifications will be monitored via SES dashboard.
+```
+
+4. Click **Submit request**
+
+> ⏱️ AWS typically reviews and approves within 24 hours. You can continue with sandbox testing (using verified emails) while you wait.
+
+### 16.4 Create SMTP Credentials
+
+1. Go to **Amazon SES Console** → **SMTP settings** (left sidebar)
+2. Note the **SMTP endpoint** for your region (e.g., `email-smtp.ap-south-1.amazonaws.com`)
+3. Click **Create SMTP credentials**
+4. This opens the IAM console — leave the default IAM user name or customize it
+5. Click **Create user**
+6. **Save the credentials immediately** — you won't be able to see the password again:
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  SMTP Username:  AKIA...........................         │
+│  SMTP Password:  BL8f...........................         │
+└──────────────────────────────────────────────────────────┘
+```
+
+> ⚠️ **SMTP credentials are NOT the same as your AWS Access Key.** SES generates a special derived password. Always use the credentials from this page.
+
+### 16.5 Configure Supabase to Use SES
+
+Now connect SES to your Supabase project:
+
+1. Go to **[Supabase Dashboard](https://supabase.com/dashboard)**
+2. Select your Servio project
+3. Navigate to **Authentication** → **SMTP Settings** (under Email section)
+4. Toggle **Enable Custom SMTP** to **ON**
+5. Fill in the following:
+
+| Field | Value |
+|---|---|
+| **Sender email** | `noreply@servio.lk` (or your verified email) |
+| **Sender name** | `Servio` |
+| **Host** | `email-smtp.ap-south-1.amazonaws.com` |
+| **Port** | `587` |
+| **Minimum interval** | `30` (seconds between emails to same user) |
+| **Username** | Your SMTP username from Step 16.4 |
+| **Password** | Your SMTP password from Step 16.4 |
+
+6. Click **Save**
+
+> 💡 Use port `587` with STARTTLS (Supabase handles this automatically). Port `465` (TLS Wrapper) also works but `587` is recommended.
+
+### 16.6 Customize Email Templates (Optional)
+
+While you're in the Supabase Auth settings, you can customize the email templates:
+
+1. Go to **Authentication** → **Email Templates**
+2. Available templates:
+   - **Confirm signup** — OTP/confirmation email sent on registration
+   - **Magic link** — Passwordless login link
+   - **Change email address** — Email change confirmation
+   - **Reset password** — Password reset link/OTP
+
+Example custom signup template:
+```html
+<h2>Welcome to Servio! 🚗</h2>
+<p>Your verification code is:</p>
+<h1 style="letter-spacing: 8px; font-size: 32px; text-align: center;
+    background: #f4f4f5; padding: 16px; border-radius: 8px;">
+  {{ .Token }}
+</h1>
+<p>This code expires in 1 hour.</p>
+<p style="color: #888;">If you didn't create a Servio account, you can safely ignore this email.</p>
+```
+
+### 16.7 Test the Integration
+
+#### Quick Test (While in Sandbox)
+
+If you're still in SES Sandbox, first verify the recipient email in SES:
+1. Go to **SES Console** → **Verified identities** → **Create identity** → **Email address**
+2. Verify the test recipient email
+
+Then test:
+1. Go to your Servio app signup page
+2. Register with the verified test email
+3. Check the inbox for the OTP email
+4. Verify it arrives from your custom sender address (not `noreply@mail.app.supabase.io`)
+
+#### Production Test (After Sandbox Exit)
+
+1. Sign up with any email address
+2. Trigger a password reset
+3. Check:
+   - ✅ Email arrives within a few seconds
+   - ✅ Sender shows your custom address and name
+   - ✅ Email doesn't land in spam
+   - ✅ DKIM signature passes (check email headers)
+
+#### Using AWS CLI to Test SES Directly
+
+```bash
+aws ses send-email \
+  --from "noreply@servio.lk" \
+  --destination "ToAddresses=your-test@gmail.com" \
+  --message "Subject={Data='SES Test'},Body={Text={Data='Hello from Servio SES!'}}" \
+  --region ap-south-1
+```
+
+### 16.8 Monitor SES Sending
+
+1. **SES Dashboard**: Go to **SES Console** → **Account dashboard** to view:
+   - Send rate and quota
+   - Bounce rate (keep below 5%)
+   - Complaint rate (keep below 0.1%)
+
+2. **Supabase Logs**: Go to **Supabase Dashboard** → **Logs** → **Auth** to check for email delivery errors
+
+### 16.9 Troubleshooting SES
+
+| Issue | Cause | Fix |
+|---|---|---|
+| `Email address is not verified` | Sender email not verified in SES | Verify the sender email/domain in SES Console |
+| `Message rejected` | Still in Sandbox, sending to unverified recipient | Request production access (Section 16.3) or verify recipient |
+| `SMTP credentials invalid` | Using AWS Access Key instead of SMTP credentials | Generate proper SMTP credentials from SES Console (Section 16.4) |
+| `Connection timed out` | Wrong SMTP host or port | Use `email-smtp.<region>.amazonaws.com` on port `587` |
+| Emails landing in spam | Missing SPF/DKIM records | Add the DNS records from Section 16.2 |
+| Supabase shows `email rate limit exceeded` | Custom SMTP rate limit too low | Increase the "Minimum interval" in Supabase SMTP settings |
+| `Throttling - Maximum sending rate exceeded` | Exceeded SES send rate | Request a sending rate increase in SES Console |
+
+### 16.10 SES Cost Summary
+
+| Tier | Limit | Price |
+|---|---|---|
+| Free Tier (12 months) | 3,000 messages/month | **$0.00** |
+| After Free Tier | Per message | **$0.10 / 1,000 emails** |
+| Attachments | Per GB | **$0.12 / GB** |
+
+> For a university project sending auth emails only, you'll likely stay well within the free tier. Even after it expires, 1,000 auth emails costs just $0.10.
 
 ---
 

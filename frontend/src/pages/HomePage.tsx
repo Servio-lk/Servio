@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
@@ -19,6 +19,7 @@ interface RecentService {
 export default function HomePage() {
   const { user, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
+  const homeDataLoaded = useRef(false);
 
   const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -38,11 +39,13 @@ export default function HomePage() {
 
   useEffect(() => {
     // Wait for auth (including backend token exchange) to fully complete before
-    // calling getUserAppointments(), so localStorage.getItem('user') is ready
-    if (!authLoading) {
+    // calling getUserAppointments(), so localStorage.getItem('user') is ready.
+    // Use a ref to prevent re-loading when user object updates due to token refresh.
+    if (!authLoading && !homeDataLoaded.current) {
+      homeDataLoaded.current = true;
       loadHomeData();
     }
-  }, [user, authLoading]);
+  }, [authLoading]);
 
   // Refresh only the appointments list (lightweight — no full page reload)
   const refreshAppointments = useCallback(async () => {
