@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthResponse;
 
 import '../../core/services/supabase_service.dart';
 import 'signup_widgets.dart';
@@ -77,6 +78,8 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
   String get _otpCode => _otpControllers.map((c) => c.text).join();
 
   Future<void> _handleVerify() async {
+    if (_isLoading) return;
+
     if (_email.isEmpty) {
       _showSnackBar('Email is missing. Please go back and try again.');
       return;
@@ -90,33 +93,12 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
 
     setState(() => _isLoading = true);
 
+    AuthResponse response;
     try {
-      final response = await _supabaseService.verifyEmailOtp(
+      response = await _supabaseService.verifyEmailOtp(
         email: _email,
         otp: code,
       );
-
-      // OTP login creates/opens a session; set password so future login can use email+password.
-      if (response.user != null && _password.isNotEmpty) {
-        await _supabaseService.setPassword(_password);
-
-        final phone = (widget.extras?['phone'] as String?)?.trim() ?? '';
-        if (phone.isNotEmpty) {
-          try {
-            await _supabaseService.client
-                .from('profiles')
-                .update({'phone': phone})
-                .eq('id', response.user!.id);
-          } catch (e) {
-            debugPrint('Error updating phone in profile: $e');
-          }
-        }
-      }
-
-      if (!mounted) return;
-
-      _showSnackBar('Email verified!', isError: false);
-      context.go('/signup/vehicle', extra: widget.extras);
     } catch (e) {
       if (mounted) {
         String msg = 'Invalid code. Please try again.';
@@ -125,6 +107,65 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
           msg = 'Code has expired. Please request a new one.';
         }
         _showSnackBar(msg);
+      }
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      final user = response.user ?? _supabaseService.currentUser;
+      if (user == null) {
+        throw Exception('No authenticated user found after OTP verification.');
+      }
+
+      var hasFollowUpWarning = false;
+
+      // Password/profile hydration should not block onboarding progression.
+      if (_password.isNotEmpty) {
+        try {
+          await _supabaseService.setPassword(_password);
+        } catch (e) {
+          hasFollowUpWarning = true;
+          debugPrint('setPassword failed after OTP verify: $e');
+        }
+      }
+
+      final name = (widget.extras?['name'] as String?)?.trim() ?? '';
+      final phone = (widget.extras?['phone'] as String?)?.trim() ?? '';
+
+      try {
+        await _supabaseService.client.from('profiles').upsert({
+          'id': user.id,
+          'email': _email,
+          if (name.isNotEmpty) 'full_name': name,
+          if (phone.isNotEmpty) 'phone': phone,
+        }, onConflict: 'id');
+
+        final profileRow = await _supabaseService.client
+            .from('profiles')
+            .select('id')
+            .eq('id', user.id)
+            .maybeSingle();
+        if (profileRow == null) {
+          hasFollowUpWarning = true;
+        }
+      } catch (e) {
+        hasFollowUpWarning = true;
+        debugPrint('profile setup failed after OTP verify: $e');
+      }
+
+      if (!mounted) return;
+
+      _showSnackBar(
+        hasFollowUpWarning
+            ? 'Email verified. Continue setup; we will complete your profile shortly.'
+            : 'Email verified!',
+        isError: false,
+      );
+      context.go('/signup/vehicle', extra: widget.extras);
+    } catch (e) {
+      if (mounted) {
+        _showSnackBar('Email verification failed. Please try again.');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -201,9 +242,10 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
                   height: 64,
                   child: Row(
                     children: List.generate(_otpLength, (i) {
-                      return Expanded(
-                        child: Container(
-                          margin: EdgeInsets.only(left: i > 0 ? 8 : 0),
+                      return [
+                        if (i > 0) const SizedBox(width: 8),
+                        Expanded(
+                          child: Container(
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFE7DF),
                             borderRadius: BorderRadius.circular(8),
@@ -242,8 +284,9 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
                             },
                           ),
                         ),
-                      );
-                    }),
+                      ),
+                      ];
+                    }).expand((widgets) => widgets).toList(),
                   ),
                 ),
                 const SizedBox(height: 32),

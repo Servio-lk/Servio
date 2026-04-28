@@ -48,11 +48,7 @@ function App() {
           />
           <Route
             path="/signup"
-            element={
-              <GuestGuard>
-                <Signup />
-              </GuestGuard>
-            }
+            element={<Signup />}
           />
 
           {/* OAuth callback route */}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -47,6 +48,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
   }
 
   Future<void> _handleCreateAccount() async {
+    if (_isLoading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
 
@@ -98,8 +100,11 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
 
         if (errorStr.contains('User already registered')) {
           errorMessage = 'An account with this email already exists.';
-        } else if (errorStr.contains('For security purposes, you can only request this after')) {
-          errorMessage = 'Please wait 60 seconds before requesting a new code.';
+        } else if (errorStr.contains(
+          'For security purposes, you can only request this after',
+        )) {
+          errorMessage =
+              'You recently requested a code. Please wait about 60 seconds and try again.';
         } else if (errorStr.contains('Network') ||
             errorStr.contains('SocketException') ||
             errorStr.contains('Failed host lookup') ||
@@ -108,9 +113,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
           errorMessage =
               'Unable to connect to the server. Please check your internet connection.';
         } else if (errorStr.contains('rate limit') ||
-            errorStr.contains('429')) {
+            errorStr.contains('429') ||
+            errorStr.contains('over_email_send_rate_limit')) {
           errorMessage =
-              'Too many attempts. Please wait a moment and try again.';
+              'Too many code requests right now. Please wait a little, then try again.';
         }
 
         _showSnackBar(errorMessage);
@@ -197,15 +203,17 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                     controller: _phoneController,
                     hint: '07X XXX XXXX',
                     keyboardType: TextInputType.phone,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(10),
+                    ],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
                         return 'Please enter your phone number';
                       }
-                      
-                      // Remove +, spaces, and dashes for length validation
-                      final digitsOnly = v.replaceAll(RegExp(r'[\+\s\-]'), '');
-                      if (digitsOnly.length < 10) {
-                        return 'Phone number must have at least 10 digits';
+
+                      if (v.length != 10) {
+                        return 'Phone number must be exactly 10 digits';
                       }
                       return null;
                     },

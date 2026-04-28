@@ -4,8 +4,9 @@
 -- Step 1: Make user_id nullable (Supabase users don't have a local user row)
 ALTER TABLE vehicles ALTER COLUMN user_id DROP NOT NULL;
 
--- Step 2: Add profile_id column referencing the profiles table
-ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES profiles(id);
+-- Step 2: Add profile_id column referencing the profiles table.
+-- Use ON DELETE CASCADE so profile deletion also cleans up dependent vehicles.
+ALTER TABLE vehicles ADD COLUMN IF NOT EXISTS profile_id UUID REFERENCES profiles(id) ON DELETE CASCADE;
 
 -- Step 3: Create an index for fast lookups by profile
 CREATE INDEX IF NOT EXISTS idx_vehicles_profile_id ON vehicles(profile_id);
