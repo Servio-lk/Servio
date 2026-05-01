@@ -8,7 +8,7 @@ import { apiService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "/ServioLogo.png";
 import GarageImage from "@/assets/images/Garage image.png";
-import { ArrowLeft, Car, CarFront, Bike, Truck, Bus } from "lucide-react";
+import { Car, CarFront, Bike, Truck, Bus } from "lucide-react";
 
 // ----------------------------------------------------------------------
 // Reusable Sub-components
