@@ -145,31 +145,53 @@ public class AuthService {
             throw new IllegalArgumentException("Unauthorized: Supabase token validation failed - " + e.getMessage());
         }
 
-        // Determine role from the request (default to USER)
-        final Role requestedRole = "ADMIN".equalsIgnoreCase(request.getRole()) ? Role.ADMIN : Role.USER;
-
-        // Look up profile for display name (optional - use request data as fallback)
+        // Determine role by checking the profiles table first (is_admin / role columns),
+        // then falling back to the request role.
+        Role resolvedRole = Role.USER;
         String displayName = request.getFullName();
         try {
             UUID profileId = UUID.fromString(supabaseUserId);
             Profile profile = profileRepository.findById(profileId).orElse(null);
-            if (profile != null && profile.getFullName() != null) {
-                displayName = profile.getFullName();
+            if (profile != null) {
+                if (profile.getFullName() != null) {
+                    displayName = profile.getFullName();
+                }
+                // Check is_admin flag first, then role column
+                if (Boolean.TRUE.equals(profile.getIsAdmin())) {
+                    resolvedRole = Role.ADMIN;
+                } else if ("ADMIN".equalsIgnoreCase(profile.getRole())) {
+                    resolvedRole = Role.ADMIN;
+                }
             }
         } catch (IllegalArgumentException ignored) {
             // supabaseUserId was not a valid UUID
         }
+
+        // If profile didn't indicate admin, check the request role as fallback
+        if (resolvedRole != Role.ADMIN && "ADMIN".equalsIgnoreCase(request.getRole())) {
+            resolvedRole = Role.ADMIN;
+        }
+
         final String finalDisplayName = displayName;
+        final Role finalRole = resolvedRole;
 
         // Ensure a corresponding backend user exists (appointments require users.id)
         final String finalTokenEmail = tokenEmail;
         User backendUser = userRepository.findByEmail(finalTokenEmail)
+                .map(existing -> {
+                    // Sync the role if it changed in the profile
+                    if (existing.getRole() != finalRole) {
+                        existing.setRole(finalRole);
+                        return userRepository.save(existing);
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> userRepository.save(User.builder()
                 .fullName(finalDisplayName)
                         .email(finalTokenEmail)
                         .phone(request.getPhone())
                         .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                        .role(requestedRole)
+                        .role(finalRole)
                         .build()));
 
         // Generate backend JWT using backend numeric user ID for consistency
@@ -181,7 +203,7 @@ public class AuthService {
                 .fullName(displayName)
                 .email(tokenEmail)
                 .phone(request.getPhone())
-                .role(requestedRole.name())
+                .role(finalRole.name())
                 .createdAt(backendUser.getCreatedAt())
                 .build();
 

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -104,8 +104,14 @@ export default function Signup() {
   const { isAuthenticated } = useAuth();
 
   // Navigation State
-  const [step, setStep] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const stepParam = searchParams.get("step");
+  const step = stepParam ? parseInt(stepParam, 10) : 1;
   const [loading, setLoading] = useState(false);
+
+  const setStep = (newStep: number) => {
+    setSearchParams({ step: newStep.toString() });
+  };
 
   useEffect(() => {
     // If the user visits /signup while already logged in, and isn't currently onboarding, redirect to home
@@ -166,7 +172,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const { error } = await supabaseAuth.signUp({
+      const { user, error } = await supabaseAuth.signUp({
         email,
         password,
         fullName: name,
@@ -174,6 +180,12 @@ export default function Signup() {
       });
 
       if (error) throw new Error(error.message);
+
+      // Supabase returns an empty identities array when a user with this email already exists
+      if (user && user.identities && user.identities.length === 0) {
+        toast.error("An account with this email already exists. Please sign in.");
+        return;
+      }
 
       toast.success("Verification code sent. Please check your email.");
       setStep(2);

@@ -223,6 +223,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('token', data.data.token);
           if (data.data.user) {
             localStorage.setItem('user', JSON.stringify(data.data.user));
+            // Update the user role from backend response (authoritative source —
+            // the backend checks profiles.is_admin / profiles.role in the DB)
+            const backendRole = data.data.user.role?.toUpperCase();
+            if (backendRole && backendRole !== user.role) {
+              setUser(prev => prev ? { ...prev, role: backendRole } : prev);
+            }
           }
           console.log('[Auth] Backend token stored successfully');
         } else {
@@ -261,7 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         isAuthenticated: !!session,
-        isAdmin: user?.role === 'ADMIN',
+        isAdmin: user?.role === 'ADMIN' || user?.role === 'admin',
         isLoading,
         login,
         logout,

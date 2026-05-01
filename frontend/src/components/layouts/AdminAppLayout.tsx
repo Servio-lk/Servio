@@ -2,6 +2,7 @@ import { Link, useLocation, Outlet } from 'react-router-dom';
 import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoImage from '/ServioLogo.png';
 
 // Admin Tab bar items for both mobile and desktop
 const adminNavItems = [
@@ -20,8 +21,8 @@ function AdminDesktopSidebar() {
     return (
         <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
             {/* Logo */}
-            <div className="h-[64px] p-4 border-b border-black/10">
-                <h1 className="text-2xl font-bold text-[#ff5d2e]">Servio Admin</h1>
+            <div className="h-[64px] p-4 border-b border-black/10 inline-flex justify-center items-center">
+                <img src={LogoImage} alt="Servio" className="h-10 w-auto" />
             </div>
 
             {/* Navigation */}
@@ -71,9 +72,7 @@ function AdminDesktopHeader() {
     return (
         <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
             {/* Title/Breadcrumb placeholder */}
-            <div className="flex-1">
-                <h2 className="text-lg font-semibold text-black">Admin Panel</h2>
-            </div>
+            <div className="flex-1"> </div>
 
             {/* Actions */}
             <div className="flex items-center gap-4">
