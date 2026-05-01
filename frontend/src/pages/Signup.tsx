@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { supabaseAuth } from "@/services/supabaseAuth";
 import { apiService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -146,7 +145,7 @@ export default function Signup() {
 
   // --- OTP Timer Effect ---
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+    let timer: ReturnType<typeof setTimeout>;
     if (step === 2 && resendCountdown > 0) {
       timer = setInterval(() => setResendCountdown((c) => c - 1), 1000);
     }
@@ -166,7 +165,7 @@ export default function Signup() {
 
     setLoading(true);
     try {
-      const { user, error } = await supabaseAuth.signUp({
+      const { error } = await supabaseAuth.signUp({
         email,
         password,
         fullName: name,
@@ -303,7 +302,6 @@ export default function Signup() {
   );
 
   const renderStep2 = () => {
-    const maskedEmail = email.replace(/(?<=.).(?=[^@]*?.@)/g, "*");
     return (
       <div className="flex flex-col items-center mt-8">
         <div className="flex gap-2 justify-center mb-6">
