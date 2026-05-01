@@ -1,5 +1,6 @@
-# Build stage
-FROM maven:3.9-eclipse-temurin-17 AS builder
+# Build stage — $BUILDPLATFORM ensures Maven runs natively (no QEMU emulation)
+# Java bytecode is platform-independent, so we can build on ARM64 and run on x86_64
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
@@ -14,26 +15,42 @@ RUN --mount=type=cache,target=/root/.m2 \
 
 COPY src ./src
 
-# Build with retry logic
+# Build with retry logic — fail explicitly if all attempts fail
 RUN --mount=type=cache,target=/root/.m2 \
+    success=false; \
     for i in 1 2 3; do \
-        mvn clean package -DskipTests && break || \
-        (echo "Build attempt $i failed, retrying..." && sleep 5); \
-    done
+        if mvn clean package -DskipTests; then success=true; break; fi; \
+        echo "Build attempt $i failed, retrying..." && sleep 5; \
+    done; \
+    $success || (echo "BUILD FAILED after 3 attempts" && exit 1)
 
-# Production stage
-FROM eclipse-temurin:17-jre
+# Production stage — uses $TARGETPLATFORM (set via: docker build --platform linux/amd64)
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
-RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
+
+# dumb-init for proper signal handling
+RUN apt-get update && apt-get install -y --no-install-recommends dumb-init curl \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/*.jar app.jar
 
-# Create non-root user/group with predictable ids (Debian syntax)
-RUN addgroup --system --gid 1001 appuser \
-  && adduser --system --uid 1001 --ingroup appuser --home /nonexistent --disabled-password appuser
+# Create non-root user
+RUN groupadd -r -g 1001 appuser \
+    && useradd -r -u 1001 -g appuser -d /nonexistent -s /usr/sbin/nologin appuser
 USER appuser
 
-EXPOSE 8080
+EXPOSE 3001
 
-ENTRYPOINT ["dumb-init", "--", "java", "-jar", "app.jar"]
+# Health check — matches server.port=3001
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD curl -f http://localhost:3001/api/services || exit 1
+
+# JVM tuned for AWS t3.micro (1 GB RAM total, ~512 MB for JVM)
+ENTRYPOINT ["dumb-init", "--", "java", \
+  "-Djava.net.preferIPv4Stack=true", \
+  "-Xms128m", "-Xmx384m", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=50.0", \
+  "-jar", "app.jar"]
+

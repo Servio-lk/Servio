@@ -60,6 +60,30 @@ class SupabaseAuthService {
     }
   }
 
+  // Verify email OTP
+  async verifyEmailOtp(email: string, token: string): Promise<SupabaseAuthResponse> {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'signup',
+    });
+
+    return {
+      user: data.user,
+      session: data.session,
+      error,
+    }
+  }
+
+  // Resend email OTP
+  async resendEmailOtp(email: string): Promise<{ error: AuthError | null }> {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    return { error };
+  }
+
   // Sign in with email and password
   async signIn(data: SignInData): Promise<SupabaseAuthResponse> {
     const { email, password } = data
