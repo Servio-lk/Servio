@@ -108,15 +108,14 @@ public class AdminCustomerService {
                         .createdAt(user.getCreatedAt())
                         .build();
 
-        List<CustomerVehicleHistoryDto> vehicles = user == null ? List.of()
-                : vehicleRepository.findByUserId(user.getId()).stream()
-                        .map(vehicle -> CustomerVehicleHistoryDto.builder()
-                                .vehicle(toVehicleDto(vehicle))
-                                .serviceRecords(serviceRecordRepository.findByVehicleId(vehicle.getId()).stream()
-                                        .map(this::toServiceRecordDto)
-                                        .collect(Collectors.toList()))
-                                .build())
-                        .collect(Collectors.toList());
+        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByProfileId(profile.getId()).stream()
+                .map(vehicle -> CustomerVehicleHistoryDto.builder()
+                        .vehicle(toVehicleDto(vehicle))
+                        .serviceRecords(serviceRecordRepository.findByVehicleId(vehicle.getId()).stream()
+                                .map(this::toServiceRecordDto)
+                                .collect(Collectors.toList()))
+                        .build())
+                .collect(Collectors.toList());
 
         return AdminCustomerDetailsDto.builder()
                 .profile(profile)
@@ -147,7 +146,8 @@ public class AdminCustomerService {
                 .createdAt(user.getCreatedAt())
                 .build();
 
-        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByUserId(user.getId()).stream()
+        // Vehicles are linked via profile_id, use the synthetic UUID to look up
+        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByProfileId(syntheticProfile.getId()).stream()
                 .map(vehicle -> CustomerVehicleHistoryDto.builder()
                         .vehicle(toVehicleDto(vehicle))
                         .serviceRecords(serviceRecordRepository.findByVehicleId(vehicle.getId()).stream()
@@ -166,8 +166,8 @@ public class AdminCustomerService {
     private VehicleDto toVehicleDto(Vehicle vehicle) {
         return VehicleDto.builder()
                 .id(vehicle.getId())
-                .userId(vehicle.getUser().getId())
-                .userName(vehicle.getUser().getFullName())
+                .profileId(vehicle.getProfile() != null ? vehicle.getProfile().getId().toString() : null)
+                .ownerName(vehicle.getProfile() != null ? vehicle.getProfile().getFullName() : null)
                 .make(vehicle.getMake())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())

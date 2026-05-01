@@ -22,12 +22,16 @@ export default function AuthCallback() {
                      session.user.email?.split('@')[0] || 'User',
             email: session.user.email || '',
             phone: session.user.user_metadata?.phone || null,
-            role: session.user.user_metadata?.role || 'USER',
+            role: session.user.user_metadata?.role?.toUpperCase() ||
+                  (session.user.email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
           };
 
           login(userData, session);
           toast.success('Welcome to Servio!');
-          navigate('/home');
+
+          // Redirect based on role
+          const isAdminRole = userData.role === 'ADMIN';
+          navigate(isAdminRole ? '/admin' : '/home');
         } else {
           toast.error('Authentication failed');
           navigate('/login');

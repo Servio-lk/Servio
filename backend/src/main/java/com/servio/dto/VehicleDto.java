@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @Builder
 public class VehicleDto {
     private Long id;
-    private Long userId;
-    private String userName;
+    private String profileId;
+    private String ownerName;
     private String make;
     private String model;
     private Integer year;

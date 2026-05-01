@@ -8,6 +8,5 @@ import java.util.UUID;
 
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
-    List<Vehicle> findByUserId(Long userId);
     List<Vehicle> findByProfileId(UUID profileId);
 }
