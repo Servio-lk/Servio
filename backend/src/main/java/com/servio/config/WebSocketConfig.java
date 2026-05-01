@@ -21,11 +21,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Pure WebSocket endpoint (ideal for @stomp/stompjs natively in React)
-        registry.addEndpoint("/ws")
+        // Moved under /api to allow CloudFront proxying
+        registry.addEndpoint("/api/ws")
                 .setAllowedOriginPatterns("*");
                 
         // Fallback SockJS endpoint (if needed)
-        registry.addEndpoint("/ws-sockjs")
+        registry.addEndpoint("/api/ws-sockjs")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }

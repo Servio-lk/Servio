@@ -24,7 +24,6 @@ const apiBase = (() => {
 })();
 
 const BASE_URL = apiBase
-  .replace('/api', '')
   .replace(/^https/, 'wss')
   .replace(/^http/, 'ws');
 const WS_URL = `${BASE_URL}/ws`;
