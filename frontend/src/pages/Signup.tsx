@@ -26,33 +26,32 @@ function SignupHeader({
   step,
   title,
   subtitle,
-  onBack,
 }: {
   step: number;
   title: string;
   subtitle: string;
-  onBack?: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 md:gap-3 w-full text-center relative">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="absolute left-0 top-0 p-2 text-gray-500 hover:text-black hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ArrowLeft size={20} />
-        </button>
-      )}
-      <div className="mt-8 md:mt-2">
-        <SignupLogo />
-        <p className="text-[#FF5D2E] font-medium text-sm mb-1">Step {step} of 4</p>
-        <h1 className="font-semibold text-xl md:text-2xl lg:text-3xl text-black">
-          {title}
-        </h1>
-        <p className="text-sm md:text-base text-gray-700 mt-2">
-          {subtitle}
-        </p>
+    <div className="flex flex-col items-center text-center w-full">
+      <SignupLogo />
+      <div className="p-2 bg-white rounded-sm inline-flex flex-col justify-start items-start gap-2 overflow-hidden mb-1">
+        <div className="self-stretch rounded-sm inline-flex justify-start items-center gap-1 overflow-hidden">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className={`w-10 h-1 relative rounded transition-colors ${
+                i <= step ? "bg-[#FF5D2E]" : "bg-black/20"
+              }`}
+            />
+          ))}
+        </div>
       </div>
+      <h1 className="font-semibold text-xl md:text-2xl lg:text-3xl text-black">
+        {title}
+      </h1>
+      <p className="text-sm md:text-base text-gray-700 mt-2">
+        {subtitle}
+      </p>
     </div>
   );
 }
@@ -71,14 +70,16 @@ function CustomInput({
   maxLength?: number;
 }) {
   return (
-    <Input
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      maxLength={maxLength}
-      className="h-11 md:h-12 lg:h-[59px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
-    />
+    <div className="w-full">
+      <Input
+        type={type}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        maxLength={maxLength}
+        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+      />
+    </div>
   );
 }
 
@@ -87,7 +88,7 @@ function PrimaryButton({ onClick, disabled, label }: { onClick: () => void; disa
     <Button
       onClick={onClick}
       disabled={disabled}
-      className="w-full h-11 md:h-12 lg:h-[59px] bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {disabled ? "Please wait..." : label}
     </Button>
@@ -267,26 +268,30 @@ export default function Signup() {
   // --- Step Content Renders ---
   
   const renderStep1 = () => (
-    <div className="flex flex-col gap-4 mt-6">
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Full Name:</label>
+    <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8 w-full">
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Full Name:</label>
         <CustomInput value={name} onChange={(e) => setName(e.target.value)} placeholder="Chamira Fernando" />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Email Address:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Email Address:</label>
         <CustomInput value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" type="email" />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Phone Number:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Phone Number:</label>
         <CustomInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07X XXX XXXX" type="tel" maxLength={10} />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Password:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Password:</label>
         <CustomInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
-        <p className="text-xs text-gray-500 mt-1">Minimum 8 characters.</p>
+        <p className="text-xs text-gray-500 mt-1 text-left">Minimum 8 characters.</p>
       </div>
 
-      <div className="mt-4 flex justify-center">
+      <div className="mt-2 w-full">
+        <PrimaryButton label="Create Account" onClick={handleCreateAccount} disabled={loading} />
+      </div>
+
+      <div className="mt-2 flex justify-center w-full">
         <p className="text-sm text-gray-600">
           Already have an account?{" "}
           <button onClick={() => navigate("/login")} className="text-[#FF5D2E] hover:underline font-semibold">
@@ -294,17 +299,13 @@ export default function Signup() {
           </button>
         </p>
       </div>
-
-      <div className="mt-2">
-        <PrimaryButton label="Create Account" onClick={handleCreateAccount} disabled={loading} />
-      </div>
     </div>
   );
 
   const renderStep2 = () => {
     return (
-      <div className="flex flex-col items-center mt-8">
-        <div className="flex gap-2 justify-center mb-6">
+      <div className="flex flex-col items-center mt-4 md:mt-6 lg:mt-8 w-full">
+        <div className="flex gap-2 justify-center mb-6 w-full">
           {otp.map((digit, i) => (
             <input
               key={i}
@@ -359,9 +360,9 @@ export default function Signup() {
   };
 
   const renderStep3 = () => (
-    <div className="flex flex-col gap-4 mt-6">
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Vehicle Type:</label>
+    <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8 w-full">
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Vehicle Type:</label>
         <div className="grid grid-cols-3 gap-3">
           {vehicleTypes.map((v, i) => (
             <button
@@ -380,48 +381,48 @@ export default function Signup() {
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Vehicle Make & Model:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Vehicle Make & Model:</label>
         <CustomInput value={makeModel} onChange={(e) => setMakeModel(e.target.value)} placeholder="Toyota Corolla" />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Vehicle Year:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Vehicle Year:</label>
         <CustomInput value={year} onChange={(e) => setYear(e.target.value)} placeholder="2019" type="number" />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Vehicle Registration No.:</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Vehicle Registration No.:</label>
         <CustomInput value={registration} onChange={(e) => setRegistration(e.target.value)} placeholder="CBA-1234" />
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Vehicle Nickname (Optional):</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Vehicle Nickname (Optional):</label>
         <CustomInput value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="e.g., The Daily Commuter" />
       </div>
 
-      <div className="mt-2">
+      <div className="mt-2 w-full">
         <PrimaryButton label="Next Step" onClick={handleNextVehicle} />
       </div>
     </div>
   );
 
   const renderStep4 = () => (
-    <div className="flex flex-col gap-4 mt-6">
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Current Mileage (Optional):</label>
+    <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8 w-full">
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Current Mileage (Optional):</label>
         <CustomInput value={mileage} onChange={(e) => setMileage(e.target.value)} placeholder="45,000 km" type="number" />
-        <p className="text-xs text-gray-500 mt-1">A rough estimate is fine!</p>
+        <p className="text-xs text-gray-500 mt-1 text-left">A rough estimate is fine!</p>
       </div>
-      <div>
-        <label className="text-sm font-medium mb-1.5 block">Last Service Date (Optional):</label>
+      <div className="w-full">
+        <label className="text-sm font-medium mb-1.5 block text-left">Last Service Date (Optional):</label>
         <CustomInput value={lastServiceDate} onChange={(e) => setLastServiceDate(e.target.value)} placeholder="YYYY-MM-DD" type="date" />
       </div>
 
-      <div className="mt-6 flex flex-col gap-3">
+      <div className="mt-2 flex flex-col gap-3 w-full">
         <PrimaryButton label="Finish Setup" onClick={handleFinishSetup} disabled={loading} />
         <Button
           onClick={handleSkip}
           disabled={loading}
           variant="outline"
-          className="w-full h-11 md:h-12 lg:h-[59px] border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold text-sm md:text-base rounded-lg"
+          className="w-full h-10 md:h-11 lg:h-12 border-gray-300 text-gray-700 hover:bg-gray-50 font-semibold text-sm md:text-base rounded-lg"
         >
           Skip this for now
         </Button>
@@ -440,27 +441,20 @@ export default function Signup() {
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden fixed inset-0">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
-        <div className="w-full max-w-md h-full py-4 overflow-y-auto no-scrollbar pb-20">
-          <SignupHeader
-            step={step}
-            title={stepHeaders[step - 1].title}
-            subtitle={stepHeaders[step - 1].subtitle}
-            onBack={
-              step > 1
-                ? () => {
-                    if (step === 2) setStep(1);
-                    else if (step === 3) setStep(2);
-                    else if (step === 4) setStep(3);
-                  }
-                : () => navigate("/login")
-            }
-          />
+      <div className="flex-1 overflow-y-auto bg-white">
+        <div className="min-h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+          <div className="w-full max-w-md py-4">
+            <SignupHeader
+              step={step}
+              title={stepHeaders[step - 1].title}
+              subtitle={stepHeaders[step - 1].subtitle}
+            />
 
-          {step === 1 && renderStep1()}
-          {step === 2 && renderStep2()}
-          {step === 3 && renderStep3()}
-          {step === 4 && renderStep4()}
+            {step === 1 && renderStep1()}
+            {step === 2 && renderStep2()}
+            {step === 3 && renderStep3()}
+            {step === 4 && renderStep4()}
+          </div>
         </div>
       </div>
 
