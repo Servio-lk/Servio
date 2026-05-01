@@ -5,16 +5,23 @@ import { apiService, type NotificationDto } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 const apiBase = (() => {
-  const host = window.location.hostname;
-  const sameHostApi = `http://${host}:3001/api`;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return sameHostApi;
+  const envApi = import.meta.env.VITE_API_URL;
+
+  if (envApi) {
+    return envApi;
   }
-  return import.meta.env.VITE_API_URL || sameHostApi;
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  return `${window.location.origin}/api`;
 })();
 
 const BASE_URL = apiBase
   .replace('/api', '')
+  .replace(/^https/, 'wss')
   .replace(/^http/, 'ws');
 const WS_URL = `${BASE_URL}/ws`;
 
