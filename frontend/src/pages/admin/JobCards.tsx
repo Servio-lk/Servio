@@ -16,9 +16,16 @@ export function AdminJobCards() {
   const loadJobCards = async () => {
     try {
       setLoading(true);
+      const apiBaseUrl = (() => {
+        let url = import.meta.env.VITE_API_URL;
+        if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+        if (url) return url;
+        const h = window.location.hostname;
+        return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+      })();
       const url = statusFilter
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/status/${statusFilter}`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards`;
+        ? `${apiBaseUrl}/admin/job-cards/status/${statusFilter}`
+        : `${apiBaseUrl}/admin/job-cards`;
       
       const response = await fetch(url, {
         headers: {
@@ -37,7 +44,13 @@ export function AdminJobCards() {
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
       const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
@@ -62,7 +75,13 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname ===
   const handleDeleteJobCard = async (id: number) => {
     if (confirm('Are you sure you want to delete this job card?')) {
       try {
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
         const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}`, {
           method: 'DELETE',
           headers: {

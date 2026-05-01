@@ -2,9 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import type { IMessage } from '@stomp/stompjs';
 
-// We now have a pure WebSocket endpoint on the backend at /ws
 const apiBase = (() => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
+
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
 
   if (envApi) {
     return envApi;

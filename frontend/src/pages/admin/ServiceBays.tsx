@@ -21,7 +21,13 @@ export function AdminServiceBays() {
   const loadBays = async () => {
     try {
       setLoading(true);
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
       const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -44,7 +50,13 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname ===
     }
 
     try {
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
       const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
         method: 'POST',
         headers: {
@@ -78,7 +90,13 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname ===
   const handleDeleteBay = async (id: number) => {
     if (confirm('Are you sure you want to delete this service bay?')) {
       try {
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
         const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}`, {
           method: 'DELETE',
           headers: {
@@ -100,7 +118,13 @@ const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname ===
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+const apiBaseUrl = (() => {
+  let url = import.meta.env.VITE_API_URL;
+  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
+  if (url) return url;
+  const h = window.location.hostname;
+  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
+})();
       const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {

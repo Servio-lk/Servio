@@ -5,7 +5,11 @@ import { apiService, type NotificationDto } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 
 const apiBase = (() => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
+
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
 
   if (envApi) {
     return envApi;
