@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  User, Car, Plus, Pencil, Trash2, Clock, Tag,
+  User, Car, Plus, Pencil, Trash2, Clock,
   Phone, MapPin, Mail, ChevronDown, ChevronUp, X, Save,
-  Wrench, Calendar, BadgeDollarSign, Shield, HelpCircle,
+   Calendar, BadgeDollarSign, Shield,
 } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
