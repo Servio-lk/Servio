@@ -1,7 +1,12 @@
 import { apiFetch } from './apiFetch';
 
 const getApiBaseUrl = () => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
+
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
   if (envApi) return envApi;
 
   const host = window.location.hostname;

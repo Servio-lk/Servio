@@ -1,9 +1,16 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
 const getApiBaseUrl = () => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
 
-  // If explicitly configured, always use it.
+  // Mixed Content Protection:
+  // If the page is HTTPS, but the env URL is HTTP, we MUST ignore the env URL
+  // and fallback to the relative origin, otherwise the browser will block it.
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
+  // If explicitly configured and safe, always use it.
   if (envApi) {
     return envApi;
   }
@@ -15,7 +22,6 @@ const getApiBaseUrl = () => {
   }
 
   // Non-local without explicit config: use same origin + /api path
-  // (works when CloudFront proxies /api/* to the backend)
   return `${window.location.origin}/api`;
 };
 

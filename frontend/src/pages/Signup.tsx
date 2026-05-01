@@ -451,10 +451,10 @@ export default function Signup() {
   ];
 
   return (
-    <div className="flex h-screen w-full bg-white overflow-hidden fixed inset-0">
+    <div className="flex h-[100dvh] w-full bg-white overflow-hidden fixed inset-0">
       {/* Left side - Form */}
       <div className="flex-1 overflow-y-auto bg-white">
-        <div className="min-h-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8">
+        <div className="min-h-full flex flex-col items-center justify-start pt-12 sm:pt-16 md:pt-20 lg:pt-24 pb-12 px-4 sm:px-6 md:px-8">
           <div className="w-full max-w-md py-4">
             <SignupHeader
               step={step}

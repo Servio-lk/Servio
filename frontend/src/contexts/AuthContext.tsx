@@ -4,20 +4,21 @@ import { registerAuthHandlers } from '@/services/apiFetch';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 const getApiBaseUrl = () => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
 
-  // If explicitly configured, always use it.
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
   if (envApi) {
     return envApi;
   }
 
-  // In local dev, use same host on port 3001.
   const host = window.location.hostname;
   if (host === 'localhost' || host === '127.0.0.1') {
     return `http://${host}:3001/api`;
   }
 
-  // Non-local without explicit config: use same origin + /api path
   return `${window.location.origin}/api`;
 };
 

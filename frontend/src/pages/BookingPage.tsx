@@ -8,7 +8,12 @@ import { apiService } from '@/services/api';
 import { VehicleSelector } from '@/components/VehicleSelector';
 
 const API_BASE_URL = (() => {
-  const envApi = import.meta.env.VITE_API_URL;
+  let envApi = import.meta.env.VITE_API_URL;
+
+  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
   if (envApi) return envApi;
 
   const host = window.location.hostname;
