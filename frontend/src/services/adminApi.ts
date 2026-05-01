@@ -1,6 +1,18 @@
 import { apiFetch } from './apiFetch';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const getApiBaseUrl = () => {
+  const envApi = import.meta.env.VITE_API_URL;
+  if (envApi) return envApi;
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  return `${window.location.origin}/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {

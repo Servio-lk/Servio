@@ -22,7 +22,8 @@ export function AdminMechanics() {
   const loadMechanics = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/mechanics`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/mechanics`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -44,7 +45,8 @@ export function AdminMechanics() {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/mechanics`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/mechanics`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -75,7 +77,8 @@ export function AdminMechanics() {
   const handleDeleteMechanic = async (id: number) => {
     if (confirm('Are you sure you want to delete this mechanic?')) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/mechanics/${id}`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+        const response = await fetch(`${apiBaseUrl}/admin/mechanics/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,

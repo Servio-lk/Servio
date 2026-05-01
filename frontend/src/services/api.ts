@@ -1,21 +1,22 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
 const getApiBaseUrl = () => {
-  const host = window.location.hostname;
-  const sameHostApi = `http://${host}:3001/api`;
   const envApi = import.meta.env.VITE_API_URL;
 
-  // In local dev, always use same host to avoid stale env URLs causing hangs.
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return sameHostApi;
-  }
-
-  // In non-local environments, prefer explicit env configuration.
+  // If explicitly configured, always use it.
   if (envApi) {
     return envApi;
   }
 
-  return sameHostApi;
+  // In local dev, use same host on port 3001.
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  // Non-local without explicit config: use same origin + /api path
+  // (works when CloudFront proxies /api/* to the backend)
+  return `${window.location.origin}/api`;
 };
 
 const API_BASE_URL = getApiBaseUrl();

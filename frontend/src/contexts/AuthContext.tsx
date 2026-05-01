@@ -3,28 +3,23 @@ import { supabaseAuth } from '@/services/supabaseAuth';
 import { registerAuthHandlers } from '@/services/apiFetch';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
-const getApiBaseCandidates = () => {
-  const host = window.location.hostname;
-  const candidates = [
-    import.meta.env.VITE_API_URL,
-    `http://${host}:3001/api`,
-    'http://localhost:3001/api',
-    'http://127.0.0.1:3001/api',
-  ].filter((url): url is string => Boolean(url));
+const getApiBaseUrl = () => {
+  const envApi = import.meta.env.VITE_API_URL;
 
-  return Array.from(new Set(candidates));
-};
-
-async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = 10000) {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(input, { ...init, signal: controller.signal });
-  } finally {
-    window.clearTimeout(timeoutId);
+  // If explicitly configured, always use it.
+  if (envApi) {
+    return envApi;
   }
-}
+
+  // In local dev, use same host on port 3001.
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  // Non-local without explicit config: use same origin + /api path
+  return `${window.location.origin}/api`;
+};
 
 async function exchangeSupabaseToken(payload: {
   accessToken: string;
@@ -33,31 +28,28 @@ async function exchangeSupabaseToken(payload: {
   phone: string;
   role: string;
 }) {
-  for (const apiBase of getApiBaseCandidates()) {
-    try {
-      const response = await fetchWithTimeout(
-        `${apiBase}/auth/supabase-login`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-        5000,
-      );
+  const apiBase = getApiBaseUrl();
+  try {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
 
-      const data = await response.json();
-      if (data?.success && data?.data?.token) {
-        return data;
-      }
+    const response = await fetch(`${apiBase}/auth/supabase-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
 
-      // Server responded but did not issue token, do not keep trying other hosts.
-      return null;
-    } catch {
-      // Try next host candidate.
+    window.clearTimeout(timeoutId);
+
+    const data = await response.json();
+    if (data?.success && data?.data?.token) {
+      return data;
     }
+    return null;
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
 interface User {

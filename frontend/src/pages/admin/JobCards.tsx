@@ -37,7 +37,8 @@ export function AdminJobCards() {
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/${id}/status/${newStatus}`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -61,7 +62,8 @@ export function AdminJobCards() {
   const handleDeleteJobCard = async (id: number) => {
     if (confirm('Are you sure you want to delete this job card?')) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/${id}`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+        const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,

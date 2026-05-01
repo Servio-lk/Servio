@@ -21,7 +21,8 @@ export function AdminServiceBays() {
   const loadBays = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -43,7 +44,8 @@ export function AdminServiceBays() {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +78,8 @@ export function AdminServiceBays() {
   const handleDeleteBay = async (id: number) => {
     if (confirm('Are you sure you want to delete this service bay?')) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays/${id}`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+        const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -97,7 +100,8 @@ export function AdminServiceBays() {
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays/${id}/status/${newStatus}`, {
+const apiBaseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' ? `http://${window.location.hostname}:3001/api` : `${window.location.origin}/api`);
+      const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
