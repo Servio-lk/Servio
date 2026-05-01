@@ -139,4 +139,6 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 #AWS
-servio-key*.pem
+servio-key.pem
+servio-key-new.pem
+*.pem
