@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ChevronRight, Filter, Grid, List as ListIcon } from 'lucide-react';
+import { Search, ChevronRight, Grid, List as ListIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 
@@ -104,9 +104,6 @@ export default function ServicesPage() {
                 className="flex-1 bg-transparent text-base font-medium text-black outline-none placeholder:text-black/50"
               />
             </div>
-            <button className="bg-white border border-[#ffe7df] rounded-2xl p-3 hover:bg-[#fff7f5] transition-colors">
-              <Filter className="w-6 h-6" />
-            </button>
           </div>
         </div>
 

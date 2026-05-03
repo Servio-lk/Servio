@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Check, Clock, Image, Shield } from 'lucide-react';
+import { Check, Clock, Image, Shield } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { VehicleSelector } from '@/components/VehicleSelector';
 import { apiService, type ServiceItem, type ServiceOption } from '@/services/api';
@@ -136,9 +136,6 @@ export default function ServiceDetailPage() {
       <div className="min-h-screen flex flex-col">
         <div className="sticky top-0 bg-gradient-to-b from-[#fff7f5] to-transparent z-10 pb-4">
           <div className="flex items-center gap-4 px-4 py-3 lg:px-0">
-            <button onClick={() => navigate(-1)} className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm hover:shadow-md transition-shadow">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
             <span className="text-lg font-semibold text-black lg:hidden">Service Details</span>
           </div>
         </div>
@@ -152,8 +149,8 @@ export default function ServiceDetailPage() {
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <h1 className="text-xl lg:text-2xl font-semibold text-black">{service.name}</h1>
-                  <p className="text-lg font-semibold text-[#ff5d2e] mt-1">{service.priceRange || `from ${formatLkr(service.basePrice)}`}</p>
+                  <h1 className="text-xl lg:text-2xl font-semibold text-black text-left">{service.name}</h1>
+                  <p className="text-lg font-semibold text-[#ff5d2e] mt-1 text-left">{service.priceRange || `from ${formatLkr(service.basePrice)}`}</p>
                 </div>
 
                 <div className="flex items-center gap-4 text-sm text-black/70">
@@ -161,15 +158,15 @@ export default function ServiceDetailPage() {
                   {service.warrantyIncluded !== false && <div className="flex items-center gap-1"><Shield className="w-4 h-4" /><span>Warranty included</span></div>}
                 </div>
 
-                <p className="text-base text-black/70 leading-relaxed">{service.description}</p>
+                <p className="text-base text-black/70 leading-relaxed text-left">{service.description}</p>
               </div>
 
               <div className="hidden lg:block">
-                <h3 className="text-lg font-semibold text-black mb-3">What's Included</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <h3 className="text-lg font-semibold text-black mb-3 text-left">What's Included</h3>
+                <div className="grid grid-cols-2 gap-3 text-left">
                   {includedItems.map((feature, idx) => (
                     <div key={idx} className="flex items-center gap-2 p-3 bg-white rounded-lg">
-                      <Check className="w-5 h-5 text-green-500" />
+                      <Check className="w-5 h-5 text-[#ff5d2e]" />
                       <span className="text-sm font-medium text-black">{feature}</span>
                     </div>
                   ))}
@@ -180,7 +177,7 @@ export default function ServiceDetailPage() {
                 <>
                   <div className="h-px bg-black/10" />
                   <div className="flex flex-col gap-4">
-                    <h3 className="text-base lg:text-lg font-semibold text-black">Selectable Packages</h3>
+                    <h3 className="text-base lg:text-lg font-semibold text-black text-left">Packages</h3>
                     <div className="flex flex-col gap-2">
                       {service.options.map((option) => (
                         <button
@@ -207,7 +204,7 @@ export default function ServiceDetailPage() {
 
               <div className="h-px bg-black/10" />
               <div className="flex flex-col gap-4">
-                <h3 className="text-base lg:text-lg font-semibold text-black">Special Instructions</h3>
+                <h3 className="text-base lg:text-lg font-semibold text-black text-left">Special Instructions</h3>
                 <textarea
                   placeholder="Add any special requests or notes for the service team..."
                   value={specialInstructions}
@@ -228,7 +225,7 @@ export default function ServiceDetailPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-black/70">Your Vehicle</label>
+                  <label className="text-sm font-medium text-black/70 text-left">Your Vehicle</label>
                   <VehicleSelector value={vehicleName} onSelect={setVehicleName} />
                 </div>
 

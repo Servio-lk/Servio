@@ -3,10 +3,13 @@ import { apiFetch } from './apiFetch';
 const getApiBaseUrl = () => {
   let envApi = import.meta.env.VITE_API_URL;
 
-  // Mixed Content Protection:
-  // If the page is HTTPS, but the env URL is HTTP, we MUST ignore the env URL
-  // and fallback to the relative origin, otherwise the browser will block it.
-  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalEnvApi && !isLocalHost) {
+    envApi = undefined;
+  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
     envApi = undefined;
   }
 
@@ -77,6 +80,7 @@ interface ServiceItem {
   priceRange: string;
   durationMinutes: number | null;
   imageUrl: string | null;
+  iconUrl?: string | null;
   warrantyIncluded?: boolean | null;
   isFeatured: boolean;
   includedItems?: string[];
