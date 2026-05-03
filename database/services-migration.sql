@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS services (
     price_range VARCHAR(50),
     duration_minutes INTEGER,
     image_url VARCHAR(500),
+    icon_url VARCHAR(500),
     is_featured BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT NOW(),

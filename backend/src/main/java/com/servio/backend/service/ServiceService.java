@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -97,7 +98,16 @@ public class ServiceService {
         response.setPriceRange(service.getPriceRange());
         response.setDurationMinutes(service.getDurationMinutes());
         response.setImageUrl(service.getImageUrl());
+        response.setIconUrl(service.getIconUrl());
+        response.setWarrantyIncluded(service.getWarrantyIncluded());
         response.setIsFeatured(service.getIsFeatured());
+        response.setIncludedItems(service.getIncludedItems() != null ? service.getIncludedItems() : List.of());
+        if (service.getOptions() != null && !service.getOptions().isEmpty()) {
+            response.setOptions(service.getOptions().stream()
+                    .sorted(Comparator.comparing(o -> o.getDisplayOrder() != null ? o.getDisplayOrder() : 0))
+                    .map(this::mapToOptionResponse)
+                    .collect(Collectors.toList()));
+        }
         return response;
     }
 
@@ -121,6 +131,7 @@ public class ServiceService {
         response.setDescription(option.getDescription());
         response.setPriceAdjustment(option.getPriceAdjustment());
         response.setIsDefault(option.getIsDefault());
+        response.setDisplayOrder(option.getDisplayOrder());
         return response;
     }
 

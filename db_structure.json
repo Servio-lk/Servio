@@ -1,5 +1,4 @@
-| db_structure_json|
-| {
+{
     "tables": {
         "auth.users": {
             "table": "users",
@@ -328,6 +327,73 @@
                     "name": "vehicle_type",
                     "default": null,
                     "data_type": "character varying(255)",
+                    "is_nullable": true
+                }
+            ],
+            "rls_enabled": true,
+            "foreign_keys": [
+                {
+                    "column": null,
+                    "constraint_name": null,
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                }
+            ],
+            "primary_keys": [
+                "id"
+            ]
+        },
+        "public.users": {
+            "table": "users",
+            "schema": "public",
+            "columns": [
+                {
+                    "name": "id",
+                    "default": "nextval('users_id_seq'::regclass)",
+                    "data_type": "bigint",
+                    "is_nullable": false
+                },
+                {
+                    "name": "created_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
+                    "is_nullable": false
+                },
+                {
+                    "name": "email",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "full_name",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "password_hash",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "phone",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": true
+                },
+                {
+                    "name": "role",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "updated_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
                     "is_nullable": true
                 }
             ],
@@ -717,6 +783,13 @@
             ],
             "rls_enabled": true,
             "foreign_keys": [
+                {
+                    "column": "user_id",
+                    "constraint_name": "fkcgy7qjc1r99dp117y9en6lxye",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
                 {
                     "column": "appointment_id",
                     "constraint_name": "fkfhaj6kqx2pjpn6eambt0pa1nm",
@@ -1169,6 +1242,36 @@
                     "default": null,
                     "data_type": "bigint",
                     "is_nullable": false
+                },
+                {
+                    "name": "customer_notified_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
+                    "is_nullable": true
+                },
+                {
+                    "name": "published_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
+                    "is_nullable": true
+                },
+                {
+                    "name": "warranty_included",
+                    "default": null,
+                    "data_type": "boolean",
+                    "is_nullable": true
+                },
+                {
+                    "name": "status",
+                    "default": "'PUBLISHED'::character varying",
+                    "data_type": "character varying(20)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "icon_url",
+                    "default": null,
+                    "data_type": "character varying(500)",
+                    "is_nullable": true
                 }
             ],
             "rls_enabled": true,
@@ -1242,10 +1345,23 @@
                     "default": null,
                     "data_type": "uuid",
                     "is_nullable": true
+                },
+                {
+                    "name": "user_id",
+                    "default": null,
+                    "data_type": "bigint",
+                    "is_nullable": true
                 }
             ],
             "rls_enabled": true,
             "foreign_keys": [
+                {
+                    "column": "user_id",
+                    "constraint_name": "fko4u5y92lt2sx8y2dc1bb9sewc",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
                 {
                     "column": "profile_id",
                     "constraint_name": "vehicles_profile_id_fkey",
@@ -2301,6 +2417,13 @@
                     "referenced_table": null,
                     "referenced_column": null,
                     "referenced_schema": null
+                },
+                {
+                    "column": "user_id",
+                    "constraint_name": "fks370cd0kwqwvbmem4c7gu7utt",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
                 }
             ],
             "primary_keys": [
@@ -3125,6 +3248,13 @@
             "rls_enabled": true,
             "foreign_keys": [
                 {
+                    "column": "uploaded_by_user_id",
+                    "constraint_name": "fk9clkepa3g4o8k0ib95h4onged",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
+                {
                     "column": "repair_job_id",
                     "constraint_name": "fknsmd02baki7km7h68io8tw8c5",
                     "referenced_table": null,
@@ -3179,6 +3309,13 @@
             ],
             "rls_enabled": true,
             "foreign_keys": [
+                {
+                    "column": "created_by_id",
+                    "constraint_name": "fkcmt0lp5scygn1b8ps3ghossd1",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
                 {
                     "column": "job_card_id",
                     "constraint_name": "fkjcgiwopv562fuf9odntefsu4j",
@@ -3280,6 +3417,73 @@
                 {
                     "column": "repair_job_id",
                     "constraint_name": "fktn0tpwf35p3bqelwt080cl0cf",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                }
+            ],
+            "primary_keys": [
+                "id"
+            ]
+        },
+        "public.service_photos": {
+            "table": "service_photos",
+            "schema": "public",
+            "columns": [
+                {
+                    "name": "id",
+                    "default": "nextval('service_photos_id_seq'::regclass)",
+                    "data_type": "bigint",
+                    "is_nullable": false
+                },
+                {
+                    "name": "created_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
+                    "is_nullable": true
+                },
+                {
+                    "name": "display_order",
+                    "default": null,
+                    "data_type": "integer",
+                    "is_nullable": true
+                },
+                {
+                    "name": "is_primary",
+                    "default": null,
+                    "data_type": "boolean",
+                    "is_nullable": true
+                },
+                {
+                    "name": "public_id",
+                    "default": null,
+                    "data_type": "character varying(255)",
+                    "is_nullable": true
+                },
+                {
+                    "name": "updated_at",
+                    "default": null,
+                    "data_type": "timestamp(6) without time zone",
+                    "is_nullable": true
+                },
+                {
+                    "name": "url",
+                    "default": null,
+                    "data_type": "character varying(500)",
+                    "is_nullable": false
+                },
+                {
+                    "name": "service_id",
+                    "default": null,
+                    "data_type": "bigint",
+                    "is_nullable": false
+                }
+            ],
+            "rls_enabled": true,
+            "foreign_keys": [
+                {
+                    "column": "service_id",
+                    "constraint_name": "fkmto5mwcfse3uv02np3mv85wcu",
                     "referenced_table": null,
                     "referenced_column": null,
                     "referenced_schema": null
@@ -3637,6 +3841,13 @@
             ],
             "rls_enabled": true,
             "foreign_keys": [
+                {
+                    "column": "uploaded_by_id",
+                    "constraint_name": "fkam1rxqx8og8pyt2t8hv1ntdqq",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
                 {
                     "column": "job_card_id",
                     "constraint_name": "fkc99b6notp8k9lqh9nentod6db",
@@ -4165,6 +4376,20 @@
             "rls_enabled": true,
             "foreign_keys": [
                 {
+                    "column": "created_by_user_id",
+                    "constraint_name": "fk5uqt5gafbfr11xj5q5pbg5qff",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
+                {
+                    "column": "approved_by_user_id",
+                    "constraint_name": "fk99hxnun8w4uu4u6x9mfijuqn",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
+                {
                     "column": "repair_job_id",
                     "constraint_name": "fkt0fpf949hsxhdqtqc9x56kigu",
                     "referenced_table": null,
@@ -4402,6 +4627,13 @@
             ],
             "rls_enabled": true,
             "foreign_keys": [
+                {
+                    "column": "performed_by_user_id",
+                    "constraint_name": "fk1svjuekpqy4s3bxgx2xkrrlah",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
                 {
                     "column": "repair_job_id",
                     "constraint_name": "fkg16nuht5i3t8heeyihpypmh7a",
@@ -5338,6 +5570,44 @@
                 "id"
             ]
         },
+        "public.service_included_items": {
+            "table": "service_included_items",
+            "schema": "public",
+            "columns": [
+                {
+                    "name": "service_id",
+                    "default": null,
+                    "data_type": "bigint",
+                    "is_nullable": false
+                },
+                {
+                    "name": "item",
+                    "default": null,
+                    "data_type": "text",
+                    "is_nullable": true
+                },
+                {
+                    "name": "display_order",
+                    "default": null,
+                    "data_type": "integer",
+                    "is_nullable": false
+                }
+            ],
+            "rls_enabled": true,
+            "foreign_keys": [
+                {
+                    "column": "service_id",
+                    "constraint_name": "fk1l2gtfcpnvut2ojfjni8t7ao7",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                }
+            ],
+            "primary_keys": [
+                "service_id",
+                "display_order"
+            ]
+        },
         "public.repair_progress_updates": {
             "table": "repair_progress_updates",
             "schema": "public",
@@ -5414,6 +5684,13 @@
                 {
                     "column": "repair_job_id",
                     "constraint_name": "fk1rtkfp85hxmn8edxmmcyh2bt6",
+                    "referenced_table": null,
+                    "referenced_column": null,
+                    "referenced_schema": null
+                },
+                {
+                    "column": "updated_by_user_id",
+                    "constraint_name": "fkfvjmnhyuxeyn44hi08xh7wbh8",
                     "referenced_table": null,
                     "referenced_column": null,
                     "referenced_schema": null
@@ -5510,4 +5787,4 @@
             ]
         }
     }
-} |
+} 

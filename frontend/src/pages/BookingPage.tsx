@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, CreditCard, Calendar, Clock, Loader2 } from 'lucide-react';
+import { ArrowLeft, Car, Phone, Coins, CreditCard, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -41,13 +41,16 @@ export default function BookingPage() {
   const [bookedSlots, setBookedSlots] = useState<string[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
 
-  const selectedOil = searchParams.get('oil') || 'standard';
+  const selectedOptionParam = searchParams.get('option');
   const specialInstructions = searchParams.get('notes') || '';
 
   const [vehicleName, setVehicleName] = useState(searchParams.get('vehicle') || '');
 
   const [currentService, setCurrentService] = useState<any>(null);
   const [isServiceLoading, setIsServiceLoading] = useState(true);
+  const [selectedOptionId, setSelectedOptionId] = useState<number | null>(
+    selectedOptionParam ? Number(selectedOptionParam) : null
+  );
 
   useEffect(() => {
     const fetchService = async () => {
@@ -58,6 +61,12 @@ export default function BookingPage() {
         const response = await apiService.getServiceById(idToFetch);
         if (response.success && response.data) {
           setCurrentService(response.data);
+          const options = response.data.options || [];
+          const selectedFromUrl = selectedOptionParam
+            ? options.find((option: any) => option.id === Number(selectedOptionParam))
+            : null;
+          const defaultOption = selectedFromUrl || options.find((option: any) => option.isDefault) || options[0];
+          setSelectedOptionId(defaultOption?.id ?? null);
         }
       } catch (error) {
         console.error('Failed to load service:', error);
@@ -66,7 +75,7 @@ export default function BookingPage() {
       }
     };
     fetchService();
-  }, [serviceId]);
+  }, [serviceId, selectedOptionParam]);
 
   const generateDates = () => {
     const today = new Date();
@@ -150,12 +159,6 @@ export default function BookingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDateIndex]);
 
-  const oilOptions: Record<string, { name: string; price: number }> = {
-    'standard': { name: 'Standard/Conventional Oil', price: 4000 },
-    'synthetic-blend': { name: 'Synthetic Blend Oil', price: 5500 },
-    'full-synthetic': { name: 'Full Synthetic Oil', price: 7000 },
-  };
-
   // Map service names to icon images in /public/service icons/
   const serviceIcons: Record<string, string> = {
     'Washing Packages': '/service icons/Washing Packages.png',
@@ -178,13 +181,16 @@ export default function BookingPage() {
 
   const serviceIconSrc = currentService?.name ? serviceIcons[currentService.name] : undefined;
 
-  const isLubeService = currentService?.name === 'Lube Services' || serviceId === '2';
+  const serviceOptions = currentService?.options || [];
+  const selectedOption = serviceOptions.find((option: any) => option.id === selectedOptionId)
+    || serviceOptions.find((option: any) => option.isDefault)
+    || serviceOptions[0];
   const orderDetails = {
     service: currentService?.name || '',
     serviceFee: currentService?.basePrice || 0,
-    oilType: isLubeService ? (oilOptions[selectedOil]?.name || 'Standard Oil') : null,
-    oilPrice: isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0,
-    total: (currentService?.basePrice || 0) + (isLubeService ? (oilOptions[selectedOil]?.price || 4000) : 0),
+    optionName: selectedOption?.name || null,
+    optionPrice: selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0,
+    total: (currentService?.basePrice || 0) + (selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0),
   };
 
   const convertToDateTime = (dateObj: Date, timeSlot: string): string => {
@@ -225,7 +231,8 @@ export default function BookingPage() {
       // Step 1: Create the appointment (same for both payment methods)
       const appointmentDateTime = convertToDateTime(selectedDateObj.fullDate, selectedTime);
       const vehicleNote = vehicleName.trim() ? `Vehicle: ${vehicleName.trim()}` : '';
-      const baseNote = isLubeService ? `${orderDetails.oilType} - ${selectedTime}` : `${orderDetails.service} - ${selectedTime}`;
+      const optionNote = orderDetails.optionName ? `${orderDetails.optionName} - ` : '';
+      const baseNote = `${optionNote}${orderDetails.service} - ${selectedTime}`;
       const appointmentRequest = {
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
@@ -378,6 +385,39 @@ export default function BookingPage() {
     );
   };
 
+  const PackageSelector = () => {
+    if (!serviceOptions.length) return null;
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="text-lg font-semibold text-black">Select Package</h3>
+        <div className="flex flex-col gap-2">
+          {serviceOptions.map((option: any) => (
+            <button
+              key={option.id}
+              onClick={() => setSelectedOptionId(option.id)}
+              className={`w-full text-left p-4 rounded-lg transition-all ${
+                selectedOptionId === option.id
+                  ? 'bg-[#ffe7df] border-2 border-[#ff5d2e]'
+                  : 'bg-white border border-black/10 hover:border-[#ff5d2e]/50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedOptionId === option.id ? 'border-[#ff5d2e]' : 'border-black/30'}`}>
+                  {selectedOptionId === option.id && <div className="w-3 h-3 rounded-full bg-[#ff5d2e]" />}
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-black">{option.name}</p>
+                  <p className="text-sm text-black/50">{option.description}</p>
+                </div>
+                <p className="font-semibold text-black">+LKR {Number(option.priceAdjustment || 0).toLocaleString()}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   // ── Mobile views ──────────────────────────────────────────────────────────
   const MobileTimeSelection = () => (
     <div className="flex flex-col gap-4 pb-24">
@@ -398,6 +438,10 @@ export default function BookingPage() {
       </div>
 
       <div className="h-px bg-black/10" />
+
+      <PackageSelector />
+
+      {serviceOptions.length > 0 && <div className="h-px bg-black/10" />}
 
       <div className="flex flex-col gap-2">
         {isLoadingSlots ? (
@@ -440,10 +484,10 @@ export default function BookingPage() {
             <span className="text-black/70">Service Fee</span>
             <span className="font-medium text-black">+LKR {orderDetails.serviceFee.toLocaleString()}</span>
           </div>
-          {isLubeService && orderDetails.oilType && (
+          {orderDetails.optionName && (
             <div className="flex items-center justify-between text-sm">
-              <span className="text-black/70">{orderDetails.oilType}</span>
-              <span className="font-medium text-black">+LKR {orderDetails.oilPrice.toLocaleString()}</span>
+              <span className="text-black/70">{orderDetails.optionName}</span>
+              <span className="font-medium text-black">+LKR {orderDetails.optionPrice.toLocaleString()}</span>
             </div>
           )}
           <div className="h-px bg-black/10 my-2" />
@@ -505,10 +549,26 @@ export default function BookingPage() {
   if (isServiceLoading) {
     return (
       <AppLayout showNav={false}>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="flex flex-col items-center">
-            <Loader2 className="w-10 h-10 animate-spin text-[#ff5d2e] mb-4" />
-            <p className="text-black/60 font-medium text-sm">Loading service details...</p>
+        <div className="min-h-screen max-w-6xl mx-auto w-full px-4 lg:px-6 py-6">
+          <div className="h-10 w-10 bg-white rounded-lg animate-pulse mb-6" />
+          <div className="hidden lg:grid lg:grid-cols-5 gap-8">
+            <div className="lg:col-span-3 flex flex-col gap-6">
+              <div className="h-24 bg-white rounded-lg animate-pulse" />
+              <div className="grid grid-cols-3 gap-3">
+                {Array.from({ length: 9 }).map((_, index) => <div key={index} className="h-12 bg-white rounded-lg animate-pulse" />)}
+              </div>
+            </div>
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-2xl shadow-lg p-6 space-y-4">
+                <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+                <div className="h-16 bg-[#fff7f5] rounded-lg animate-pulse" />
+                <div className="h-32 bg-gray-50 rounded-lg animate-pulse" />
+                <div className="h-12 bg-[#ff5d2e]/20 rounded-xl animate-pulse" />
+              </div>
+            </div>
+          </div>
+          <div className="lg:hidden flex flex-col gap-3">
+            {Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-16 bg-white rounded-lg animate-pulse" />)}
           </div>
         </div>
       </AppLayout>
@@ -605,6 +665,8 @@ export default function BookingPage() {
                 )}
               </div>
 
+              <PackageSelector />
+
               {specialInstructions && (
                 <div className="flex flex-col gap-2 p-4 bg-[#fff7f5] rounded-lg">
                   <p className="text-sm font-medium text-black/70">Special Instructions</p>
@@ -637,10 +699,10 @@ export default function BookingPage() {
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {orderDetails.serviceFee.toLocaleString()}</span>
                   </div>
-                  {isLubeService && orderDetails.oilType && (
+                  {orderDetails.optionName && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-black/70">{orderDetails.oilType}</span>
-                      <span className="font-medium text-black">LKR {orderDetails.oilPrice.toLocaleString()}</span>
+                      <span className="text-black/70">{orderDetails.optionName}</span>
+                      <span className="font-medium text-black">LKR {orderDetails.optionPrice.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="h-px bg-black/10" />

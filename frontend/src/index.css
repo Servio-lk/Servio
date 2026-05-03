@@ -118,3 +118,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-black/10 bg-gray-50 px-3 py-2 text-sm text-black outline-none transition-colors placeholder:text-black/40 focus:border-[#ff5d2e] focus:bg-white;
+  }
+}

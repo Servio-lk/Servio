@@ -2,6 +2,7 @@ package com.servio.backend.config;
 
 import com.servio.backend.entity.Service;
 import com.servio.backend.entity.ServiceCategory;
+import com.servio.backend.entity.ServiceOption;
 import com.servio.backend.repository.ServiceCategoryRepository;
 import com.servio.backend.repository.ServiceRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.List;
 
 @Component
@@ -44,9 +47,9 @@ public class DataSeeder implements CommandLineRunner {
         periodic = categoryRepository.save(periodic);
 
         createService(periodic, "Washing Packages", "from LKR 500", new BigDecimal("500"));
-        createService(periodic, "Lube Services", "from LKR 1,500", new BigDecimal("1500"));
+        createLubeService(periodic);
         createService(periodic, "Exterior & Interior Detailing", "from LKR 3,000", new BigDecimal("3000"));
-        createService(periodic, "Engine Tune ups", "from LKR 2,500", new BigDecimal("2500"));
+        createEngineTuneUps(periodic);
         createService(periodic, "Inspection Reports", "from LKR 1,000", new BigDecimal("1000"));
         createService(periodic, "Tyre Services", "from LKR 800", new BigDecimal("800"));
         createService(periodic, "Waxing", "from LKR 1,200", new BigDecimal("1200"));
@@ -92,5 +95,62 @@ public class DataSeeder implements CommandLineRunner {
         service.setIsActive(true);
         service.setIsFeatured(false);
         serviceRepository.save(service);
+    }
+
+    private void createEngineTuneUps(ServiceCategory category) {
+        Service service = baseService(category, "Engine Tune ups", "from LKR 2,500", new BigDecimal("2500"));
+        service.setDescription("Keep your engine running at peak performance with our professional tune-up service. We inspect and adjust all critical components.");
+        service.setDurationMinutes(120);
+        service.setWarrantyIncluded(true);
+        service.setIncludedItems(List.of(
+                "Spark plug check",
+                "Air filter replacement",
+                "Fuel injector cleaning",
+                "Performance diagnostics"
+        ));
+        serviceRepository.save(service);
+    }
+
+    private void createLubeService(ServiceCategory category) {
+        Service service = baseService(category, "Lube Services", "from LKR 1,500", new BigDecimal("1500"));
+        service.setDescription("Professional oil change with premium lubricants to protect your engine. Our certified technicians use only high-quality filters.");
+        service.setDurationMinutes(45);
+        service.setWarrantyIncluded(true);
+        service.setIncludedItems(List.of(
+                "Premium quality oil",
+                "Oil filter replacement",
+                "Multi-point inspection",
+                "Fluid level check"
+        ));
+
+        List<ServiceOption> options = new ArrayList<>();
+        options.add(option(service, "Standard/Conventional Oil", "Basic protection for everyday driving", new BigDecimal("4000"), true, 0));
+        options.add(option(service, "Synthetic Blend Oil", "Enhanced protection and performance", new BigDecimal("5500"), false, 1));
+        options.add(option(service, "Full Synthetic Oil", "Maximum protection for high-performance engines", new BigDecimal("7000"), false, 2));
+        service.setOptions(options);
+
+        serviceRepository.save(service);
+    }
+
+    private Service baseService(ServiceCategory category, String name, String priceRange, BigDecimal basePrice) {
+        Service service = new Service();
+        service.setCategory(category);
+        service.setName(name);
+        service.setPriceRange(priceRange);
+        service.setBasePrice(basePrice);
+        service.setIsActive(true);
+        service.setIsFeatured(false);
+        return service;
+    }
+
+    private ServiceOption option(Service service, String name, String description, BigDecimal price, boolean isDefault, int order) {
+        ServiceOption option = new ServiceOption();
+        option.setService(service);
+        option.setName(name);
+        option.setDescription(description);
+        option.setPriceAdjustment(price);
+        option.setIsDefault(isDefault);
+        option.setDisplayOrder(order);
+        return option;
     }
 }

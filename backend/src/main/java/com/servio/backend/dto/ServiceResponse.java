@@ -19,6 +19,9 @@ public class ServiceResponse {
     private String priceRange;
     private Integer durationMinutes;
     private String imageUrl;
+    private String iconUrl;
+    private Boolean warrantyIncluded;
     private Boolean isFeatured;
+    private List<String> includedItems;
     private List<ServiceOptionResponse> options;
 }
