@@ -1,39 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Client } from '@stomp/stompjs';
-import type { IMessage } from '@stomp/stompjs';
 import { apiService, type NotificationDto } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-
-const apiBase = (() => {
-  let envApi = import.meta.env.VITE_API_URL;
-
-  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
-    envApi = undefined;
-  }
-
-  if (envApi) {
-    return envApi;
-  }
-
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return `http://${host}:3001/api`;
-  }
-
-  return `${window.location.origin}/api`;
-})();
-
-const BASE_URL = apiBase
-  .replace(/^https/, 'wss')
-  .replace(/^http/, 'ws');
-const WS_URL = `${BASE_URL}/ws`;
+import { supabase } from '@/lib/supabase';
 
 export function useNotifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<NotificationDto[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const clientRef = useRef<Client | null>(null);
+  const seenIdsRef = useRef<Set<number>>(new Set());
 
   // Numeric user id — only available for local (non-Supabase) users
   const numericUserId = user?.id && !isNaN(Number(user.id)) ? Number(user.id) : null;
@@ -45,6 +20,7 @@ export function useNotifications() {
       const res = await apiService.getMyNotifications(numericUserId);
       if (res.success && res.data) {
         setNotifications(res.data);
+        seenIdsRef.current = new Set(res.data.map(n => n.id));
         setUnreadCount(res.data.filter(n => !n.isRead).length);
       }
     } catch {
@@ -61,38 +37,49 @@ export function useNotifications() {
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Real-time WebSocket subscription
+  // Supabase Realtime subscription. The REST fetch above remains the source of
+  // truth for history and as a fallback when realtime briefly disconnects.
   useEffect(() => {
     if (!numericUserId) return;
 
-    const client = new Client({
-      brokerURL: WS_URL,
-      reconnectDelay: 5000,
-      onConnect: () => {
-        client.subscribe(
-          `/topic/notifications/user/${numericUserId}`,
-          (msg: IMessage) => {
-            try {
-              const notification: NotificationDto = JSON.parse(msg.body);
-              setNotifications(prev => [notification, ...prev]);
-              setUnreadCount(prev => prev + 1);
-            } catch {
-              // malformed — ignore
-            }
-          }
-        );
-      },
-      onStompError: (frame) => {
-        console.warn('[Notifications WS] STOMP error', frame.headers['message']);
-      },
-    });
+    const channel = supabase
+      .channel(`notifications:user:${numericUserId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${numericUserId}`,
+        },
+        (payload) => {
+          const row = payload.new as Record<string, any>;
+          const notification: NotificationDto = {
+            id: Number(row.id),
+            userId: Number(row.user_id),
+            userName: row.user_name || '',
+            title: row.title,
+            message: row.message,
+            type: row.type,
+            isRead: Boolean(row.is_read),
+            createdAt: row.created_at,
+          };
 
-    client.activate();
-    clientRef.current = client;
+          if (seenIdsRef.current.has(notification.id)) {
+            return;
+          }
+
+          seenIdsRef.current.add(notification.id);
+          setNotifications(prev => [notification, ...prev]);
+          if (!notification.isRead) {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
 
     return () => {
-      client.deactivate();
-      clientRef.current = null;
+      supabase.removeChannel(channel);
     };
   }, [numericUserId]);
 
@@ -121,4 +108,3 @@ export function useNotifications() {
 
   return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, refresh: fetchNotifications };
 }
-

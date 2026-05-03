@@ -5,38 +5,35 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "service_options")
+@Table(name = "service_photos")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class ServiceOption {
+public class ServicePhoto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "service_id", nullable = false)
-    @JsonIgnoreProperties("options")
+    @JsonIgnoreProperties("photos")
     private Service service;
 
-    @Column(nullable = false, length = 200)
-    private String name;
+    @Column(nullable = false, length = 500)
+    private String url;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
-    @Column(name = "price_adjustment", precision = 10, scale = 2)
-    private BigDecimal priceAdjustment = BigDecimal.ZERO;
-
-    @Column(name = "is_default")
-    private Boolean isDefault = false;
+    @Column(name = "public_id", length = 255)
+    private String publicId;
 
     @Column(name = "display_order")
     private Integer displayOrder = 0;
+
+    @Column(name = "is_primary")
+    private Boolean isPrimary = false;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

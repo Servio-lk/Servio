@@ -54,6 +54,84 @@ class AdminApiService {
     return response.json();
   }
 
+  async createService(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateService(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async publishService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}/publish`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async hideService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}/hide`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async deleteService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async uploadServicePhoto(file: File) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/photos/upload`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return response.json();
+  }
+
+  async uploadServiceIcon(file: File) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/icons/upload`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return response.json();
+  }
+
   async getAllOffers() {
     const response = await apiFetch(`${API_BASE_URL}/admin/offers`, {
       headers: this.getHeaders(),
@@ -118,4 +196,3 @@ class AdminApiService {
 }
 
 export const adminApi = new AdminApiService();
-

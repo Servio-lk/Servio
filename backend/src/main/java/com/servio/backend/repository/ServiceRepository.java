@@ -21,4 +21,6 @@ public interface ServiceRepository extends JpaRepository<Service, Long> {
     
     @Query("SELECT s FROM Service s LEFT JOIN FETCH s.options WHERE s.id = :id AND s.isActive = true")
     Optional<Service> findByIdWithOptions(@Param("id") Long id);
+
+    List<Service> findAllByOrderByUpdatedAtDesc();
 }

@@ -14,4 +14,5 @@ public class ServiceOptionResponse {
     private String description;
     private BigDecimal priceAdjustment;
     private Boolean isDefault;
+    private Integer displayOrder;
 }

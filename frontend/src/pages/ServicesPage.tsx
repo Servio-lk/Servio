@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ChevronRight, Filter, Grid, List as ListIcon, Loader2 } from 'lucide-react';
+import { Search, ChevronRight, Filter, Grid, List as ListIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 
@@ -112,10 +112,7 @@ export default function ServicesPage() {
 
         {/* Loader */}
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center text-[#ff5d2e]">
-            <Loader2 className="w-10 h-10 animate-spin mb-4" />
-            <p className="text-sm font-medium text-black/60">Loading services...</p>
-          </div>
+          <ServicesSkeleton viewMode={viewMode} />
         ) : (
           /* Services List - Mobile uses Figma design, Desktop uses grid/list */
           <div className="flex flex-col gap-4 lg:gap-6">
@@ -212,5 +209,40 @@ export default function ServicesPage() {
         )}
       </div>
     </AppLayout >
+  );
+}
+
+function ServicesSkeleton({ viewMode }: { viewMode: 'list' | 'grid' }) {
+  return (
+    <div className="flex flex-col gap-4 lg:gap-6">
+      {Array.from({ length: 3 }).map((_, categoryIndex) => (
+        <div key={categoryIndex} className="flex flex-col gap-3 lg:gap-4">
+          <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+
+          <div className="lg:hidden flex flex-col gap-2">
+            {Array.from({ length: 4 }).map((__, index) => (
+              <div key={index} className="bg-white min-h-[56px] rounded-[8px] shadow-[0px_2px_8px_0px_rgba(0,0,0,0.04)] p-2 flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 rounded bg-[#ffe7df]" />
+                <div className="h-4 flex-1 bg-gray-100 rounded" />
+                <div className="w-5 h-5 rounded bg-gray-100" />
+              </div>
+            ))}
+          </div>
+
+          <div className={viewMode === 'grid' ? 'hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3' : 'hidden lg:flex flex-col gap-2'}>
+            {Array.from({ length: viewMode === 'grid' ? 4 : 5 }).map((__, index) => (
+              <div key={index} className={`bg-white rounded-lg shadow-sm animate-pulse ${viewMode === 'grid' ? 'p-4 flex flex-col gap-3' : 'px-4 py-3 flex items-center gap-3'}`}>
+                <div className={`${viewMode === 'grid' ? 'w-12 h-12' : 'w-10 h-10'} rounded bg-[#ffe7df] shrink-0`} />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-2/3 bg-gray-100 rounded" />
+                  <div className="h-3 w-24 bg-gray-100 rounded" />
+                </div>
+                {viewMode === 'grid' && <div className="h-9 w-full bg-[#ff5d2e]/20 rounded-lg" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }

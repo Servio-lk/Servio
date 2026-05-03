@@ -88,6 +88,16 @@ function mapSupabaseUser(supabaseUser: SupabaseUser): User {
   };
 }
 
+function areUsersEqual(a: User | null, b: User | null): boolean {
+  return (
+    a?.id === b?.id &&
+    a?.email === b?.email &&
+    a?.fullName === b?.fullName &&
+    a?.phone === b?.phone &&
+    a?.role === b?.role
+  );
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -95,6 +105,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isBackendTokenReady, setIsBackendTokenReady] = useState(false);
   const attemptedTokenExchange = useRef<Set<string>>(new Set());
+  const sessionRef = useRef<Session | null>(null);
+  const userRef = useRef<User | null>(null);
+  const backendTokenReadyRef = useRef(false);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  useEffect(() => {
+    backendTokenReadyRef.current = isBackendTokenReady;
+  }, [isBackendTokenReady]);
+
+  const applySessionState = useCallback((nextSession: Session, forceUserUpdate = false) => {
+    const nextUser = mapSupabaseUser(nextSession.user);
+
+    sessionRef.current = nextSession;
+    setSession(prev => (prev?.access_token === nextSession.access_token ? prev : nextSession));
+    setSupabaseUser(prev => (prev?.id === nextSession.user.id ? prev : nextSession.user));
+
+    if (forceUserUpdate || !areUsersEqual(userRef.current, nextUser)) {
+      userRef.current = nextUser;
+      setUser(nextUser);
+    }
+  }, []);
 
   const refreshBackendToken = useCallback(async (): Promise<boolean> => {
     try {
@@ -145,9 +183,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const currentSession = await supabaseAuth.getCurrentSession();
         if (currentSession) {
-          setSession(currentSession);
-          setSupabaseUser(currentSession.user);
-          setUser(mapSupabaseUser(currentSession.user));
+          applySessionState(currentSession);
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -162,6 +198,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
 
       if (authEvent === 'SIGNED_OUT' || !newSession) {
+        sessionRef.current = null;
+        userRef.current = null;
         setUser(null);
         setSession(null);
         setSupabaseUser(null);
@@ -172,21 +210,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      setSession(newSession);
-      setSupabaseUser(newSession.user);
-      setUser(mapSupabaseUser(newSession.user));
+      const previousSession = sessionRef.current;
+      const sameUser = previousSession?.user.id === newSession.user.id;
 
-      if (authEvent === 'SIGNED_IN') {
+      applySessionState(newSession, authEvent === 'USER_UPDATED');
+
+      // Supabase can emit SIGNED_IN again when a suspended tab wakes up. Treat
+      // that as a silent session confirmation for the same user, otherwise the
+      // app clears the backend token and the route guards flash a full loader.
+      if (authEvent === 'SIGNED_IN' && !sameUser) {
         localStorage.removeItem('token');
         setIsBackendTokenReady(false);
         attemptedTokenExchange.current.clear();
+      } else if ((authEvent === 'TOKEN_REFRESHED' || authEvent === 'SIGNED_IN') && backendTokenReadyRef.current) {
+        setIsBackendTokenReady(true);
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [applySessionState]);
 
   useEffect(() => {
     const syncBackendToken = async () => {
@@ -220,7 +264,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // the backend checks profiles.is_admin / profiles.role in the DB)
             const backendRole = data.data.user.role?.toUpperCase();
             if (backendRole && backendRole !== user.role) {
-              setUser(prev => prev ? { ...prev, role: backendRole } : prev);
+              setUser(prev => {
+                if (!prev) return prev;
+                const nextUser = { ...prev, role: backendRole };
+                userRef.current = nextUser;
+                return nextUser;
+              });
             }
           }
           console.log('[Auth] Backend token stored successfully');
@@ -236,6 +285,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session, user, isBackendTokenReady]);
 
   const login = (userData: User, userSession: Session) => {
+    userRef.current = userData;
+    sessionRef.current = userSession;
     setUser(userData);
     setSession(userSession);
     setSupabaseUser(userSession.user);
@@ -245,6 +296,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabaseAuth.signOut();
+    userRef.current = null;
+    sessionRef.current = null;
     setUser(null);
     setSession(null);
     setSupabaseUser(null);

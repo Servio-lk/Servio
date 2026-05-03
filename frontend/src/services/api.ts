@@ -77,7 +77,9 @@ interface ServiceItem {
   priceRange: string;
   durationMinutes: number | null;
   imageUrl: string | null;
+  warrantyIncluded?: boolean | null;
   isFeatured: boolean;
+  includedItems?: string[];
   options?: ServiceOption[];
 }
 
@@ -87,6 +89,7 @@ interface ServiceOption {
   description: string;
   priceAdjustment: number;
   isDefault: boolean;
+  displayOrder?: number;
 }
 
 interface ServiceProvider {

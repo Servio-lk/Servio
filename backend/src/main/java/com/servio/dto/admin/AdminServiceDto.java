@@ -5,6 +5,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,8 +19,16 @@ public class AdminServiceDto {
     private String priceRange;
     private Integer durationMinutes;
     private String imageUrl;
+    private String iconUrl;
+    private String status;
+    private Boolean warrantyIncluded;
     private Boolean isFeatured;
     private Boolean isActive;
+    private LocalDateTime publishedAt;
+    private LocalDateTime customerNotifiedAt;
+    private List<String> includedItems;
+    private List<ServiceOptionRequest> options;
+    private List<ServicePhotoDto> photos;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
