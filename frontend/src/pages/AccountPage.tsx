@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   User, Car, Plus, Pencil, Trash2, Clock,
   Phone, MapPin, Mail, ChevronDown, ChevronUp, X, Save,
-   Calendar, BadgeDollarSign, Shield,
+  Calendar, BadgeDollarSign, Shield, LogOut
 } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,7 +45,7 @@ const emptyVehicle: VehicleRequest = {
 };
 
 export default function AccountPage() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   // Vehicles
   const [vehicles, setVehicles] = useState<VehicleDto[]>([]);
@@ -595,6 +595,17 @@ export default function AccountPage() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ── LOGOUT ── */}
+        <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
+          <button
+            onClick={() => logout()}
+            className="flex items-center justify-center gap-2 w-full py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium border border-red-100"
+          >
+            <LogOut className="w-5 h-5" />
+            Sign Out
+          </button>
         </div>
       </div>
     </AppLayout>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Circle } from 'lucide-react';
+import { Circle } from 'lucide-react';
 
 export default function ChooseTime() {
   const [selectedDate, setSelectedDate] = useState('Tomorrow');
@@ -55,9 +55,6 @@ export default function ChooseTime() {
 
       {/* Header */}
       <div className="flex flex-col px-4">
-        <button className="w-10 h-10 rounded-lg flex items-start">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
         <div className="flex items-center">
           <h1 className="flex-1 text-[28px] font-semibold text-black">Choose a time</h1>
         </div>

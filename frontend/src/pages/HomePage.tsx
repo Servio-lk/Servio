@@ -13,6 +13,7 @@ interface RecentService {
   name: string;
   date: string;
   vehicle: string;
+  iconUrl?: string;
 }
 
 export default function HomePage() {
@@ -26,6 +27,26 @@ export default function HomePage() {
   const [recentServices, setRecentServices] = useState<RecentService[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  // Icon mapping - maps service names to icon filenames
+  const serviceIcons: Record<string, string> = {
+    'Washing Packages': '/service icons/Washing Packages.png',
+    'Lube Services': '/service icons/Lube Services.png',
+    'Exterior & Interior Detailing': '/service icons/Exterior & Interior Detailing.png',
+    'Engine Tune ups': '/service icons/Engine Tune ups.png',
+    'Inspection Reports': '/service icons/Inspection Reports.png',
+    'Tyre Services': '/service icons/Tyre Services.png',
+    'Waxing': '/service icons/Waxing.png',
+    'Undercarriage Degreasing': '/service icons/Undercarriage Degreasing.png',
+    'Windscreen Treatments': '/service icons/Windscreen Treatments.png',
+    'Battery Services': '/service icons/Battery Services.png',
+    'Packages': '/service icons/Nano Coating Packages.png',
+    'Treatments': '/service icons/Nano Coating Treatments.png',
+    'Insurance Claims': '/service icons/Insurance Claims.png',
+    'Wheel Alignment': '/service icons/Wheel Alignment.png',
+    'Full Paints': '/service icons/Full Paints.png',
+    'Part Replacements': '/service icons/Part Replacements.png',
+  };
 
   const withTimeout = useCallback(async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
     return await Promise.race([
@@ -50,11 +71,14 @@ export default function HomePage() {
     try {
       setLoading(true);
 
-      const [servicesResult, offersResult, providersResult] = await Promise.allSettled([
+      const [allServicesResult, servicesResult, offersResult, providersResult] = await Promise.allSettled([
+        withTimeout(apiService.getAllServices(), 10000, 'All services'),
         withTimeout(apiService.getFeaturedServices(), 10000, 'Featured services'),
         withTimeout(apiService.getActiveOffers(), 10000, 'Offers'),
         withTimeout(apiService.getServiceProviders(), 10000, 'Service providers'),
       ]);
+
+      const allServicesData = allServicesResult.status === 'fulfilled' && allServicesResult.value.success ? allServicesResult.value.data : null;
 
       if (servicesResult.status === 'fulfilled') {
         const servicesResponse = servicesResult.value;
@@ -108,11 +132,14 @@ export default function HomePage() {
                   const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
                   if (match) vehicle = match[1].trim();
                 }
+                const matchedService = allServicesData?.find(s => s.name === app.serviceType);
+
                 return {
                   id: app.id,
                   name: app.serviceType,
                   date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                   vehicle: vehicle || '',
+                  iconUrl: matchedService?.iconUrl || serviceIcons[app.serviceType] || undefined,
                 };
               });
             setRecentServices(mappedServices);
@@ -215,7 +242,7 @@ export default function HomePage() {
                     key={service.id}
                     id={service.id}
                     name={service.name}
-                    imageUrl={service.imageUrl}
+                    iconUrl={service.iconUrl || serviceIcons[service.name]}
                   />
                 ))}
               </div>
@@ -249,8 +276,12 @@ export default function HomePage() {
                         idx !== recentServices.length - 1 ? 'border-b border-black/10' : ''
                       }`}
                     >
-                      <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-[#ff5d2e]" />
+                      <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center overflow-hidden p-2">
+                        {service.iconUrl ? (
+                          <img src={service.iconUrl} alt={service.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-[#ff5d2e]" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-black">{service.name}</p>

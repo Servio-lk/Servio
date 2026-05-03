@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, CreditCard, Calendar, Clock } from 'lucide-react';
+import { Car, Phone, Coins, CreditCard, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -389,7 +389,7 @@ export default function BookingPage() {
     if (!serviceOptions.length) return null;
     return (
       <div className="flex flex-col gap-3">
-        <h3 className="text-lg font-semibold text-black">Select Package</h3>
+        <h3 className="text-lg font-semibold text-black text-left">Select Package</h3>
         <div className="flex flex-col gap-2">
           {serviceOptions.map((option: any) => (
             <button
@@ -595,17 +595,8 @@ export default function BookingPage() {
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-b from-[#fff7f5] to-transparent z-10 pb-4">
-          <div className="flex items-center gap-4 px-4 py-3 lg:px-0">
-            <button
-              onClick={() => {
-                if (currentStep === 'checkout') setCurrentStep('time');
-                else navigate(-1);
-              }}
-              className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl lg:text-2xl font-semibold text-black">
+          <div className="max-w-6xl mx-auto w-full px-4 lg:px-6 py-3 flex items-center">
+            <h1 className="text-xl lg:text-2xl font-semibold text-black ml-2 lg:ml-0">
               {currentStep === 'time' ? 'Choose a Time' : 'Checkout'}
             </h1>
           </div>

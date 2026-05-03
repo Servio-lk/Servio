@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
+import { Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -161,14 +161,8 @@ export default function ConfirmationPage() {
       <div className="min-h-screen flex flex-col">
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-b from-[#fff7f5] to-transparent z-10 pb-4">
-          <div className="flex items-center gap-4 px-4 py-3 lg:px-0">
-            <button
-              onClick={() => navigate('/home')}
-              className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm hover:shadow-md transition-shadow"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl lg:text-2xl font-semibold text-black">Appointment Confirmed!</h1>
+          <div className="flex items-center justify-center gap-4 px-4 py-3 lg:px-0">
+            <h1 className="text-xl lg:text-2xl font-semibold text-black text-center">Appointment Confirmed!</h1>
           </div>
         </div>
 

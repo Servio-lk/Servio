@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, List, FileText, User, LogOut, Menu, X, Car, Settings } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { Home, List, FileText, User, Settings, LogOut } from 'lucide-react';
+import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -105,15 +105,9 @@ function DesktopHeader() {
 }
 
 // Mobile header component
-function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
+function MobileHeader() {
   return (
     <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-black/10 sticky top-0 z-20">
-      <button
-        onClick={onMenuOpen}
-        className="p-2 -ml-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
       <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
       <div className="flex items-center gap-1">
         <NotificationBell />
@@ -160,119 +154,9 @@ function MobileTabBar() {
   );
 }
 
-// Mobile slide-out menu
-function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const location = useLocation();
-  const { user, logout } = useAuth();
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="lg:hidden fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-      
-      {/* Menu panel */}
-      <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-black/10">
-          <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* User info */}
-        <div className="p-4 border-b border-black/10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#ffe7df] rounded-full flex items-center justify-center">
-              <User className="w-6 h-6 text-[#ff5d2e]" />
-            </div>
-            <div>
-              <p className="font-semibold text-black">{user?.fullName || 'Guest'}</p>
-              <p className="text-sm text-black/50">{user?.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="flex flex-col gap-2">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-[#ffe7df] text-[#ff5d2e]'
-                        : 'text-black/70 hover:bg-[#fff7f5]'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="mt-6 pt-6 border-t border-black/10">
-            <ul className="flex flex-col gap-2">
-              <li>
-                <Link
-                  to="/vehicles"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
-                >
-                  <Car className="w-5 h-5" />
-                  <span className="font-medium">My Vehicles</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/settings"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="font-medium">Settings</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t border-black/10">
-          <button
-            onClick={() => {
-              logout();
-              onClose();
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Main AppLayout component
 export function AppLayout({ children, showNav = true }: AppLayoutProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   if (!showNav) {
     return (
       <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#fff7f5]">
@@ -297,10 +181,7 @@ export function AppLayout({ children, showNav = true }: AppLayoutProps) {
       <DesktopHeader />
       
       {/* Mobile header */}
-      <MobileHeader onMenuOpen={() => setMobileMenuOpen(true)} />
-      
-      {/* Mobile menu */}
-      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileHeader />
 
       {/* Main content */}
       <main className="lg:ml-64 lg:pt-16 pb-20 lg:pb-6">

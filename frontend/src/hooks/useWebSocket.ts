@@ -5,7 +5,13 @@ import type { IMessage } from '@stomp/stompjs';
 const apiBase = (() => {
   let envApi = import.meta.env.VITE_API_URL;
 
-  if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalEnvApi && !isLocalHost) {
+    envApi = undefined;
+  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
     envApi = undefined;
   }
 
