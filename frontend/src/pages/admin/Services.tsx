@@ -387,8 +387,6 @@ export function AdminServices() {
     }
   };
 
-  const uploadPhoto = async (file: File) => uploadPhotos([file]);
-
   const handlePhotoDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragActive(false);
