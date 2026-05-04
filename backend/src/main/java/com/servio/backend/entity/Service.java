@@ -8,6 +8,8 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
 
 @Entity
 @Table(name = "services")
@@ -74,14 +76,17 @@ public class Service {
     @CollectionTable(name = "service_included_items", joinColumns = @JoinColumn(name = "service_id"))
     @Column(name = "item", columnDefinition = "TEXT")
     @OrderColumn(name = "display_order")
+    @Fetch(FetchMode.SUBSELECT)
     private List<String> includedItems;
 
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("service")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ServiceOption> options;
 
     @OneToMany(mappedBy = "service", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnoreProperties("service")
+    @Fetch(FetchMode.SUBSELECT)
     private List<ServicePhoto> photos;
 
     @PrePersist

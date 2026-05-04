@@ -255,7 +255,6 @@ export function AdminBilling() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-black flex items-center gap-2">
-            <Calculator className="w-7 h-7 text-[#ff5d2e]" />
             Billing Calculation
           </h1>
           <p className="text-sm text-black/60 mt-1">Generate professional invoices and manage checkout</p>
@@ -285,7 +284,7 @@ export function AdminBilling() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Customer & Vehicle */}
         <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm space-y-6 text-left">
             <div className="flex items-center gap-2 border-b pb-4">
               <UserIcon className="w-5 h-5 text-[#ff5d2e]" />
               <h2 className="font-bold text-lg text-black">Customer & Vehicle Details</h2>

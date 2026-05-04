@@ -99,7 +99,7 @@ export function AdminInventory() {
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto w-full">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-black">Inventory POS</h1>
+          <h1 className="text-2xl font-bold text-black text-left">Inventory POS</h1>
           <p className="text-sm text-black/60 mt-1">Manage stock, parts and consumables</p>
         </div>
         <button
