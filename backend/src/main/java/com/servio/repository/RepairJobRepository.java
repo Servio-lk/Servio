@@ -24,4 +24,6 @@ public interface RepairJobRepository extends JpaRepository<RepairJob, Long> {
     
     @Query("SELECT r FROM RepairJob r WHERE r.appointment.id = :appointmentId")
     RepairJob findByAppointmentId(@Param("appointmentId") Long appointmentId);
+
+    long countByAssignedTechnicianIdAndStatusNotIn(Long assignedTechnicianId, List<String> statuses);
 }

@@ -32,6 +32,7 @@ import { AdminCustomers } from './pages/admin/Customers'
 import AdminCalendar from './pages/admin/AdminCalendar'
 import { AdminInventory } from './pages/admin/Inventory'
 import { AdminBilling } from './pages/admin/Billing'
+import { AdminMechanics } from './pages/admin/Mechanics'
 
 import './App.css'
 
@@ -146,6 +147,8 @@ function App() {
             <Route path="calendar" element={<AdminCalendar />} />
             <Route path="inventory" element={<AdminInventory />} />
             <Route path="billing" element={<AdminBilling />} />
+            <Route path="staff" element={<AdminMechanics />} />
+            <Route path="mechanics" element={<AdminMechanics />} />
           </Route>
 
           {/* Redirect old mobile routes to new unified routes */}

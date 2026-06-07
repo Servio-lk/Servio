@@ -1,5 +1,5 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User, Package, ReceiptText } from 'lucide-react';
+import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User, Package, ReceiptText, Wrench } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
@@ -11,6 +11,7 @@ const adminNavItems = [
     { icon: Tag, label: 'Offers', path: '/admin/offers' },
     { icon: Calendar, label: 'Appointments', path: '/admin/appointments' },
     { icon: Users, label: 'Customers', path: '/admin/customers' },
+    { icon: Wrench, label: 'Staff', path: '/admin/staff' },
     { icon: Package, label: 'Inventory', path: '/admin/inventory' },
     { icon: ReceiptText, label: 'Billing', path: '/admin/billing' },
     { icon: CalendarDays, label: 'Calendar', path: '/admin/calendar' },

@@ -200,6 +200,71 @@ class AdminApiService {
     return response.json();
   }
 
+  async getStaff() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createStaff(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateStaff(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async getStaffSchedule(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async updateStaffSchedule(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async assignMechanic(repairId: number, mechanicId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/assign-mechanic`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ mechanicId }),
+    });
+    return response.json();
+  }
+
+  async getRepairMessages(repairId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async sendRepairMessage(repairId: number, body: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ body }),
+    });
+    return response.json();
+  }
 
 }
 

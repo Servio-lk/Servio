@@ -1,132 +1,177 @@
-import { useEffect, useState } from 'react';
-import { Wrench, Search, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, Edit2, Plus, Search, Trash2, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminApi } from '@/services/adminApi';
+
+type StaffMember = {
+  id: number;
+  fullName: string;
+  email: string;
+  phone: string;
+  specialization?: string;
+  experienceYears?: number;
+  status?: string;
+  isActive?: boolean;
+  activeJobCount?: number;
+};
+
+type StaffForm = {
+  fullName: string;
+  email: string;
+  phone: string;
+  specialization: string;
+  experienceYears: string;
+  status: string;
+  isActive: boolean;
+};
+
+const emptyForm: StaffForm = {
+  fullName: '',
+  email: '',
+  phone: '',
+  specialization: '',
+  experienceYears: '',
+  status: 'AVAILABLE',
+  isActive: true,
+};
+
+const defaultWorkingHours = [
+  { dayOfWeek: 'MONDAY', shiftStart: '09:00', shiftEnd: '17:00' },
+  { dayOfWeek: 'TUESDAY', shiftStart: '09:00', shiftEnd: '17:00' },
+  { dayOfWeek: 'WEDNESDAY', shiftStart: '09:00', shiftEnd: '17:00' },
+  { dayOfWeek: 'THURSDAY', shiftStart: '09:00', shiftEnd: '17:00' },
+  { dayOfWeek: 'FRIDAY', shiftStart: '09:00', shiftEnd: '17:00' },
+];
 
 export function AdminMechanics() {
-  const [mechanics, setMechanics] = useState<any[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-    specialization: '',
-    experienceYears: '',
-  });
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [editing, setEditing] = useState<StaffMember | null>(null);
+  const [formData, setFormData] = useState<StaffForm>(emptyForm);
+  const [scheduleFor, setScheduleFor] = useState<StaffMember | null>(null);
+  const [workingHours, setWorkingHours] = useState(defaultWorkingHours);
+  const [unavailableBlocks, setUnavailableBlocks] = useState<any[]>([]);
 
   useEffect(() => {
-    loadMechanics();
+    loadStaff();
   }, []);
 
-  const loadMechanics = async () => {
+  const loadStaff = async () => {
     try {
       setLoading(true);
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/mechanics`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      setMechanics(data.data || []);
+      const response = await adminApi.getStaff();
+      setStaff(response.data || []);
     } catch (error) {
-      console.error('Failed to load mechanics:', error);
-      toast.error('Failed to load mechanics');
+      console.error('Failed to load staff:', error);
+      toast.error('Failed to load staff');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddMechanic = async () => {
+  const filteredStaff = useMemo(() => {
+    const query = searchQuery.toLowerCase();
+    return staff.filter((member) =>
+      member.fullName?.toLowerCase().includes(query) ||
+      member.email?.toLowerCase().includes(query) ||
+      member.specialization?.toLowerCase().includes(query)
+    );
+  }, [searchQuery, staff]);
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormData(emptyForm);
+    setShowStaffModal(true);
+  };
+
+  const openEdit = (member: StaffMember) => {
+    setEditing(member);
+    setFormData({
+      fullName: member.fullName || '',
+      email: member.email || '',
+      phone: member.phone || '',
+      specialization: member.specialization || '',
+      experienceYears: member.experienceYears ? String(member.experienceYears) : '',
+      status: member.status || 'AVAILABLE',
+      isActive: member.isActive !== false,
+    });
+    setShowStaffModal(true);
+  };
+
+  const closeForm = () => {
+    setEditing(null);
+    setFormData(emptyForm);
+    setShowStaffModal(false);
+  };
+
+  const saveStaff = async () => {
     if (!formData.fullName || !formData.email || !formData.phone) {
-      toast.error('Please fill in all required fields');
+      toast.error('Please fill in name, email, and phone');
       return;
     }
 
+    const payload = {
+      ...formData,
+      experienceYears: formData.experienceYears ? Number(formData.experienceYears) : null,
+    };
+
     try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/mechanics`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (response.ok) {
-        toast.success('Mechanic added successfully');
-        setShowModal(false);
-        setFormData({
-          fullName: '',
-          email: '',
-          phone: '',
-          specialization: '',
-          experienceYears: '',
-        });
-        loadMechanics();
-      } else {
-        toast.error('Failed to add mechanic');
-      }
-    } catch (error) {
-      toast.error('Error adding mechanic');
+      const response = editing
+        ? await adminApi.updateStaff(editing.id, payload)
+        : await adminApi.createStaff(payload);
+      if (!response.success) throw new Error(response.message);
+      toast.success(editing ? 'Staff member updated' : 'Staff member created');
+      closeForm();
+      loadStaff();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save staff member');
     }
   };
 
-  const handleDeleteMechanic = async (id: number) => {
-    if (confirm('Are you sure you want to delete this mechanic?')) {
-      try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-        const response = await fetch(`${apiBaseUrl}/admin/mechanics/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          },
-        });
-        
-        if (response.ok) {
-          toast.success('Mechanic deleted successfully');
-          loadMechanics();
-        } else {
-          toast.error('Failed to delete mechanic');
-        }
-      } catch (error) {
-        toast.error('Error deleting mechanic');
-      }
+  const deactivateStaff = async (member: StaffMember) => {
+    if (!confirm(`Deactivate ${member.fullName}?`)) return;
+    try {
+      const response = await adminApi.updateStaff(member.id, { ...member, isActive: false });
+      if (!response.success) throw new Error(response.message);
+      toast.success('Staff member deactivated');
+      loadStaff();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to deactivate staff member');
     }
   };
 
-  const filteredMechanics = mechanics.filter(
-    (mechanic) =>
-      mechanic.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      mechanic.specialization?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const openSchedule = async (member: StaffMember) => {
+    setScheduleFor(member);
+    try {
+      const response = await adminApi.getStaffSchedule(member.id);
+      setWorkingHours(response.data?.workingHours?.length ? response.data.workingHours : defaultWorkingHours);
+      setUnavailableBlocks(response.data?.unavailableBlocks || []);
+    } catch {
+      setWorkingHours(defaultWorkingHours);
+      setUnavailableBlocks([]);
+    }
+  };
+
+  const saveSchedule = async () => {
+    if (!scheduleFor) return;
+    try {
+      const response = await adminApi.updateStaffSchedule(scheduleFor.id, { workingHours, unavailableBlocks });
+      if (!response.success) throw new Error(response.message);
+      toast.success('Schedule saved');
+      setScheduleFor(null);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save schedule');
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex h-64 items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff5d2e] mx-auto"></div>
-          <p className="mt-4 text-black/70">Loading mechanics...</p>
+          <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-[#ff5d2e]" />
+          <p className="mt-4 text-black/70">Loading staff...</p>
         </div>
       </div>
     );
@@ -134,159 +179,217 @@ const apiBaseUrl = (() => {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-[#ff5d2e] rounded-lg flex items-center justify-center">
-            <Wrench className="w-6 h-6 text-white" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#ff5d2e]">
+            <Wrench className="h-6 w-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-black">Mechanics Management</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-black">Staff Scheduling</h1>
+            <p className="text-sm text-black/60">Manage mechanics, status, skills, and availability.</p>
+          </div>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#ff5d2e] text-white rounded-lg hover:bg-[#e64d1e] transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          <span>Add Mechanic</span>
+        <button onClick={openCreate} className="flex items-center justify-center gap-2 rounded-lg bg-[#ff5d2e] px-4 py-2 text-white transition-colors hover:bg-[#e64d1e]">
+          <Plus className="h-5 w-5" />
+          <span>Add Staff</span>
         </button>
       </div>
 
-      {/* Search Bar */}
       <div className="relative">
-        <Search className="absolute left-3 top-3 w-5 h-5 text-black/40" />
+        <Search className="absolute left-3 top-3 h-5 w-5 text-black/40" />
         <input
           type="text"
-          placeholder="Search mechanics..."
+          placeholder="Search by name, email, or specialty..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
+          className="w-full rounded-lg border border-black/10 bg-white py-2 pl-10 pr-4 text-sm focus:border-[#ff5d2e] focus:outline-none"
         />
       </div>
 
-      {/* Mechanics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredMechanics.length > 0 ? (
-          filteredMechanics.map((mechanic) => (
-            <div key={mechanic.id} className="bg-white rounded-lg border border-black/10 p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-black">{mechanic.fullName}</h3>
-                  <p className="text-sm text-black/60">{mechanic.specialization || 'General Service'}</p>
-                </div>
-                <div className="relative group">
-                  <button className="p-2 hover:bg-black/5 rounded-lg">
-                    <MoreVertical className="w-4 h-4 text-black/60" />
-                  </button>
-                  <div className="absolute right-0 top-full hidden group-hover:flex flex-col bg-white border border-black/10 rounded-lg shadow-lg">
-                    <button className="px-4 py-2 text-sm text-black hover:bg-black/5 flex items-center gap-2">
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteMechanic(mechanic.id)}
-                      className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-black/10"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filteredStaff.map((member) => (
+          <div key={member.id} className="rounded-lg border border-black/10 bg-white p-4">
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-black">{member.fullName}</h3>
+                <p className="text-sm text-black/60">{member.specialization || 'General Service'}</p>
               </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-black/60">Email:</span>
-                  <span className="text-black">{mechanic.email}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-black/60">Phone:</span>
-                  <span className="text-black">{mechanic.phone}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-black/60">Experience:</span>
-                  <span className="text-black">{mechanic.experienceYears || '-'} years</span>
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                    mechanic.status === 'AVAILABLE' 
-                      ? 'bg-green-50 text-green-700' 
-                      : 'bg-yellow-50 text-yellow-700'
-                  }`}>
-                    {mechanic.status || 'AVAILABLE'}
-                  </span>
-                </div>
-              </div>
+              <span className={`rounded-full px-2 py-1 text-xs font-medium ${member.isActive === false ? 'bg-black/5 text-black/50' : 'bg-green-50 text-green-700'}`}>
+                {member.isActive === false ? 'Inactive' : 'Active'}
+              </span>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-8">
-            <Wrench className="w-12 h-12 text-black/20 mx-auto mb-3" />
-            <p className="text-black/60">No mechanics found</p>
+
+            <div className="space-y-2 text-sm">
+              <p><span className="text-black/60">Email:</span> <span className="text-black">{member.email}</span></p>
+              <p><span className="text-black/60">Phone:</span> <span className="text-black">{member.phone}</span></p>
+              <p><span className="text-black/60">Experience:</span> <span className="text-black">{member.experienceYears || '-'} years</span></p>
+              <p><span className="text-black/60">Active jobs:</span> <span className="text-black">{member.activeJobCount || 0}</span></p>
+              <span className="inline-flex rounded-full bg-[#ffe7df] px-2 py-1 text-xs font-medium text-[#ff5d2e]">
+                {member.status || 'AVAILABLE'}
+              </span>
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => openEdit(member)} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-black/10 px-3 py-2 text-sm text-black hover:bg-black/5">
+                <Edit2 className="h-4 w-4" /> Edit
+              </button>
+              <button onClick={() => openSchedule(member)} className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-black/10 px-3 py-2 text-sm text-black hover:bg-black/5">
+                <CalendarDays className="h-4 w-4" /> Schedule
+              </button>
+              <button onClick={() => deactivateStaff(member)} className="rounded-lg border border-red-100 px-3 py-2 text-red-600 hover:bg-red-50">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-black mb-4">Add New Mechanic</h2>
-            
-            <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Full Name"
-                value={formData.fullName}
-                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
-              />
-              <input
-                type="email"
-                placeholder="Email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
-              />
-              <input
-                type="tel"
-                placeholder="Phone"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
-              />
-              <input
-                type="text"
-                placeholder="Specialization (e.g., Engine, Electrical)"
-                value={formData.specialization}
-                onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
-              />
-              <input
-                type="number"
-                placeholder="Years of Experience"
-                value={formData.experienceYears}
-                onChange={(e) => setFormData({ ...formData, experienceYears: e.target.value })}
-                className="w-full px-3 py-2 bg-white border border-black/10 rounded-lg text-sm focus:outline-none focus:border-[#ff5d2e]"
-              />
-            </div>
-
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => setShowModal(false)}
-                className="flex-1 px-4 py-2 bg-black/5 text-black rounded-lg hover:bg-black/10 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddMechanic}
-                className="flex-1 px-4 py-2 bg-[#ff5d2e] text-white rounded-lg hover:bg-[#e64d1e] transition-colors"
-              >
-                Add Mechanic
-              </button>
-            </div>
-          </div>
+      {!filteredStaff.length && (
+        <div className="rounded-lg border border-black/10 bg-white py-10 text-center">
+          <Wrench className="mx-auto mb-3 h-12 w-12 text-black/20" />
+          <p className="text-black/60">No staff found</p>
         </div>
       )}
+
+      {showStaffModal && (
+        <StaffModal
+          title={editing ? 'Edit Staff Member' : 'Add Staff Member'}
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeForm}
+          onSave={saveStaff}
+        />
+      )}
+
+      {scheduleFor && (
+        <ScheduleModal
+          member={scheduleFor}
+          workingHours={workingHours}
+          setWorkingHours={setWorkingHours}
+          unavailableBlocks={unavailableBlocks}
+          setUnavailableBlocks={setUnavailableBlocks}
+          onClose={() => setScheduleFor(null)}
+          onSave={saveSchedule}
+        />
+      )}
+    </div>
+  );
+}
+
+function StaffModal({ title, formData, setFormData, onClose, onSave }: any) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-lg bg-white p-6">
+        <h2 className="mb-4 text-xl font-bold text-black">{title}</h2>
+        <div className="space-y-3">
+          {[
+            ['fullName', 'Full Name', 'text'],
+            ['email', 'Email', 'email'],
+            ['phone', 'Phone', 'tel'],
+            ['specialization', 'Specialization / skills', 'text'],
+            ['experienceYears', 'Years of Experience', 'number'],
+          ].map(([key, placeholder, type]) => (
+            <input
+              key={key}
+              type={type}
+              placeholder={placeholder}
+              value={formData[key]}
+              onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-[#ff5d2e] focus:outline-none"
+            />
+          ))}
+          <select
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-[#ff5d2e] focus:outline-none"
+          >
+            <option value="AVAILABLE">Available</option>
+            <option value="BUSY">Busy</option>
+            <option value="ON_LEAVE">On leave</option>
+          </select>
+          <label className="flex items-center gap-2 text-sm text-black">
+            <input type="checkbox" checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />
+            Active staff member
+          </label>
+        </div>
+        <div className="mt-6 flex gap-3">
+          <button onClick={onClose} className="flex-1 rounded-lg bg-black/5 px-4 py-2 text-black hover:bg-black/10">Cancel</button>
+          <button onClick={onSave} className="flex-1 rounded-lg bg-[#ff5d2e] px-4 py-2 text-white hover:bg-[#e64d1e]">Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleModal({ member, workingHours, setWorkingHours, unavailableBlocks, setUnavailableBlocks, onClose, onSave }: any) {
+  const updateWorkingHour = (index: number, key: string, value: string) => {
+    const next = [...workingHours];
+    next[index] = { ...next[index], [key]: value };
+    setWorkingHours(next);
+  };
+
+  const addUnavailableBlock = () => {
+    setUnavailableBlocks([
+      ...unavailableBlocks,
+      { startsAt: new Date().toISOString().slice(0, 16), endsAt: new Date(Date.now() + 3600000).toISOString().slice(0, 16), reason: '' },
+    ]);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6">
+        <h2 className="text-xl font-bold text-black">{member.fullName} Schedule</h2>
+        <p className="mb-4 text-sm text-black/60">Working days, shift windows, and unavailable blocks.</p>
+
+        <div className="space-y-3">
+          {workingHours.map((row: any, index: number) => (
+            <div key={`${row.dayOfWeek}-${index}`} className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <select value={row.dayOfWeek} onChange={(e) => updateWorkingHour(index, 'dayOfWeek', e.target.value)} className="rounded-lg border border-black/10 px-3 py-2 text-sm">
+                {['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'].map((day) => <option key={day}>{day}</option>)}
+              </select>
+              <input type="time" value={row.shiftStart} onChange={(e) => updateWorkingHour(index, 'shiftStart', e.target.value)} className="rounded-lg border border-black/10 px-3 py-2 text-sm" />
+              <input type="time" value={row.shiftEnd} onChange={(e) => updateWorkingHour(index, 'shiftEnd', e.target.value)} className="rounded-lg border border-black/10 px-3 py-2 text-sm" />
+            </div>
+          ))}
+          <button onClick={() => setWorkingHours([...workingHours, { dayOfWeek: 'SATURDAY', shiftStart: '09:00', shiftEnd: '13:00' }])} className="rounded-lg border border-black/10 px-3 py-2 text-sm text-black hover:bg-black/5">
+            Add working day
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-semibold text-black">Unavailable Blocks</h3>
+            <button onClick={addUnavailableBlock} className="rounded-lg border border-black/10 px-3 py-2 text-sm text-black hover:bg-black/5">Add block</button>
+          </div>
+          <div className="space-y-3">
+            {unavailableBlocks.map((block: any, index: number) => (
+              <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+                <input type="datetime-local" value={String(block.startsAt).slice(0, 16)} onChange={(e) => {
+                  const next = [...unavailableBlocks];
+                  next[index] = { ...next[index], startsAt: e.target.value };
+                  setUnavailableBlocks(next);
+                }} className="rounded-lg border border-black/10 px-3 py-2 text-sm" />
+                <input type="datetime-local" value={String(block.endsAt).slice(0, 16)} onChange={(e) => {
+                  const next = [...unavailableBlocks];
+                  next[index] = { ...next[index], endsAt: e.target.value };
+                  setUnavailableBlocks(next);
+                }} className="rounded-lg border border-black/10 px-3 py-2 text-sm" />
+                <input placeholder="Reason" value={block.reason || ''} onChange={(e) => {
+                  const next = [...unavailableBlocks];
+                  next[index] = { ...next[index], reason: e.target.value };
+                  setUnavailableBlocks(next);
+                }} className="rounded-lg border border-black/10 px-3 py-2 text-sm" />
+                <button onClick={() => setUnavailableBlocks(unavailableBlocks.filter((_: any, i: number) => i !== index))} className="rounded-lg border border-red-100 px-3 py-2 text-red-600 hover:bg-red-50">Remove</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button onClick={onClose} className="flex-1 rounded-lg bg-black/5 px-4 py-2 text-black hover:bg-black/10">Cancel</button>
+          <button onClick={onSave} className="flex-1 rounded-lg bg-[#ff5d2e] px-4 py-2 text-white hover:bg-[#e64d1e]">Save Schedule</button>
+        </div>
+      </div>
     </div>
   );
 }

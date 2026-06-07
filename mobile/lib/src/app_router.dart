@@ -11,6 +11,7 @@ import 'features/auth/signup_step2_screen.dart';
 import 'features/auth/signup_step3_screen.dart';
 import 'shared/main_navigation_screen.dart';
 import 'features/worker/worker_dashboard_screen.dart';
+import 'features/worker/worker_chat_screen.dart';
 import 'features/admin/admin_dashboard_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -66,6 +67,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/worker',
         builder: (context, state) => const WorkerDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/worker/chat/:appointmentId',
+        builder: (context, state) => WorkerChatScreen(
+          appointmentId: int.parse(state.pathParameters['appointmentId']!),
+        ),
       ),
       GoRoute(
         path: '/admin',
