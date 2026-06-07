@@ -9,6 +9,8 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import AuthCallback from './pages/AuthCallback'
 import AdminSetup from './pages/AdminSetup'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 // Main app pages (responsive - works on both mobile and desktop)
 import HomePage from './pages/HomePage'
@@ -53,8 +55,13 @@ function App() {
             element={<Signup />}
           />
 
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+
           {/* OAuth callback route */}
           <Route path="/auth/callback" element={<AuthCallback />} />
+
+          {/* Password reset route - public because Supabase recovery links create a temporary session */}
+          <Route path="/reset-password" element={<ResetPassword />} />
 
           {/* Admin setup page - for creating admin users */}
           <Route path="/admin-setup" element={<AdminSetup />} />
