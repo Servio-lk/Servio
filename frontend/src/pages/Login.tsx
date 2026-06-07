@@ -98,9 +98,15 @@ function LoginButton({ onClick, disabled }: { onClick: () => void; disabled?: bo
 }
 
 function ForgotPassword() {
+  const navigate = useNavigate();
+
   return (
     <div className="flex justify-center w-full">
-      <button className="text-xs md:text-sm text-gray-600 hover:text-gray-900 underline">
+      <button
+        type="button"
+        onClick={() => navigate("/forgot-password")}
+        className="text-xs md:text-sm text-gray-600 hover:text-gray-900 underline"
+      >
         Forgot Password?
       </button>
     </div>
