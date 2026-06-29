@@ -206,6 +206,39 @@ class SupabaseService {
     return null;
   }
 
+  Future<bool> reportMechanicErrorToBackend(String email) async {
+    final checkedUrls = <String>{};
+    final baseUrls = [
+      ApiConfig.apiBaseUrl,
+      ...ApiConfig.fallbackApiBaseUrls,
+    ].where((url) => checkedUrls.add(url)).toList();
+
+    for (final baseUrl in baseUrls) {
+      try {
+        final uri = Uri.parse('$baseUrl/auth/mechanic-registration/report-error');
+        final client = HttpClient()
+          ..connectionTimeout = const Duration(milliseconds: 1200);
+
+        try {
+          final request = await client.postUrl(uri);
+          request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+          request.write(jsonEncode({'email': email}));
+          final response = await request.close().timeout(
+            const Duration(milliseconds: 1800),
+          );
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            return true;
+          }
+        } finally {
+          client.close(force: true);
+        }
+      } catch (e) {
+        debugPrint('Report error failed for $baseUrl: $e');
+      }
+    }
+    return false;
+  }
+
   Future<Map<String, dynamic>?> getCurrentMechanic() async {
     final email = currentUser?.email;
     if (email == null) return null;

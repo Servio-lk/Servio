@@ -43,7 +43,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/supabase-login",
-                                "/api/auth/mechanic-registration", "/api/health", "/error")
+                                "/api/auth/mechanic-registration", "/api/auth/mechanic-registration/report-error", "/api/health", "/error")
                         .permitAll()
                         // Swagger OpenAPI
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()

@@ -101,6 +101,20 @@ public class AuthController {
                         .body(ApiResponse.error("No mechanic registration found for this email", null)));
     }
 
+    @PostMapping("/mechanic-registration/report-error")
+    @Operation(summary = "Report incorrect mechanic registration information to admin")
+    public ResponseEntity<ApiResponse<String>> reportMechanicRegistrationError(
+            @Valid @RequestBody com.servio.auth.dto.ReportErrorRequest request
+    ) {
+        try {
+            mechanicService.reportRegistrationError(request.getEmail());
+            return ResponseEntity.ok(ApiResponse.success("Error reported to admin successfully", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to report error: " + e.getMessage(), null));
+        }
+    }
+
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile(Authentication authentication) {
         try {

@@ -24,6 +24,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import com.servio.auth.repository.UserRepository;
+import com.servio.auth.entity.Role;
+import com.servio.notification.repository.NotificationRepository;
+import com.servio.notification.entity.Notification;
+import com.servio.auth.entity.User;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -34,6 +40,8 @@ public class MechanicService {
     private final RepairJobRepository repairJobRepository;
     private final MechanicStaffDetailsRepository staffDetailsRepository;
     private final MechanicDocumentRepository documentRepository;
+    private final UserRepository userRepository;
+    private final NotificationRepository notificationRepository;
 
     public MechanicDto createMechanic(MechanicDto dto) {
         validateMechanic(dto);
@@ -349,5 +357,24 @@ public class MechanicService {
                 .bytes(document.getBytes())
                 .uploadedAt(document.getUploadedAt())
                 .build();
+    }
+
+    public void reportRegistrationError(String email) {
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (admins.isEmpty()) {
+            return;
+        }
+
+        List<Notification> notifications = admins.stream()
+                .map(admin -> Notification.builder()
+                        .user(admin)
+                        .title("Mechanic Info Correction Requested")
+                        .message("Mechanic " + email + " reported incorrect pre-registered information.")
+                        .type("ALERT")
+                        .isRead(false)
+                        .build())
+                .collect(Collectors.toList());
+
+        notificationRepository.saveAll(notifications);
     }
 }

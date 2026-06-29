@@ -408,26 +408,28 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                             const SizedBox(height: 8),
                             // Don't have account
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 4,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () => context.go('/signup'),
-                                  child: Text(
-                                    "Don't have an account? Sign Up",
-                                    style: GoogleFonts.instrumentSans(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black.withOpacity(0.7),
-                                      height: 22 / 14,
+                            if (widget.allowedRole == null || widget.allowedRole == 'MECHANIC')
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () => context.go('/signup'),
+                                    child: Text(
+                                      "Don't have an account? Sign Up",
+                                      style: GoogleFonts.instrumentSans(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black.withOpacity(0.7),
+                                        height: 22 / 14,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
+                            if (widget.allowedRole == null || widget.allowedRole == 'MECHANIC')
+                              const SizedBox(height: 16),
                             // Divider with "or"
                             Padding(
                               padding: const EdgeInsets.symmetric(vertical: 4),
