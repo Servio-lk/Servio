@@ -3,10 +3,12 @@ package com.servio.controller;
 import com.servio.dto.*;
 import com.servio.service.MechanicScheduleService;
 import com.servio.service.MechanicService;
+import com.servio.service.StaffCloudinaryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,10 +19,16 @@ import java.util.List;
 public class AdminStaffController {
     private final MechanicService mechanicService;
     private final MechanicScheduleService scheduleService;
+    private final StaffCloudinaryService staffCloudinaryService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<MechanicDto>>> getStaff() {
         return ResponseEntity.ok(ApiResponse.success("Staff retrieved successfully", mechanicService.getAllMechanics()));
+    }
+
+    @GetMapping("/next-employee-code")
+    public ResponseEntity<ApiResponse<String>> getNextEmployeeCode() {
+        return ResponseEntity.ok(ApiResponse.success("Employee code generated successfully", mechanicService.generateNextEmployeeCode()));
     }
 
     @PostMapping
@@ -59,6 +67,20 @@ public class AdminStaffController {
             return ResponseEntity.ok(ApiResponse.success("Schedule updated successfully", scheduleService.updateSchedule(id, request)));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to update schedule", e.getMessage()));
+        }
+    }
+
+    @PostMapping(value = "/uploads", consumes = "multipart/form-data")
+    public ResponseEntity<ApiResponse<StaffFileUploadResponse>> uploadStaffFile(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam String documentType,
+            @RequestParam(required = false) Long staffId
+    ) {
+        try {
+            StaffFileUploadResponse uploaded = staffCloudinaryService.uploadStaffFile(file, documentType, staffId);
+            return ResponseEntity.ok(ApiResponse.success("File uploaded successfully", uploaded));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to upload file", e.getMessage()));
         }
     }
 }

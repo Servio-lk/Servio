@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthGuard, GuestGuard } from '@/components/AuthGuard'
-import { AdminGuard } from '@/components/AdminGuard'
 
 // Auth pages
 import Login from './pages/Login'
@@ -17,23 +16,13 @@ import HomePage from './pages/HomePage'
 import ServicesPage from './pages/ServicesPage'
 import ServiceDetailPage from './pages/ServiceDetailPage'
 import ActivityPage from './pages/ActivityPage'
+import MessagesPage from './pages/MessagesPage'
 import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 import AccountPage from './pages/AccountPage'
 
-// Admin pages
-import { AdminAppLayout } from './components/layouts/AdminAppLayout'
-import { AdminDashboard } from './pages/admin/Dashboard'
-import { AdminServices } from './pages/admin/Services'
-import { AdminOffers } from './pages/admin/Offers'
-import { AdminAppointments } from './pages/admin/Appointments'
-import { AdminCustomers } from './pages/admin/Customers'
-import AdminCalendar from './pages/admin/AdminCalendar'
-import { AdminInventory } from './pages/admin/Inventory'
-import { AdminBilling } from './pages/admin/Billing'
-import { AdminMechanics } from './pages/admin/Mechanics'
-
+// Admin pages removed from this frontend
 import './App.css'
 
 function App() {
@@ -104,6 +93,22 @@ function App() {
             }
           />
           <Route
+            path="/messages"
+            element={
+              <AuthGuard>
+                <MessagesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/messages/:appointmentId"
+            element={
+              <AuthGuard>
+                <MessagesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
             path="/book/:id"
             element={
               <AuthGuard>
@@ -130,31 +135,13 @@ function App() {
             }
           />
 
-          {/* Admin routes - protected by AdminGuard */}
-          <Route
-            path="/admin"
-            element={
-              <AdminGuard>
-                <AdminAppLayout />
-              </AdminGuard>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="services" element={<AdminServices />} />
-            <Route path="offers" element={<AdminOffers />} />
-            <Route path="appointments" element={<AdminAppointments />} />
-            <Route path="customers" element={<AdminCustomers />} />
-            <Route path="calendar" element={<AdminCalendar />} />
-            <Route path="inventory" element={<AdminInventory />} />
-            <Route path="billing" element={<AdminBilling />} />
-            <Route path="staff" element={<AdminMechanics />} />
-            <Route path="mechanics" element={<AdminMechanics />} />
-          </Route>
+          {/* Admin routes removed */}
 
           {/* Redirect old mobile routes to new unified routes */}
           <Route path="/mobile/home" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/services" element={<Navigate to="/services" replace />} />
           <Route path="/mobile/activity" element={<Navigate to="/activity" replace />} />
+          <Route path="/mobile/messages" element={<Navigate to="/messages" replace />} />
           <Route path="/mobile/service/:id" element={<Navigate to="/services/:id" replace />} />
           <Route path="/mobile/choose-time" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/checkout" element={<Navigate to="/home" replace />} />

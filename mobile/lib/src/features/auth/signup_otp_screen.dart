@@ -132,14 +132,42 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
 
       final name = (widget.extras?['name'] as String?)?.trim() ?? '';
       final phone = (widget.extras?['phone'] as String?)?.trim() ?? '';
+      final registeredMechanic = await _supabaseService
+          .getActiveMechanicByEmail(_email);
+      final isMechanicSignup =
+          registeredMechanic != null ||
+          widget.extras?['role']?.toString().toUpperCase() == 'MECHANIC';
+      final role = isMechanicSignup ? 'MECHANIC' : 'CUSTOMER';
+      final profileName =
+          _nonEmptyText(registeredMechanic?['full_name']) ?? name;
+      final profilePhone = _nonEmptyText(registeredMechanic?['phone']) ?? phone;
 
       try {
         await _supabaseService.client.from('profiles').upsert({
           'id': user.id,
           'email': _email,
-          if (name.isNotEmpty) 'full_name': name,
-          if (phone.isNotEmpty) 'phone': phone,
+          if (profileName.isNotEmpty) 'full_name': profileName,
+          if (profilePhone.isNotEmpty) 'phone': profilePhone,
+          'role': role,
+          'is_admin': false,
         }, onConflict: 'id');
+
+        await _supabaseService.updateUserProfile(
+          data: {
+            'role': role,
+            if (profileName.isNotEmpty) 'full_name': profileName,
+            if (profilePhone.isNotEmpty) 'phone': profilePhone,
+          },
+        );
+
+        if (isMechanicSignup && registeredMechanic != null) {
+          await _supabaseService.syncMechanicProfile(
+            user: user,
+            mechanic: registeredMechanic,
+            fallbackName: profileName,
+            fallbackPhone: profilePhone,
+          );
+        }
 
         final profileRow = await _supabaseService.client
             .from('profiles')
@@ -158,11 +186,19 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
 
       _showSnackBar(
         hasFollowUpWarning
-            ? 'Email verified. Continue setup; we will complete your profile shortly.'
+            ? isMechanicSignup
+                  ? 'Email verified. Opening your mechanic workspace now.'
+                  : 'Email verified. Continue setup; we will complete your profile shortly.'
+            : isMechanicSignup
+            ? 'Mechanic account verified!'
             : 'Email verified!',
         isError: false,
       );
-      context.go('/signup/vehicle', extra: widget.extras);
+      if (isMechanicSignup) {
+        context.go('/worker');
+      } else {
+        context.go('/signup/vehicle', extra: widget.extras);
+      }
     } catch (e) {
       if (mounted) {
         _showSnackBar('Email verification failed. Please try again.');
@@ -200,6 +236,11 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
         duration: const Duration(seconds: 3),
       ),
     );
+  }
+
+  String? _nonEmptyText(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
   }
 
   @override
@@ -246,45 +287,45 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
                         if (i > 0) const SizedBox(width: 8),
                         Expanded(
                           child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE7DF),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.white),
-                          ),
-                          child: TextField(
-                            controller: _otpControllers[i],
-                            focusNode: _focusNodes[i],
-                            keyboardType: TextInputType.number,
-                            textAlign: TextAlign.center,
-                            maxLength: 1,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            style: GoogleFonts.instrumentSans(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFE7DF),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.white),
                             ),
-                            decoration: const InputDecoration(
-                              counterText: '',
-                              border: InputBorder.none,
+                            child: TextField(
+                              controller: _otpControllers[i],
+                              focusNode: _focusNodes[i],
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              maxLength: 1,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              style: GoogleFonts.instrumentSans(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                              decoration: const InputDecoration(
+                                counterText: '',
+                                border: InputBorder.none,
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty && i < _otpLength - 1) {
+                                  _focusNodes[i + 1].requestFocus();
+                                } else if (value.isEmpty && i > 0) {
+                                  _focusNodes[i - 1].requestFocus();
+                                }
+                                // Auto-submit on last digit
+                                if (value.isNotEmpty &&
+                                    i == _otpLength - 1 &&
+                                    _otpCode.length == _otpLength) {
+                                  _handleVerify();
+                                }
+                              },
                             ),
-                            onChanged: (value) {
-                              if (value.isNotEmpty && i < _otpLength - 1) {
-                                _focusNodes[i + 1].requestFocus();
-                              } else if (value.isEmpty && i > 0) {
-                                _focusNodes[i - 1].requestFocus();
-                              }
-                              // Auto-submit on last digit
-                              if (value.isNotEmpty &&
-                                  i == _otpLength - 1 &&
-                                  _otpCode.length == _otpLength) {
-                                _handleVerify();
-                              }
-                            },
                           ),
                         ),
-                      ),
                       ];
                     }).expand((widgets) => widgets).toList(),
                   ),

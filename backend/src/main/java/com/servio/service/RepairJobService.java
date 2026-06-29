@@ -60,6 +60,21 @@ public class RepairJobService {
         
         return savedJob;
     }
+
+    public RepairJob getOrCreateRepairJobForAppointment(Long appointmentId) {
+        return repairJobRepository.findFirstByAppointmentId(appointmentId)
+                .orElseGet(() -> {
+                    Appointment appointment = appointmentRepository.findById(appointmentId)
+                            .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                    return createRepairJob(
+                            appointmentId,
+                            appointment.getServiceType(),
+                            appointment.getNotes(),
+                            null,
+                            appointment.getEstimatedCost()
+                    );
+                });
+    }
     
     public RepairJob updateRepairJobStatus(Long repairJobId, String newStatus) {
         RepairJob repairJob = repairJobRepository.findById(repairJobId)

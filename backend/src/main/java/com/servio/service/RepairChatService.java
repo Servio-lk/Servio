@@ -20,6 +20,7 @@ public class RepairChatService {
     private final RepairJobRepository repairJobRepository;
     private final MechanicRepository mechanicRepository;
     private final ProfileRepository profileRepository;
+    private final RepairJobService repairJobService;
 
     public RepairConversation getOrCreateConversation(Long repairId) {
         return conversationRepository.findByRepairJobId(repairId)
@@ -31,15 +32,18 @@ public class RepairChatService {
                             .isReadOnly(isClosed(repairJob))
                             .build());
 
-                    if (repairJob.getUser() != null) {
-                        String clientUserId = repairJob.getAppointment() != null
-                                && repairJob.getAppointment().getProfile() != null
-                                ? repairJob.getAppointment().getProfile().getId().toString()
-                                : String.valueOf(repairJob.getUser().getId());
+                    String clientUserId = repairJob.getAppointment() != null
+                            && repairJob.getAppointment().getProfile() != null
+                            ? repairJob.getAppointment().getProfile().getId().toString()
+                            : repairJob.getUser() != null ? String.valueOf(repairJob.getUser().getId()) : null;
+                    if (clientUserId != null) {
+                        String memberRef = repairJob.getUser() != null
+                                ? "user:" + repairJob.getUser().getId()
+                                : "profile:" + clientUserId;
                         ensureMember(
                                 conversation,
                                 ConversationMemberRole.CLIENT,
-                                "user:" + repairJob.getUser().getId(),
+                                memberRef,
                                 clientUserId,
                                 null,
                                 true
@@ -54,6 +58,14 @@ public class RepairChatService {
 
     public RepairConversationDto getConversationDto(Long repairId, Authentication authentication) {
         RepairConversation conversation = getOrCreateConversation(repairId);
+        requireReadAccess(conversation, authentication);
+        return toConversationDto(conversation);
+    }
+
+    public RepairConversationDto getConversationByAppointment(Long appointmentId, Authentication authentication) {
+        RepairJob repairJob = repairJobRepository.findFirstByAppointmentId(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Repair chat is not available for this appointment yet"));
+        RepairConversation conversation = getOrCreateConversation(repairJob.getId());
         requireReadAccess(conversation, authentication);
         return toConversationDto(conversation);
     }
@@ -115,6 +127,11 @@ public class RepairChatService {
                 true
         );
         return toConversationDto(conversation);
+    }
+
+    public RepairConversationDto assignMechanicToAppointment(Long appointmentId, Long mechanicId) {
+        RepairJob repairJob = repairJobService.getOrCreateRepairJobForAppointment(appointmentId);
+        return assignMechanic(repairJob.getId(), mechanicId);
     }
 
     private RepairConversationMember ensureMember(

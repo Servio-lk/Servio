@@ -1,5 +1,8 @@
 -- Repair chat, conversation membership, and mechanic scheduling.
 
+ALTER TABLE repair_jobs ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE repair_jobs ALTER COLUMN vehicle_id DROP NOT NULL;
+
 CREATE TABLE IF NOT EXISTS repair_conversations (
     id BIGSERIAL PRIMARY KEY,
     repair_job_id BIGINT NOT NULL UNIQUE REFERENCES repair_jobs(id) ON DELETE CASCADE,

@@ -1,7 +1,9 @@
 package com.servio.controller;
 
 import com.servio.dto.ApiResponse;
+import com.servio.dto.AssignMechanicRequest;
 import com.servio.dto.AppointmentDto;
+import com.servio.dto.RepairConversationDto;
 import com.servio.dto.admin.AppointmentUpdateRequest;
 import com.servio.dto.admin.PaymentCollectionRequest;
 import com.servio.entity.Appointment;
@@ -9,6 +11,7 @@ import com.servio.entity.Payment;
 import com.servio.repository.PaymentRepository;
 import com.servio.service.AdminAppointmentService;
 import com.servio.service.AppointmentService;
+import com.servio.service.RepairChatService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,6 +31,7 @@ public class AdminAppointmentController {
     private final AdminAppointmentService adminAppointmentService;
     private final AppointmentService appointmentService;
     private final PaymentRepository paymentRepository;
+    private final RepairChatService repairChatService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
@@ -67,6 +71,21 @@ public class AdminAppointmentController {
         Appointment appointment = adminAppointmentService.getAppointmentById(id);
         AppointmentDto appointmentDto = convertToDto(appointment);
         return ResponseEntity.ok(ApiResponse.success("Payment recorded successfully", appointmentDto));
+    }
+
+    @PostMapping("/{id}/assign-mechanic")
+    public ResponseEntity<ApiResponse<RepairConversationDto>> assignMechanic(
+            @PathVariable Long id,
+            @RequestBody AssignMechanicRequest request) {
+        Appointment appointment = adminAppointmentService.getAppointmentById(id);
+        if (!"CONFIRMED".equalsIgnoreCase(appointment.getStatus())
+                && !"IN_PROGRESS".equalsIgnoreCase(appointment.getStatus())) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Mechanic assignment requires a confirmed appointment", appointment.getStatus()));
+        }
+
+        RepairConversationDto conversation = repairChatService.assignMechanicToAppointment(id, request.getMechanicId());
+        return ResponseEntity.ok(ApiResponse.success("Mechanic assigned successfully", conversation));
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {
@@ -111,4 +130,3 @@ public class AdminAppointmentController {
                 .build();
     }
 }
-

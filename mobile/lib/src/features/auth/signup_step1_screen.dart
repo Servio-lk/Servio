@@ -59,6 +59,24 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
       final password = _passwordController.text;
       final name = _nameController.text.trim();
       final phone = _phoneController.text.trim();
+      final mechanic = await _supabaseService.getActiveMechanicByEmail(email);
+      final isMechanicSignup = mechanic != null;
+      final accountRole = isMechanicSignup ? 'MECHANIC' : 'CUSTOMER';
+      final mechanicName = _nonEmptyText(mechanic?['full_name']);
+      final mechanicPhone = _nonEmptyText(mechanic?['phone']);
+      final profileName = isMechanicSignup ? (mechanicName ?? name) : name;
+      final profilePhone = isMechanicSignup ? (mechanicPhone ?? phone) : phone;
+
+      if (!isMechanicSignup) {
+        if (name.isEmpty) {
+          _showSnackBar('Please enter your name.');
+          return;
+        }
+        if (phone.length != 10) {
+          _showSnackBar('Phone number must be exactly 10 digits.');
+          return;
+        }
+      }
 
       // Start sign-up from a clean auth state to avoid carrying a previous user.
       if (_supabaseService.currentSession != null) {
@@ -69,9 +87,10 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
       await _supabaseService.requestSignupOtp(
         email: email,
         data: {
-          'full_name': name,
-          'display_name': name,
-          'phone': phone,
+          'full_name': profileName,
+          'display_name': profileName,
+          'phone': profilePhone,
+          'role': accountRole,
           'signup_flow': 'otp',
         },
       );
@@ -79,7 +98,9 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
       if (!mounted) return;
 
       _showSnackBar(
-        'Verification code sent. Please check your email.',
+        isMechanicSignup
+            ? 'Mechanic email recognized. Verify your email to open your workspace.'
+            : 'Verification code sent. Please check your email.',
         isError: false,
       );
 
@@ -88,9 +109,11 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
         extra: {
           ...?widget.extras,
           'email': email,
-          'name': name,
-          'phone': phone,
+          'name': profileName,
+          'phone': profilePhone,
           'password': password,
+          'role': accountRole,
+          if (isMechanicSignup) 'mechanicId': mechanic['id'],
         },
       );
     } catch (e) {
@@ -136,6 +159,11 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
     );
   }
 
+  String? _nonEmptyText(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
   @override
   Widget build(BuildContext context) {
     return SignUpScaffold(
@@ -171,9 +199,6 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                     controller: _nameController,
                     hint: 'Chamira Fernando',
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter your name';
-                      }
                       return null;
                     },
                   ),
@@ -208,11 +233,7 @@ class _SignUpStep1ScreenState extends State<SignUpStep1Screen> {
                       LengthLimitingTextInputFormatter(10),
                     ],
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) {
-                        return 'Please enter your phone number';
-                      }
-
-                      if (v.length != 10) {
+                      if (v != null && v.isNotEmpty && v.length != 10) {
                         return 'Phone number must be exactly 10 digits';
                       }
                       return null;

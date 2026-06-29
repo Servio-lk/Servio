@@ -2,11 +2,13 @@ package com.servio.controller;
 
 import com.servio.dto.SignupRequest;
 import com.servio.dto.LoginRequest;
+import com.servio.dto.MechanicRegistrationLookupDto;
 import com.servio.dto.SupabaseLoginRequest;
 import com.servio.dto.UserResponse;
 import com.servio.dto.AuthResponse;
 import com.servio.dto.ApiResponse;
 import com.servio.service.AuthService;
+import com.servio.service.MechanicService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ import java.util.Map;
 @Validated
 public class AuthController {
     private final AuthService authService;
+    private final MechanicService mechanicService;
 
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
@@ -65,6 +68,28 @@ public class AuthController {
                             .message(e.getMessage())
                             .build());
         }
+    }
+
+    @GetMapping("/mechanic-registration")
+    public ResponseEntity<ApiResponse<MechanicRegistrationLookupDto>> mechanicRegistration(
+            @RequestParam String email
+    ) {
+        return mechanicService.findRegistrationByEmail(email)
+                .map(mechanic -> {
+                    if (Boolean.FALSE.equals(mechanic.getIsActive())) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                .body(ApiResponse.<MechanicRegistrationLookupDto>error(
+                                        "Mechanic registration is inactive",
+                                        null
+                                ));
+                    }
+
+                    return ResponseEntity.ok(
+                            ApiResponse.success("Mechanic registration found", mechanic)
+                    );
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(ApiResponse.error("No mechanic registration found for this email", null)));
     }
 
     @GetMapping("/profile")

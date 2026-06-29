@@ -6,6 +6,8 @@ class AppointmentModel {
   final int? vehicleId;
   final String? vehicleMake;
   final String? vehicleModel;
+  final int? vehicleYear;
+  final String? licensePlate;
   final String serviceType;
   final DateTime appointmentDate;
   final String status; // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
@@ -21,6 +23,8 @@ class AppointmentModel {
     this.vehicleId,
     this.vehicleMake,
     this.vehicleModel,
+    this.vehicleYear,
+    this.licensePlate,
     required this.serviceType,
     required this.appointmentDate,
     required this.status,
@@ -41,6 +45,8 @@ class AppointmentModel {
       vehicleId: json['vehicle_id'] as int?,
       vehicleMake: vehicle?['make'] as String?,
       vehicleModel: vehicle?['model'] as String?,
+      vehicleYear: vehicle?['year'] as int?,
+      licensePlate: vehicle?['license_plate'] as String?,
       serviceType: json['service_type'] as String,
       appointmentDate: DateTime.parse(json['appointment_date'] as String),
       status: (json['status'] as String?) ?? 'PENDING',
@@ -63,9 +69,15 @@ class AppointmentModel {
 
   String get vehicleDisplay {
     if (vehicleMake != null && vehicleModel != null) {
-      return '$vehicleMake $vehicleModel';
+      final year = vehicleYear;
+      return '$vehicleMake $vehicleModel${year != null ? ' $year' : ''}';
     }
     return 'Vehicle';
+  }
+
+  String get plateDisplay {
+    final plate = licensePlate?.trim();
+    return plate == null || plate.isEmpty ? 'JOB-$id' : plate.toUpperCase();
   }
 
   String get formattedDate {

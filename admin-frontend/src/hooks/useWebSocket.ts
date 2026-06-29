@@ -1,0 +1,97 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { Client } from '@stomp/stompjs';
+import type { IMessage } from '@stomp/stompjs';
+
+const apiBase = (() => {
+  let envApi = import.meta.env.VITE_API_URL;
+
+  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalEnvApi && !isLocalHost) {
+    envApi = undefined;
+  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
+  if (envApi) {
+    return envApi;
+  }
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  return `${window.location.origin}/api`;
+})();
+
+const BASE_URL = apiBase
+  .replace(/^https/, 'wss')
+  .replace(/^http/, 'ws');
+const WS_URL = `${BASE_URL}/ws`;
+
+export interface AppointmentEvent {
+  type: 'CREATED' | 'UPDATED' | 'CANCELLED' | 'DELETED';
+  appointmentId: number;
+  userId: number | null;
+  serviceType: string;
+  status: string;
+  appointmentDate: string;
+}
+
+/**
+ * Subscribes to one or more STOMP topics and fires `onEvent` whenever a
+ * message arrives.  The connection is torn down on unmount.
+ *
+ * Usage:
+ *   useWebSocket(['/topic/appointments/user/7'], (event) => refresh());
+ */
+export function useWebSocket(
+  topics: string[],
+  onEvent: (event: AppointmentEvent) => void,
+) {
+  const clientRef = useRef<Client | null>(null);
+  // Keep a stable reference to the latest callback so we never need to
+  // reconnect just because the callback identity changed.
+  const onEventRef = useRef(onEvent);
+  useEffect(() => { onEventRef.current = onEvent; }, [onEvent]);
+
+  const connect = useCallback(() => {
+    if (clientRef.current?.active) return;
+
+    const client = new Client({
+      // Native WebSocket — no SockJS needed, works directly with Vite ESM
+      brokerURL: WS_URL,
+      reconnectDelay: 5000,
+      onConnect: () => {
+        topics.forEach(topic => {
+          client.subscribe(topic, (msg: IMessage) => {
+            try {
+              const event: AppointmentEvent = JSON.parse(msg.body);
+              onEventRef.current(event);
+            } catch {
+              // malformed message — ignore
+            }
+          });
+        });
+      },
+      onStompError: (frame) => {
+        console.warn('[WS] STOMP error', frame.headers['message']);
+      },
+    });
+
+    client.activate();
+    clientRef.current = client;
+  }, // eslint-disable-next-line react-hooks/exhaustive-deps
+  [topics.join(',')]);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      clientRef.current?.deactivate();
+      clientRef.current = null;
+    };
+  }, [connect]);
+}

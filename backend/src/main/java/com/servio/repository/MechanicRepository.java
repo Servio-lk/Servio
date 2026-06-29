@@ -11,6 +11,8 @@ import java.util.Optional;
 public interface MechanicRepository extends JpaRepository<Mechanic, Long> {
     Optional<Mechanic> findByEmail(String email);
 
+    Optional<Mechanic> findByEmailIgnoreCase(String email);
+
     List<Mechanic> findByStatus(MechanicStatus status);
 
     List<Mechanic> findBySpecialization(String specialization);

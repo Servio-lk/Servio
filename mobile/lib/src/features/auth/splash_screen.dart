@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/services/supabase_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -50,11 +51,30 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (mounted) {
-        context.go('/onboarding');
-      }
-    });
+    Future.delayed(const Duration(milliseconds: 2500), _routeAfterSplash);
+  }
+
+  Future<void> _routeAfterSplash() async {
+    if (!mounted) return;
+
+    final supabaseService = SupabaseService();
+    final user = supabaseService.currentUser;
+    if (user == null) {
+      context.go('/onboarding');
+      return;
+    }
+
+    final profile = await supabaseService.getUserProfile(user.id);
+    final role = await supabaseService.resolveUserRole(user, profile: profile);
+    if (!mounted) return;
+
+    if (role == 'MECHANIC') {
+      context.go('/worker');
+    } else if (role == 'ADMIN') {
+      context.go('/admin');
+    } else {
+      context.go('/home');
+    }
   }
 
   @override
@@ -72,10 +92,7 @@ class _SplashScreenState extends State<SplashScreen>
           opacity: _fadeAnimation,
           child: ScaleTransition(
             scale: _scaleAnimation,
-            child: SvgPicture.asset(
-              'assets/Servio_Logo.svg',
-              width: 180,
-            ),
+            child: SvgPicture.asset('assets/Servio_Logo.svg', width: 180),
           ),
         ),
       ),

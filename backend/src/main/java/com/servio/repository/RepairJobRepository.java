@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface RepairJobRepository extends JpaRepository<RepairJob, Long> {
@@ -24,6 +25,8 @@ public interface RepairJobRepository extends JpaRepository<RepairJob, Long> {
     
     @Query("SELECT r FROM RepairJob r WHERE r.appointment.id = :appointmentId")
     RepairJob findByAppointmentId(@Param("appointmentId") Long appointmentId);
+
+    Optional<RepairJob> findFirstByAppointmentId(Long appointmentId);
 
     long countByAssignedTechnicianIdAndStatusNotIn(Long assignedTechnicianId, List<String> statuses);
 }

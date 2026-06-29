@@ -41,7 +41,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/supabase-login",
-                                "/api/health", "/error")
+                                "/api/auth/mechanic-registration", "/api/health", "/error")
                         .permitAll()
                         .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show User;
 import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
 
@@ -170,23 +171,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
         if (response.user != null && mounted) {
           _showSnackBar('Welcome back!', isError: false);
-
-          final profile = await _supabaseService.getUserProfile(
-            response.user!.id,
-          );
-          if (!mounted) return;
-
-          final role = profile != null
-              ? profile['role']?.toString().toUpperCase()
-              : 'CUSTOMER';
-
-          if (role == 'MECHANIC') {
-            context.go('/worker');
-          } else if (role == 'ADMIN') {
-            context.go('/admin');
-          } else {
-            context.go('/home');
-          }
+          await _routeSignedInUser(response.user!);
         } else if (mounted) {
           _showSnackBar('Login failed. Please check your credentials.');
         }
@@ -222,18 +207,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         _showSnackBar('Signed in with Google!', isError: false);
         final user = _supabaseService.currentUser;
         if (user != null) {
-          final profile = await _supabaseService.getUserProfile(user.id);
-          if (!mounted) return;
-          final role = profile != null
-              ? profile['role']?.toString().toUpperCase()
-              : 'CUSTOMER';
-          if (role == 'MECHANIC') {
-            context.go('/worker');
-          } else if (role == 'ADMIN') {
-            context.go('/admin');
-          } else {
-            context.go('/home');
-          }
+          await _routeSignedInUser(user);
         } else {
           context.go('/home');
         }
@@ -255,18 +229,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         _showSnackBar('Signed in with Facebook!', isError: false);
         final user = _supabaseService.currentUser;
         if (user != null) {
-          final profile = await _supabaseService.getUserProfile(user.id);
-          if (!mounted) return;
-          final role = profile != null
-              ? profile['role']?.toString().toUpperCase()
-              : 'CUSTOMER';
-          if (role == 'MECHANIC') {
-            context.go('/worker');
-          } else if (role == 'ADMIN') {
-            context.go('/admin');
-          } else {
-            context.go('/home');
-          }
+          await _routeSignedInUser(user);
         } else {
           context.go('/home');
         }
@@ -296,6 +259,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       }
     } catch (e) {
       if (mounted) _showSnackBar('Failed to send password reset email.');
+    }
+  }
+
+  Future<void> _routeSignedInUser(User user) async {
+    final profile = await _supabaseService.getUserProfile(user.id);
+    final role = await _supabaseService.resolveUserRole(user, profile: profile);
+
+    if (!mounted) return;
+
+    if (role == 'MECHANIC') {
+      context.go('/worker');
+    } else if (role == 'ADMIN') {
+      context.go('/admin');
+    } else {
+      context.go('/home');
     }
   }
 
