@@ -167,10 +167,7 @@ public class AuthService {
             // supabaseUserId was not a valid UUID
         }
 
-        // If profile didn't indicate admin, check the request role as fallback
-        if (resolvedRole != Role.ADMIN && "ADMIN".equalsIgnoreCase(request.getRole())) {
-            resolvedRole = Role.ADMIN;
-        }
+
 
         final String finalDisplayName = displayName;
         final Role finalRole = resolvedRole;

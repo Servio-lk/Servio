@@ -252,13 +252,12 @@ function LoginForm() {
           fullName: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email || email,
           phone: user.user_metadata?.phone || null,
-          role: user.user_metadata?.role?.toUpperCase() || (email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
+          role: 'USER',
         };
 
-        const isAdminRole = user.user_metadata?.role?.toUpperCase() === 'ADMIN' || email === 'admin@servio.lk';
         login(userData, session);
         toast.success("Welcome back!");
-        navigate(isAdminRole ? '/admin' : '/home');
+        navigate('/home');
       }
     } catch (err: any) {
       console.error("Login error:", err);
