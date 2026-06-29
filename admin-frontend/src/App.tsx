@@ -1,7 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { AuthGuard, GuestGuard } from '@/components/AuthGuard'
+import { GuestGuard } from '@/components/AuthGuard'
 import { AdminGuard } from '@/components/AdminGuard'
 
 // Auth pages

@@ -43,6 +43,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/supabase-login",
                                 "/api/auth/mechanic-registration", "/api/health", "/error")
                         .permitAll()
+                        // Swagger OpenAPI
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                        // Actuator public
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Public availability endpoint — no auth needed to check free slots
@@ -53,6 +57,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws", "/ws/**", "/ws-sockjs/**").permitAll()
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
+                        .requestMatchers("/actuator/metrics/**", "/actuator/prometheus").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

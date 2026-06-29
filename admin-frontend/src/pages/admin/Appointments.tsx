@@ -4,7 +4,6 @@ import {
   Calendar, Filter, Clock, CreditCard, Banknote,
   CheckCircle, ChevronDown, X, AlertCircle, RefreshCw,
 } from 'lucide-react';
-import { UserGear } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 
 // Valid status transitions per current status
