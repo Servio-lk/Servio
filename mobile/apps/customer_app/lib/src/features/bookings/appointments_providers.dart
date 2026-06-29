@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'appointments_repository.dart';
-import 'models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 // ─── APPOINTMENTS PROVIDERS ──────────────────────────────────────────────────
 

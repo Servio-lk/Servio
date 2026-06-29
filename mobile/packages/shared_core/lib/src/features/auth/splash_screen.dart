@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/services/supabase_service.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
+  final String unauthenticatedRoute;
+  
+  const SplashScreen({super.key, this.unauthenticatedRoute = '/onboarding'});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -60,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen>
     final supabaseService = SupabaseService();
     final user = supabaseService.currentUser;
     if (user == null) {
-      context.go('/onboarding');
+      context.go(widget.unauthenticatedRoute);
       return;
     }
 

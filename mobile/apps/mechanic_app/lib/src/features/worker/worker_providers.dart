@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_core/shared_core.dart';
 import 'worker_repository.dart';
-import '../bookings/models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 final workerRepositoryProvider = Provider<WorkerRepository>(
   (_) => WorkerRepository(),

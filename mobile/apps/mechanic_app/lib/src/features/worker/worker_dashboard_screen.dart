@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:shared_core/shared_core.dart';
-import '../bookings/models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 import 'worker_providers.dart';
 
 class WorkerDashboardScreen extends ConsumerStatefulWidget {

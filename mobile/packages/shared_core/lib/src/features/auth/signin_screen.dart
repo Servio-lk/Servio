@@ -6,7 +6,8 @@ import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  final String? allowedRole;
+  const SignInScreen({super.key, this.allowedRole});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -51,7 +52,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
         if (response.user != null && mounted) {
           print('Sign in successful!');
-          _showSnackBar('Welcome back!', isError: false);
           await _routeSignedInUser(response.user!);
         } else if (mounted) {
           print('Sign in failed: No user returned');
@@ -93,7 +93,6 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final success = await _supabaseService.signInWithGoogle();
       if (success && mounted) {
-        _showSnackBar('Signed in with Google!', isError: false);
         final user = _supabaseService.currentUser;
         if (user != null) {
           await _routeSignedInUser(user);
@@ -120,7 +119,6 @@ class _SignInScreenState extends State<SignInScreen> {
     try {
       final success = await _supabaseService.signInWithFacebook();
       if (success && mounted) {
-        _showSnackBar('Signed in with Facebook!', isError: false);
         final user = _supabaseService.currentUser;
         if (user != null) {
           await _routeSignedInUser(user);
@@ -168,6 +166,14 @@ class _SignInScreenState extends State<SignInScreen> {
     final role = await _supabaseService.resolveUserRole(user, profile: profile);
 
     if (!mounted) return;
+
+    if (widget.allowedRole != null && role != widget.allowedRole) {
+      await _supabaseService.signOut();
+      _showSnackBar('Access denied. This app is restricted to ${widget.allowedRole}s.', isError: true);
+      return;
+    }
+
+    _showSnackBar('Welcome back!', isError: false);
 
     if (role == 'MECHANIC') {
       context.go('/worker');

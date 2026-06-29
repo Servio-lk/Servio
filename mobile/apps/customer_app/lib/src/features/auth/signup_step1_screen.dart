@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../core/services/supabase_service.dart';
-import '../../core/utils/email_validator.dart';
+import 'package:shared_core/shared_core.dart';
+import 'package:shared_core/shared_core.dart';
 import 'signup_widgets.dart';
 
 class SignUpStep1Screen extends StatefulWidget {

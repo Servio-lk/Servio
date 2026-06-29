@@ -3,6 +3,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_core/shared_core.dart';
+import '../../shared/main_navigation_screen.dart';
 
 // ─── APPOINTMENT CONFIRMED SCREEN ────────────────────────────────────────────
 

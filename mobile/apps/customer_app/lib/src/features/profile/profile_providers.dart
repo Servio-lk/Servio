@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'vehicles_repository.dart';
-import 'models/vehicle_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 final vehiclesRepositoryProvider = Provider<VehiclesRepository>(
   (_) => VehiclesRepository(),

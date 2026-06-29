@@ -4,8 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
-import '../../core/utils/email_validator.dart';
-import '../../core/services/supabase_service.dart';
+import 'package:shared_core/shared_core.dart';
+import 'package:shared_core/shared_core.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each onboarding page

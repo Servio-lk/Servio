@@ -3,6 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Screens
 import 'package:shared_core/shared_core.dart';
+import 'features/auth/onboarding_screen.dart';
+import 'features/auth/signup_step1_screen.dart';
+import 'features/auth/signup_step2_screen.dart';
+import 'features/auth/signup_step3_screen.dart';
+import 'features/auth/signup_otp_screen.dart';
 import 'shared/main_navigation_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {

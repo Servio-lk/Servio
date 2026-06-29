@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'models/service_model.dart';
+import 'package:shared_core/shared_core.dart';
 import 'services_repository.dart';
 
 // ─── SERVICES PROVIDERS ──────────────────────────────────────────────────────

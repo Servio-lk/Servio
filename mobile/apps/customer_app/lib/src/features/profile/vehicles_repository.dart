@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'models/vehicle_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 class VehiclesRepository {
   SupabaseClient get _client => Supabase.instance.client;

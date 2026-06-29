@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'models/service_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 // ─── SERVICES REPOSITORY (queries Supabase directly) ─────────────────────────
 

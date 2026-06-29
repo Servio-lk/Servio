@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../bookings/models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 import 'package:shared_core/shared_core.dart';
 
 class WorkerRepository {

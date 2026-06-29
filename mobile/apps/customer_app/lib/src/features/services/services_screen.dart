@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'service_detail_screen.dart';
-import 'models/service_model.dart';
+import 'package:shared_core/shared_core.dart';
 import 'services_providers.dart';
 
 // ─── LOCAL UI MODEL (unchanged — used by existing UI widgets) ────────────────

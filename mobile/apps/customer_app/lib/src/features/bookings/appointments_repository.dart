@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 // ─── APPOINTMENTS REPOSITORY (queries Supabase directly) ─────────────────────
 

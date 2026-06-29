@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'appointments_providers.dart';
-import 'models/appointment_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 // ─── SERVICE IMAGE MAPPING (service_type → local asset) ──────────────────────
 

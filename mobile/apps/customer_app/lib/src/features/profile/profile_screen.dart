@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_core/shared_core.dart';
 import 'profile_providers.dart';
 import 'vehicles_repository.dart';
-import 'models/vehicle_model.dart';
+import 'package:shared_core/shared_core.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});

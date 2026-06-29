@@ -12,11 +12,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/splash',
-        builder: (context, state) => const SplashScreen(),
+        builder: (context, state) => const SplashScreen(unauthenticatedRoute: '/signin'),
       ),
       GoRoute(
         path: '/signin',
-        builder: (context, state) => const SignInScreen(),
+        builder: (context, state) => const SignInScreen(allowedRole: 'MECHANIC'),
       ),
       GoRoute(
         path: '/worker',
