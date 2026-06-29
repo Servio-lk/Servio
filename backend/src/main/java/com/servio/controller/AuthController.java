@@ -16,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,11 +26,13 @@ import java.util.Map;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 @Validated
+@Tag(name = "Auth", description = "Authentication and User Registration APIs")
 public class AuthController {
     private final AuthService authService;
     private final MechanicService mechanicService;
 
     @PostMapping("/signup")
+    @Operation(summary = "Register a new user")
     public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
         try {
             AuthResponse response = authService.signup(request);
@@ -43,6 +47,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Login an existing user")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             AuthResponse response = authService.login(request);
@@ -57,6 +62,7 @@ public class AuthController {
     }
 
     @PostMapping("/supabase-login")
+    @Operation(summary = "Login with Supabase JWT")
     public ResponseEntity<AuthResponse> supabaseLogin(@Valid @RequestBody SupabaseLoginRequest request) {
         try {
             AuthResponse response = authService.loginWithSupabase(request);
@@ -131,13 +137,4 @@ public class AuthController {
                 .build());
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.builder()
-                        .success(false)
-                        .message("Internal server error")
-                        .errors(e.getMessage())
-                        .build());
-    }
 }

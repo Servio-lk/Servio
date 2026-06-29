@@ -12,16 +12,7 @@ import AdminSetup from './pages/AdminSetup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
-// Main app pages (responsive - works on both mobile and desktop)
-import HomePage from './pages/HomePage'
-import ServicesPage from './pages/ServicesPage'
-import ServiceDetailPage from './pages/ServiceDetailPage'
-import ActivityPage from './pages/ActivityPage'
-import MessagesPage from './pages/MessagesPage'
-import BookingPage from './pages/BookingPage'
-import ConfirmationPage from './pages/ConfirmationPage'
-import AppointmentStatusPage from './pages/AppointmentStatusPage'
-import AccountPage from './pages/AccountPage'
+// Customer pages removed
 
 // Admin pages
 import { AdminAppLayout } from './components/layouts/AdminAppLayout'
@@ -68,84 +59,8 @@ function App() {
           {/* Admin setup page - for creating admin users */}
           <Route path="/admin-setup" element={<AdminSetup />} />
 
-          {/* Public appointment status page - accessible via QR code */}
-          <Route path="/appointment/:id" element={<AppointmentStatusPage />} />
-
-          {/* Protected routes - redirect to login if not authenticated */}
-          <Route
-            path="/home"
-            element={
-              <AuthGuard>
-                <HomePage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/services"
-            element={
-              <AuthGuard>
-                <ServicesPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/services/:id"
-            element={
-              <AuthGuard>
-                <ServiceDetailPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/activity"
-            element={
-              <AuthGuard>
-                <ActivityPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/messages"
-            element={
-              <AuthGuard>
-                <MessagesPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/messages/:appointmentId"
-            element={
-              <AuthGuard>
-                <MessagesPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/book/:id"
-            element={
-              <AuthGuard>
-                <BookingPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/confirmed/:id"
-            element={
-              <AuthGuard>
-                <ConfirmationPage />
-              </AuthGuard>
-            }
-          />
-
-          {/* Account page */}
-          <Route
-            path="/account"
-            element={
-              <AuthGuard>
-                <AccountPage />
-              </AuthGuard>
-            }
-          />
+          {/* Admin frontend routes */}
+          <Route path="/" element={<Navigate to="/admin" replace />} />
 
           {/* Admin routes - protected by AdminGuard */}
           <Route
@@ -168,16 +83,7 @@ function App() {
             <Route path="mechanics" element={<AdminMechanics />} />
           </Route>
 
-          {/* Redirect old mobile routes to new unified routes */}
-          <Route path="/mobile/home" element={<Navigate to="/home" replace />} />
-          <Route path="/mobile/services" element={<Navigate to="/services" replace />} />
-          <Route path="/mobile/activity" element={<Navigate to="/activity" replace />} />
-          <Route path="/mobile/messages" element={<Navigate to="/messages" replace />} />
-          <Route path="/mobile/service/:id" element={<Navigate to="/services/:id" replace />} />
-          <Route path="/mobile/choose-time" element={<Navigate to="/home" replace />} />
-          <Route path="/mobile/checkout" element={<Navigate to="/home" replace />} />
-          <Route path="/mobile/confirmed" element={<Navigate to="/home" replace />} />
-          <Route path="/mobile/welcome" element={<Navigate to="/login" replace />} />
+          {/* Mobile routes removed */}
 
           {/* Default: redirect root and unknown routes to login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
