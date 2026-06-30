@@ -59,7 +59,7 @@ function DesktopSidebar() {
       <div className="p-4 border-t border-black/10">
         <div className="flex flex-col gap-2">
           <Link
-            to="/settings"
+            to="/account"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
           >
             <GearSix className="w-5 h-5" />
@@ -89,15 +89,20 @@ function DesktopHeader() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center">
         <NotificationBell />
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
-          <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-            <UserCircle className="w-4 h-4 text-[#ff5d2e]" weight="fill" />
+        <div className="flex items-center gap-1 px-3 py-2 rounded-lg">
+          <Link
+            to="/account"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
+          >
+          <div className="w-6 h-6 rounded-full flex items-center justify-center">
+            <UserCircle className="w-6 h-6" weight="regular" />
           </div>
           <span className="text-sm font-medium text-black">
             {user?.fullName?.split(' ')[0] || 'User'}
           </span>
+          </Link>
         </div>
       </div>
     </header>

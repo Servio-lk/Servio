@@ -307,6 +307,15 @@ class ApiService {
     return this.handleResponse<User>(response);
   }
 
+  async deleteProfile(): Promise<ApiResponse<string>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+
+    return this.handleResponse<string>(response);
+  }
+
   logout(): void {
     localStorage.removeItem('token');
     localStorage.removeItem('user');

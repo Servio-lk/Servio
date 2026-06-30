@@ -20,6 +20,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
         List<Appointment> findByUserId(Long userId);
 
+        void deleteByUserIdAndStatusIn(Long userId, List<String> statuses);
+
+        long countByUserIdAndStatusIn(Long userId, List<String> statuses);
+
+        @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true, flushAutomatically = true)
+        @Query("UPDATE Appointment a SET a.user = :user, a.profile = null WHERE a.profile.id = :profileId")
+        void unlinkProfileAndSetUser(@Param("profileId") UUID profileId, @Param("user") com.servio.auth.entity.User user);
+
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.profile LEFT JOIN FETCH a.vehicle WHERE a.status = :status ORDER BY a.appointmentDate DESC")
         List<Appointment> findByStatus(@Param("status") String status);
 

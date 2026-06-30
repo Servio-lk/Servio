@@ -11,6 +11,8 @@ import com.servio.auth.entity.User;
 import com.servio.auth.repository.ProfileRepository;
 import com.servio.auth.repository.UserRepository;
 import com.servio.auth.dto.SupabaseLoginRequest;
+import com.servio.booking.entity.Appointment;
+import com.servio.booking.repository.AppointmentRepository;
 import com.servio.common.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +37,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RestTemplate restTemplate;
+    private final AppointmentRepository appointmentRepository;
+    private final SupabaseAdminService supabaseAdminService;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -251,5 +255,69 @@ public class AuthService {
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    @Transactional
+    public String deleteCustomer(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // 1. Find Supabase UUID before processing appointments
+        String oldEmail = user.getEmail();
+        Optional<Profile> profileOpt = profileRepository.findByEmail(oldEmail);
+
+        // 2. Forcefully update the DB to link appointments to this user and unlink the profile
+        profileOpt.ifPresent(profile -> {
+            appointmentRepository.unlinkProfileAndSetUser(profile.getId(), user);
+        });
+
+        // 3. Fetch all appointments (now safely linked to user_id)
+        java.util.List<Appointment> allAppointments = appointmentRepository.findByUserId(userId);
+
+        // 4. Process appointments: cancel pending/past confirmed
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        for (Appointment appt : allAppointments) {
+            boolean changed = false;
+            
+            if ("PENDING".equals(appt.getStatus())) {
+                appt.setStatus("CANCELLED");
+                changed = true;
+            } else if ("CONFIRMED".equals(appt.getStatus()) && appt.getAppointmentDate().isBefore(now)) {
+                appt.setStatus("CANCELLED");
+                changed = true;
+            }
+
+            if (changed) {
+                appointmentRepository.save(appt);
+            }
+        }
+        // FLUSH the changes to the database immediately!
+        // This is critical because the Supabase API call below will trigger a cascade delete
+        // on the profile, which triggers ON DELETE SET NULL for profile_id. 
+        // If the DB doesn't have the updated user_id yet, the check constraint fails.
+        appointmentRepository.flush();
+
+        // 4. Prevent deletion if there are still active (future) appointments
+        long activeCount = allAppointments.stream()
+                .filter(a -> "CONFIRMED".equals(a.getStatus()) || "IN_PROGRESS".equals(a.getStatus()))
+                .count();
+        
+        if (activeCount > 0) {
+            throw new IllegalStateException("Cannot delete user with active appointments. Please complete or cancel them first.");
+        }
+
+        // 5. Anonymize user to free up the email in the DB. We keep the fullName to track business transactions.
+        user.setEmail("deleted_user_" + user.getId() + "@servio.lk");
+        user.setPhone(null);
+        user.setPasswordHash(passwordEncoder.encode(UUID.randomUUID().toString()));
+        userRepository.save(user);
+
+        // 6. Delete from profiles table locally
+        String supabaseUserId = profileOpt.map(profile -> {
+            profileRepository.delete(profile);
+            return profile.getId().toString();
+        }).orElse(null);
+        
+        return supabaseUserId;
     }
 }

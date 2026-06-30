@@ -58,6 +58,9 @@ export default function AccountPage() {
   const [lastService, setLastService] = useState<AppointmentDto | null>(null);
   const [serviceLoading, setServiceLoading] = useState(true);
 
+  // Delete Account Modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
   // Offers / promotions
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offersLoading, setOffersLoading] = useState(true);
@@ -169,6 +172,25 @@ export default function AccountPage() {
       toast.success('Vehicle deleted');
     } catch {
       toast.error('Failed to delete vehicle');
+    }
+  };
+
+  const confirmDeleteAccount = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      const res = await apiService.deleteProfile();
+      if (res.success) {
+        toast.success('Account deleted successfully');
+        setShowDeleteModal(false);
+        logout();
+      } else {
+        toast.error(res.message || 'Failed to delete account');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete account. You may have active appointments.');
     }
   };
 
@@ -597,17 +619,58 @@ export default function AccountPage() {
           )}
         </div>
 
-        {/* ── LOGOUT ── */}
-        <div className="bg-white rounded-2xl shadow-sm px-5 py-4">
+        {/* ── LOGOUT & DELETE ACCOUNT ── */}
+        <div className="bg-white rounded-2xl shadow-sm px-5 py-4 flex flex-col gap-3">
           <button
             onClick={() => logout()}
-            className="flex items-center justify-center gap-2 w-full py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium border border-red-100"
+            className="flex items-center justify-center gap-2 w-full py-2 text-gray-700 hover:bg-gray-50 rounded-lg transition-colors font-medium border border-gray-200"
           >
             <LogOut className="w-5 h-5" />
             Sign Out
           </button>
+          
+          <button
+            onClick={confirmDeleteAccount}
+            className="flex items-center justify-center gap-2 w-full py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors font-medium border border-red-100 mt-2"
+          >
+            <Trash2 className="w-5 h-5" />
+            Delete Account
+          </button>
         </div>
       </div>
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4 mx-auto">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+                Delete Account?
+              </h3>
+              <p className="text-center text-gray-500 text-sm mb-6">
+                Are you sure you want to delete your account? This action cannot be undone and will cancel any pending appointments.
+              </p>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={handleDeleteAccount}
+                  className="w-full bg-red-600 text-white font-medium py-3 rounded-xl hover:bg-red-700 transition-colors"
+                >
+                  Yes, Delete My Account
+                </button>
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="w-full bg-gray-100 text-gray-900 font-medium py-3 rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

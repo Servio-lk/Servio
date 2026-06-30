@@ -33,6 +33,7 @@ import java.util.Map;
 public class AuthController {
     private final AuthService authService;
     private final MechanicService mechanicService;
+    private final com.servio.auth.service.SupabaseAdminService supabaseAdminService;
 
     @PostMapping("/signup")
     @Operation(summary = "Register a new user")
@@ -137,6 +138,31 @@ public class AuthController {
                             .success(false)
                             .message(e.getMessage())
                             .build());
+        }
+    }
+
+    @DeleteMapping("/profile")
+    @Operation(summary = "Delete (anonymize) the current user account")
+    public ResponseEntity<ApiResponse<String>> deleteProfile(Authentication authentication) {
+        try {
+            String userId = authentication.getPrincipal().toString();
+            String supabaseUserId = authService.deleteCustomer(Long.parseLong(userId));
+            
+            // Delete from Supabase Auth after the local DB transaction has successfully committed
+            if (supabaseUserId != null) {
+                supabaseAdminService.deleteUser(supabaseUserId);
+            }
+            
+            return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("Invalid user ID format", null));
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(ApiResponse.error(e.getMessage(), null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Failed to delete account: " + e.getMessage(), null));
         }
     }
 
