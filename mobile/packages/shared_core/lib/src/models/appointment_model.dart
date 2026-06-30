@@ -16,6 +16,7 @@ class AppointmentModel {
   final double estimatedCost;
   final double? actualCost;
   final DateTime createdAt;
+  final String? assignedMechanicName;
 
   const AppointmentModel({
     required this.id,
@@ -33,6 +34,7 @@ class AppointmentModel {
     required this.estimatedCost,
     this.actualCost,
     required this.createdAt,
+    this.assignedMechanicName,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -59,6 +61,7 @@ class AppointmentModel {
           ? (json['actual_cost'] as num).toDouble()
           : null,
       createdAt: DateTime.parse(json['created_at'] as String),
+      assignedMechanicName: json['assignedMechanicName'] as String?,
     );
   }
 

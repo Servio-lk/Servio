@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-
-import 'package:shared_core/shared_core.dart';
 import 'package:shared_core/shared_core.dart';
 import 'worker_providers.dart';
 
@@ -17,22 +15,59 @@ class WorkerDashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
-  static const _primary = Color(0xFFFF5D2E);
-  static const _paper = Color(0xFFFFF7F5);
-
   int _selectedTab = 0;
+
+  static final _tabRegularIcons = [
+    PhosphorIcons.house(),
+    PhosphorIcons.wrench(),
+    PhosphorIcons.package(),
+    PhosphorIcons.users(),
+  ];
+  static final _tabFillIcons = [
+    PhosphorIcons.house(PhosphorIconsStyle.fill),
+    PhosphorIcons.wrench(PhosphorIconsStyle.fill),
+    PhosphorIcons.package(PhosphorIconsStyle.fill),
+    PhosphorIcons.users(PhosphorIconsStyle.fill),
+  ];
+  static const _tabLabels = ['Home', 'Jobs', 'Inventory', 'Staff'];
+
+  Future<void> _handleSignOut() async {
+    await SupabaseService().signOut();
+    if (mounted) context.go('/signin');
+  }
+
+  Future<void> _markDone(AppointmentModel job) async {
+    try {
+      await ref
+          .read(workerRepositoryProvider)
+          .updateAppointmentStatus(job.id, 'COMPLETED');
+      ref.invalidate(activeAppointmentsProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Job marked done.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not update job status.'),
+            backgroundColor: Colors.black87,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final appointmentsAsync = ref.watch(activeAppointmentsProvider);
-    final mechanicAsync = ref.watch(currentMechanicProvider);
-    final mechanicName = mechanicAsync.maybeWhen(
-      data: (mechanic) => mechanic?['full_name']?.toString(),
-      orElse: () => null,
-    );
 
     return Scaffold(
-      backgroundColor: _paper,
+      backgroundColor: const Color(0xFFFFF7F5),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -48,90 +83,78 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
               Expanded(
                 child: appointmentsAsync.when(
                   loading: () => const Center(
-                    child: CircularProgressIndicator(color: _primary),
+                    child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
                   ),
-                  error: (err, _) => _ErrorState(
-                    message: err.toString().replaceFirst('Exception: ', ''),
-                    onRetry: () {
-                      ref.invalidate(currentMechanicProvider);
-                      ref.invalidate(activeAppointmentsProvider);
-                    },
+                  error: (err, _) => Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(err.toString().replaceFirst('Exception: ', '')),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            ref.invalidate(activeAppointmentsProvider);
+                            ref.invalidate(currentMechanicProvider);
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                   data: (appointments) => RefreshIndicator(
-                    color: _primary,
+                    color: const Color(0xFFFF5D2E),
                     onRefresh: () async {
-                      ref.invalidate(currentMechanicProvider);
                       ref.invalidate(activeAppointmentsProvider);
+                      ref.invalidate(currentMechanicProvider);
                     },
                     child: CustomScrollView(
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                          padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                           sliver: SliverList.list(
                             children: [
-                              _SearchRequestBar(
-                                onRequest: () => _showSnack(
-                                  'Parts request flow is coming soon.',
-                                ),
-                                onSignOut: _handleSignOut,
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                _selectedTab == 0
-                                    ? 'Ongoing jobs'
-                                    : _tabLabels[_selectedTab],
-                                style: GoogleFonts.instrumentSans(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
+                              _buildSearchBar(),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Ongoing jobs',
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 16),
+                              if (appointments.isEmpty)
+                                const Padding(
+                                  padding: EdgeInsets.all(32.0),
+                                  child: Center(
+                                    child: Text('No active jobs found.'),
+                                  ),
+                                )
+                              else
+                                ...appointments.asMap().entries.map((entry) {
+                                  final index = entry.key;
+                                  final job = entry.value;
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 16),
+                                    child: _buildJobCard(
+                                      job: job,
+                                      isFirst: index == 0,
+                                    ),
+                                  );
+                                }),
                             ],
                           ),
                         ),
-                        if (_selectedTab != 0)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _PlaceholderTab(
-                              label: _tabLabels[_selectedTab],
-                            ),
-                          )
-                        else if (appointments.isEmpty)
-                          const SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _EmptyJobs(),
-                          )
-                        else
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                            sliver: SliverList.separated(
-                              itemCount: appointments.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 16),
-                              itemBuilder: (context, index) => _JobCard(
-                                job: appointments[index],
-                                isHighlighted: index == 0,
-                                mechanicName: mechanicName,
-                                onMessage: () => context.push(
-                                  '/worker/chat/${appointments[index].id}',
-                                ),
-                                onCall: () => _showSnack(
-                                  'Customer call action is not connected yet.',
-                                ),
-                                onDone: () => _markDone(appointments[index]),
-                              ),
-                            ),
-                          ),
                       ],
                     ),
                   ),
                 ),
               ),
-              _WorkerTabBar(
-                selectedTab: _selectedTab,
-                onSelect: (index) => setState(() => _selectedTab = index),
-              ),
+              _buildTabBar(),
             ],
           ),
         ),
@@ -139,212 +162,220 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
     );
   }
 
-  Future<void> _markDone(AppointmentModel job) async {
-    try {
-      await ref
-          .read(workerRepositoryProvider)
-          .updateAppointmentStatus(job.id, 'COMPLETED');
-      ref.invalidate(activeAppointmentsProvider);
-      _showSnack('Job marked done.', isError: false);
-    } catch (_) {
-      _showSnack('Could not update job status.');
-    }
-  }
-
-  Future<void> _handleSignOut() async {
-    await SupabaseService().signOut();
-    if (mounted) context.go('/signin');
-  }
-
-  void _showSnack(String message, {bool isError = true}) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.black87 : Colors.green,
-      ),
-    );
-  }
-}
-
-const _tabLabels = ['Home', 'Jobs', 'Inventory', 'Staff'];
-const _tabRegularIcons = [
-  PhosphorIconsRegular.house,
-  PhosphorIconsRegular.wrench,
-  PhosphorIconsRegular.package,
-  PhosphorIconsRegular.users,
-];
-const _tabFillIcons = [
-  PhosphorIconsFill.house,
-  PhosphorIconsFill.wrench,
-  PhosphorIconsFill.package,
-  PhosphorIconsFill.users,
-];
-
-class _SearchRequestBar extends StatelessWidget {
-  final VoidCallback onRequest;
-  final VoidCallback onSignOut;
-
-  const _SearchRequestBar({required this.onRequest, required this.onSignOut});
-
-  @override
-  Widget build(BuildContext context) {
+  // ── Search Bar ────────────────────────────────────────────────────────────
+  Widget _buildSearchBar() {
     return Row(
       children: [
         Expanded(
           child: Container(
-            height: 64,
             decoration: BoxDecoration(
               color: const Color(0xFFFFE7DF),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white, width: 1),
             ),
-            child: Row(
-              children: [
-                const SizedBox(width: 16),
-                const PhosphorIcon(
-                  PhosphorIconsRegular.magnifyingGlass,
-                  size: 28,
-                  color: Colors.black,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Search for parts',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                Container(width: 1, height: 42, color: Colors.black12),
-                Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: FilledButton.icon(
-                    onPressed: onRequest,
-                    icon: const PhosphorIcon(
-                      PhosphorIconsRegular.package,
-                      size: 24,
-                      color: Colors.white,
-                    ),
-                    label: Text(
-                      'Request',
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF5D2E),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size(112, 48),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Row(
+                        children: [
+                          PhosphorIcon(
+                            PhosphorIcons.magnifyingGlass(),
+                            size: 24,
+                            color: Colors.black,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Search for parts',
+                              style: GoogleFonts.instrumentSans(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-              ],
+                  Container(
+                    width: 1,
+                    color: Colors.black.withOpacity(0.2),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5D2E),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          PhosphorIcon(
+                            PhosphorIcons.package(PhosphorIconsStyle.fill),
+                            size: 24,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Request',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
         const SizedBox(width: 8),
         IconButton(
-          tooltip: 'Sign out',
-          onPressed: onSignOut,
-          icon: const PhosphorIcon(PhosphorIconsRegular.signOut, size: 24),
+          onPressed: _handleSignOut,
+          icon: PhosphorIcon(PhosphorIcons.signOut(), size: 28),
+          color: Colors.black87,
         ),
       ],
     );
   }
-}
 
-class _JobCard extends StatelessWidget {
-  final AppointmentModel job;
-  final bool isHighlighted;
-  final String? mechanicName;
-  final VoidCallback onMessage;
-  final VoidCallback onCall;
-  final VoidCallback onDone;
+  // ── Job Card ──────────────────────────────────────────────────────────────
+  Widget _buildJobCard({required AppointmentModel job, required bool isFirst}) {
+    final double actionVertPad = isFirst ? 12.0 : 16.0;
+    final EdgeInsetsGeometry timelinePadding = isFirst
+        ? const EdgeInsets.all(12)
+        : const EdgeInsets.symmetric(horizontal: 12, vertical: 16);
 
-  const _JobCard({
-    required this.job,
-    required this.isHighlighted,
-    required this.mechanicName,
-    required this.onMessage,
-    required this.onCall,
-    required this.onDone,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     final progress = _statusProgress(job.status);
+    final startTime = _shortTime(job.appointmentDate);
+    final timeRange = _timeRange(job.appointmentDate);
+    final timeLeft = _timeLeft(job.appointmentDate);
+
+    final notesText = (job.notes?.trim().isNotEmpty == true)
+        ? job.notes!.trim()
+        : 'No special notes added for this job.';
+
+    final customerState = _customerState(job.status);
+    final customerInitial = (job.profileId != null && job.profileId!.isNotEmpty)
+        ? 'C'
+        : 'C';
+
+    final assignedMechanic = job.assignedMechanicName ?? 'Pending Assignment';
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isHighlighted
-              ? const Color(0xFFFF5D2E)
-              : Colors.black.withValues(alpha: 0.04),
-          width: isHighlighted ? 1 : 0.5,
-        ),
+        borderRadius: BorderRadius.circular(12),
+        border: isFirst
+            ? Border.all(color: const Color(0xFFFF5D2E), width: 0.5)
+            : null,
         boxShadow: const [
           BoxShadow(
-            color: Color(0x168A8A8A),
-            blurRadius: 14,
-            offset: Offset(0, 4),
+            color: Color(0x268A8A8A),
+            blurRadius: 12,
+            offset: Offset(0, 0),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _ServiceIcon(serviceType: job.serviceType),
-              const SizedBox(width: 14),
+              _buildServiceIcon(job.serviceType),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       job.serviceType,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.instrumentSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w500,
                         color: Colors.black,
+                        height: 22 / 17,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _InfoLine(
-                      icon: PhosphorIconsFill.car,
-                      text: job.vehicleDisplay,
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        PhosphorIcon(
+                          PhosphorIcons.car(),
+                          size: 16,
+                          color: const Color(0xFF545454),
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            job.vehicleDisplay,
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w400,
+                              color: const Color(0xFF545454),
+                              letterSpacing: 0.06,
+                              height: 13 / 11,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 5),
-                    _InfoLine(
-                      icon: PhosphorIconsFill.clock,
-                      text: _timeRange(job.appointmentDate),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        PhosphorIcon(
+                          PhosphorIcons.clock(),
+                          size: 16,
+                          color: const Color(0xFF545454),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          timeRange,
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF545454),
+                            letterSpacing: 0.06,
+                            height: 13 / 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              minHeight: 6,
-              value: progress,
-              backgroundColor: const Color(0xFFCCCCCC),
-              valueColor: const AlwaysStoppedAnimation(Color(0xFF00B649)),
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              height: 6,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: (progress * 100).toInt(),
+                    child: Container(color: const Color(0xFF00B649)),
+                  ),
+                  Expanded(
+                    flex: ((1 - progress) * 100).toInt(),
+                    child: Container(color: const Color(0xFFCCCCCC)),
+                  ),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 8),
@@ -352,53 +383,152 @@ class _JobCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                _shortTime(job.appointmentDate),
+                startTime,
                 style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                   color: Colors.black,
+                  letterSpacing: 0.06,
+                  height: 13 / 11,
                 ),
               ),
               Text(
-                _timeLeft(job.appointmentDate),
+                timeLeft,
                 style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black.withValues(alpha: 0.58),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black.withOpacity(0.6),
+                  letterSpacing: 0.06,
+                  height: 13 / 11,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _NotesBox(notes: job.notes),
-          const SizedBox(height: 18),
-          const Divider(color: Color(0xFFE6E6E6), height: 1),
-          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFDF4F1), width: 1),
+            ),
+            padding: const EdgeInsets.all(8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Notes:',
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF545454),
+                    letterSpacing: 0.06,
+                    height: 13 / 11,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    notesText,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                      letterSpacing: 0.06,
+                      height: 13 / 11,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(height: 0.5, color: const Color(0xFFE6E6E6)),
+          const SizedBox(height: 16),
           Row(
             children: [
-              _CustomerAvatar(seed: job.profileId ?? job.id.toString()),
-              const SizedBox(width: 10),
+              SizedBox(
+                width: 30,
+                height: 30,
+                child: Stack(
+                  children: [
+                    Positioned(
+                      left: 12,
+                      top: 3,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFF9BB5D6),
+                        ),
+                        child: Center(
+                          child: Text(
+                            'C',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 3,
+                      child: Container(
+                        width: 24,
+                        height: 24,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Color(0xFFD4A5A5),
+                        ),
+                        child: Center(
+                          child: Text(
+                            customerInitial,
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Customer',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF333333),
+                    SizedBox(
+                      height: 18,
+                      child: Text(
+                        'Customer',
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w400,
+                          color: const Color(0xFF333333),
+                          letterSpacing: -0.23,
+                          height: 20 / 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(
-                      _customerState(job.status),
+                      customerState,
                       style: GoogleFonts.instrumentSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
                         color: const Color(0xFFEA0000),
+                        letterSpacing: 0.06,
+                        height: 13 / 11,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -406,113 +536,148 @@ class _JobCard extends StatelessWidget {
               Text(
                 job.plateDisplay,
                 style: GoogleFonts.instrumentSans(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
                   color: Colors.black,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: _OutlineActionButton(
-                  icon: PhosphorIconsRegular.chatText,
+                child: _buildSecondaryButton(
+                  icon: PhosphorIcons.chatText(),
                   label: 'Message',
-                  onPressed: onMessage,
+                  verticalPad: actionVertPad,
+                  onPressed: () => context.push('/worker/chat/${job.id}'),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Expanded(
-                child: _OutlineActionButton(
-                  icon: PhosphorIconsRegular.phoneOutgoing,
+                child: _buildSecondaryButton(
+                  icon: PhosphorIcons.phoneOutgoing(),
                   label: 'Call',
-                  onPressed: onCall,
+                  verticalPad: actionVertPad,
+                  onPressed: () {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Call action not implemented yet.'),
+                          backgroundColor: Colors.black87,
+                        ),
+                      );
+                    }
+                  },
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 18),
-          const Divider(color: Color(0xFFE6E6E6), height: 1),
           const SizedBox(height: 16),
-          Text.rich(
-            TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Assign to: ',
+          Container(height: 0.5, color: const Color(0xFFE6E6E6)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(
+                'Assign to:',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF545454),
+                  letterSpacing: 0.06,
+                  height: 13 / 11,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '$assignedMechanic (Mechanic)',
                   style: GoogleFonts.instrumentSans(
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF545454),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black,
+                    letterSpacing: 0.06,
+                    height: 13 / 11,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                TextSpan(
-                  text:
-                      '${mechanicName == null || mechanicName!.isEmpty ? 'You' : mechanicName} (Mechanic)',
-                  style: GoogleFonts.instrumentSans(color: Colors.black),
-                ),
-              ],
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFFFE9E4)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFFDF4F1), width: 1),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+            padding: timelinePadding,
             child: Row(
               children: [
-                const PhosphorIcon(
-                  PhosphorIconsBold.clockCounterClockwise,
-                  size: 28,
-                  color: Color(0xFF333333),
+                PhosphorIcon(
+                  PhosphorIcons.chartBar(PhosphorIconsStyle.bold),
+                  size: 24,
+                  color: const Color(0xFF333333),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Activity timeline',
                     style: GoogleFonts.instrumentSans(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w400,
                       color: const Color(0xFF333333),
+                      letterSpacing: -0.23,
+                      height: 20 / 15,
                     ),
                   ),
                 ),
-                const PhosphorIcon(
-                  PhosphorIconsRegular.caretDown,
-                  size: 22,
+                PhosphorIcon(
+                  PhosphorIcons.caretDown(),
+                  size: 16,
                   color: Colors.black,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
-            height: 58,
-            child: FilledButton.icon(
-              onPressed: onDone,
-              icon: const PhosphorIcon(
-                PhosphorIconsRegular.checkCircle,
-                size: 28,
-                color: Colors.white,
-              ),
-              label: Text(
-                'Done',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              style: FilledButton.styleFrom(
+            child: ElevatedButton(
+              onPressed: () => _markDone(job),
+              style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF5D2E),
                 foregroundColor: Colors.white,
+                elevation: 0,
+                shadowColor: Colors.transparent,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: actionVertPad,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  PhosphorIcon(
+                    PhosphorIcons.checkCircle(),
+                    size: 24,
+                    color: Colors.white,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Done',
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      height: 19 / 15,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -521,10 +686,67 @@ class _JobCard extends StatelessWidget {
     );
   }
 
+  Widget _buildSecondaryButton({
+    required PhosphorIconData icon,
+    required String label,
+    required double verticalPad,
+    required VoidCallback onPressed,
+  }) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        side: const BorderSide(color: Color(0xFFFF9273), width: 1),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: verticalPad),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          PhosphorIcon(icon, size: 24, color: Colors.black),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: GoogleFonts.instrumentSans(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF333333),
+              height: 19 / 15,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceIcon(String serviceType) {
+    final lower = serviceType.toLowerCase();
+    final icon = lower.contains('battery')
+        ? PhosphorIcons.batteryCharging(PhosphorIconsStyle.fill)
+        : lower.contains('wash')
+        ? PhosphorIcons.sparkle(PhosphorIconsStyle.fill)
+        : lower.contains('lube') || lower.contains('oil')
+        ? PhosphorIcons.drop(PhosphorIconsStyle.fill)
+        : PhosphorIcons.wrench(PhosphorIconsStyle.fill);
+
+    return Container(
+      width: 66,
+      height: 66,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFDF4F1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: PhosphorIcon(icon, size: 40, color: const Color(0xFFFF5D2E)),
+      ),
+    );
+  }
+
   double _statusProgress(String status) {
     switch (status) {
       case 'COMPLETED':
-        return 1;
+        return 1.0;
       case 'IN_PROGRESS':
         return 0.55;
       case 'CONFIRMED':
@@ -563,327 +785,78 @@ class _JobCard extends StatelessWidget {
     final minutes = remaining.inMinutes.clamp(0, 59);
     return '$minutes min left';
   }
-}
 
-class _ServiceIcon extends StatelessWidget {
-  final String serviceType;
-
-  const _ServiceIcon({required this.serviceType});
-
-  @override
-  Widget build(BuildContext context) {
-    final lower = serviceType.toLowerCase();
-    final icon = lower.contains('battery')
-        ? PhosphorIconsRegular.batteryCharging
-        : lower.contains('wash')
-        ? PhosphorIconsRegular.sparkle
-        : lower.contains('lube') || lower.contains('oil')
-        ? PhosphorIconsRegular.drop
-        : PhosphorIconsRegular.wrench;
-
+  // ── Bottom Tab Bar ────────────────────────────────────────────────────────
+  Widget _buildTabBar() {
     return Container(
-      width: 78,
-      height: 78,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFDF4F1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: PhosphorIcon(icon, size: 44, color: const Color(0xFFFF5D2E)),
-      ),
-    );
-  }
-}
-
-class _InfoLine extends StatelessWidget {
-  final IconData icon;
-  final String text;
-
-  const _InfoLine({required this.icon, required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        PhosphorIcon(icon, size: 18, color: const Color(0xFF545454)),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.instrumentSans(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF545454),
-            ),
+      color: Colors.white,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            height: 0.4,
+            color: Colors.black.withOpacity(0.2),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _NotesBox extends StatelessWidget {
-  final String? notes;
-
-  const _NotesBox({this.notes});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = notes?.trim().isNotEmpty == true
-        ? notes!.trim()
-        : 'No special notes added for this job.';
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFFFE9E4)),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Text.rich(
-        TextSpan(
-          children: [
-            TextSpan(
-              text: 'Notes: ',
-              style: GoogleFonts.instrumentSans(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF545454),
-              ),
-            ),
-            TextSpan(
-              text: text,
-              style: GoogleFonts.instrumentSans(color: Colors.black),
-            ),
-          ],
-        ),
-        maxLines: 3,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
-
-class _CustomerAvatar extends StatelessWidget {
-  final String seed;
-
-  const _CustomerAvatar({required this.seed});
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = seed.isEmpty ? 'C' : seed.characters.first.toUpperCase();
-
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: const Color(0xFFFFE7DF),
-      child: Text(
-        initial,
-        style: GoogleFonts.instrumentSans(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFFFF5D2E),
-        ),
-      ),
-    );
-  }
-}
-
-class _OutlineActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
-
-  const _OutlineActionButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: PhosphorIcon(icon, size: 26, color: Colors.black),
-      label: Text(
-        label,
-        style: GoogleFonts.instrumentSans(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
-          color: const Color(0xFF333333),
-        ),
-      ),
-      style: OutlinedButton.styleFrom(
-        side: const BorderSide(color: Color(0xFFFF9273)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-    );
-  }
-}
-
-class _WorkerTabBar extends StatelessWidget {
-  final int selectedTab;
-  final ValueChanged<int> onSelect;
-
-  const _WorkerTabBar({required this.selectedTab, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0x1F000000))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 4),
-          child: Row(
-            children: List.generate(_tabLabels.length, (index) {
-              final isActive = selectedTab == index;
-              return Expanded(
-                child: InkWell(
-                  onTap: () => onSelect(index),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      PhosphorIcon(
-                        isActive
-                            ? _tabFillIcons[index]
-                            : _tabRegularIcons[index],
-                        size: 28,
-                        color: isActive
-                            ? Colors.black
-                            : Colors.black.withValues(alpha: 0.46),
+          Padding(
+            padding: const EdgeInsets.only(left: 24, right: 24, bottom: 4),
+            child: Row(
+              children: List.generate(4, (i) {
+                final bool isActive = _selectedTab == i;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedTab = i),
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const SizedBox(height: 8),
+                          PhosphorIcon(
+                            isActive
+                                ? _tabFillIcons[i]
+                                : _tabRegularIcons[i],
+                            size: 24,
+                            color: isActive
+                                ? Colors.black
+                                : Colors.black.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _tabLabels[i],
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 12,
+                              fontWeight: isActive
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: isActive
+                                  ? Colors.black
+                                  : Colors.black.withOpacity(0.5),
+                              height: 22 / 12,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          if (isActive)
+                            Container(
+                              width: 16,
+                              height: 2,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF5D2E),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            )
+                          else
+                            const SizedBox(height: 2),
+                        ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _tabLabels[index],
-                        style: GoogleFonts.instrumentSans(
-                          fontSize: 14,
-                          fontWeight: isActive
-                              ? FontWeight.w700
-                              : FontWeight.w600,
-                          color: isActive
-                              ? Colors.black
-                              : Colors.black.withValues(alpha: 0.48),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        width: 18,
-                        height: 3,
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? const Color(0xFFFF5D2E)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyJobs extends StatelessWidget {
-  const _EmptyJobs();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const PhosphorIcon(
-              PhosphorIconsRegular.checkCircle,
-              size: 52,
-              color: Colors.black26,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'No ongoing jobs',
-              style: GoogleFonts.instrumentSans(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: Colors.black54,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PlaceholderTab extends StatelessWidget {
-  final String label;
-
-  const _PlaceholderTab({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        '$label tools are coming soon.',
-        style: GoogleFonts.instrumentSans(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.black45,
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const PhosphorIcon(
-              PhosphorIconsRegular.warningCircle,
-              size: 52,
-              color: Colors.black45,
-            ),
-            const SizedBox(height: 14),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.instrumentSans(
-                fontSize: 16,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: onRetry,
-              child: const Text(
-                'Retry',
-                style: TextStyle(color: Color(0xFFFF5D2E)),
-              ),
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
