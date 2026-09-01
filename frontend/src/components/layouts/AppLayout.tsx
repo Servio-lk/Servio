@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText } from '@phosphor-icons/react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
@@ -15,7 +15,8 @@ const navItems = [
   { icon: House, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
   { icon: ClipboardText, label: 'Activity', path: '/activity' },
-  { icon: ChatCircleDots, label: 'Messages', path: '/messages' }
+  { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
+  { icon: Robot, label: 'AI Assistant', path: '/assistant' },
 ];
 
 // Desktop sidebar component

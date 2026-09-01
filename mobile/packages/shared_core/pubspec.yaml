@@ -12,6 +12,9 @@ dependencies:
   flutter_riverpod: ^3.2.1
   supabase_flutter: ^2.0.0
   go_router: ^17.1.0
+  google_fonts: ^8.0.1
+  flutter_svg: ^2.2.3
+  phosphor_flutter: ^2.1.0
 
 dev_dependencies:
   flutter_test:

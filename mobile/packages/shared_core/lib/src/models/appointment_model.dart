@@ -121,18 +121,11 @@ class AppointmentModel {
     return buf.toString();
   }
 
-  String get statusLabel {
-    switch (status) {
-      case 'CONFIRMED':
-        return 'Confirmed';
-      case 'IN_PROGRESS':
-        return 'In Progress';
-      case 'COMPLETED':
-        return 'Completed';
-      case 'CANCELLED':
-        return 'Cancelled';
-      default:
-        return 'Pending';
-    }
-  }
+  String get statusLabel => switch (status) {
+    'CONFIRMED' => 'Confirmed',
+    'IN_PROGRESS' => 'In Progress',
+    'COMPLETED' => 'Completed',
+    'CANCELLED' => 'Cancelled',
+    _ => 'Pending',
+  };
 }

@@ -21,6 +21,7 @@ import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 import AccountPage from './pages/AccountPage'
+import AssistantPage from './pages/AssistantPage'
 
 // Admin pages removed from this frontend
 import './App.css'
@@ -97,6 +98,14 @@ function App() {
             element={
               <AuthGuard>
                 <MessagesPage />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/assistant"
+            element={
+              <AuthGuard>
+                <AssistantPage />
               </AuthGuard>
             }
           />

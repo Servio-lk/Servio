@@ -171,7 +171,7 @@ function AppointmentChat({ appointmentId }: { appointmentId: number }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversation]);
+  }, [conversation?.conversationId, conversation?.realtimeChannel]);
 
   const sendMessage = async () => {
     if (!conversation || !body.trim()) return;

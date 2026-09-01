@@ -6,6 +6,7 @@ import '../features/home/home_screen.dart';
 import '../features/services/services_screen.dart';
 import '../features/bookings/activity_screen.dart';
 import '../features/profile/profile_screen.dart';
+import '../features/assistant/assistant_screen.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final int initialIndex;
@@ -24,6 +25,7 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
     HomeScreen(),
     ServicesScreen(),
     ActivityScreen(),
+    AssistantScreen(),
     ProfileScreen(),
   ];
 
@@ -50,11 +52,11 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           top: BorderSide(color: Color.fromRGBO(0, 0, 0, 0.2), width: 0.4),
         ),
       ),
-      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 4),
+      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 4),
       child: SafeArea(
         top: false,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             _TabBarItem(
               icon: PhosphorIconsFill.house,
@@ -63,7 +65,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               isSelected: _selectedIndex == 0,
               onTap: () => setState(() => _selectedIndex = 0),
             ),
-            const SizedBox(width: 16),
             _TabBarItem(
               icon: PhosphorIconsBold.dotsNine,
               inactiveIcon: PhosphorIconsRegular.dotsNine,
@@ -71,7 +72,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               isSelected: _selectedIndex == 1,
               onTap: () => setState(() => _selectedIndex = 1),
             ),
-            const SizedBox(width: 16),
             _TabBarItem(
               icon: PhosphorIconsFill.fileMagnifyingGlass,
               inactiveIcon: PhosphorIconsBold.fileMagnifyingGlass,
@@ -79,13 +79,19 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
               isSelected: _selectedIndex == 2,
               onTap: () => setState(() => _selectedIndex = 2),
             ),
-            const SizedBox(width: 16),
+            _TabBarItem(
+              icon: PhosphorIconsFill.robot,
+              inactiveIcon: PhosphorIconsBold.robot,
+              label: 'Assistant',
+              isSelected: _selectedIndex == 3,
+              onTap: () => setState(() => _selectedIndex = 3),
+            ),
             _TabBarItem(
               icon: PhosphorIconsFill.userCircle,
               inactiveIcon: PhosphorIconsBold.userCircle,
               label: 'Account',
-              isSelected: _selectedIndex == 3,
-              onTap: () => setState(() => _selectedIndex = 3),
+              isSelected: _selectedIndex == 4,
+              onTap: () => setState(() => _selectedIndex = 4),
             ),
           ],
         ),

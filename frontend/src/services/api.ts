@@ -582,7 +582,25 @@ class ApiService {
     });
     return this.handleResponse<void>(response);
   }
+
+  // AI Agent endpoints
+  async sendAgentMessage(message: string, conversationId?: string): Promise<ApiResponse<AgentChatResponse>> {
+    const response = await apiFetch(`${API_BASE_URL}/agent/chat`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ message, conversationId }),
+    });
+    return this.handleResponse<AgentChatResponse>(response);
+  }
 }
+
+export interface AgentChatResponse {
+  conversationId: string;
+  message: string;
+  toolCallsExecuted: string[];
+  actionData?: any;
+}
+
 
 export interface NotificationDto {
   id: number;

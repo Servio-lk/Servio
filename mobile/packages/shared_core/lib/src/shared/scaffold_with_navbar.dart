@@ -57,19 +57,13 @@ class ScaffoldWithNavBar extends StatelessWidget {
   }
 
   void _onItemTapped(int index, BuildContext context) {
-    switch (index) {
-      case 0:
-        GoRouter.of(context).go('/home');
-        break;
-      case 1:
-        GoRouter.of(context).go('/services');
-        break;
-      case 2:
-        GoRouter.of(context).go('/activity');
-        break;
-      case 3:
-        GoRouter.of(context).go('/profile');
-        break;
-    }
+    final route = switch (index) {
+      0 => '/home',
+      1 => '/services',
+      2 => '/activity',
+      3 => '/profile',
+      _ => '/home',
+    };
+    GoRouter.of(context).go(route);
   }
 }

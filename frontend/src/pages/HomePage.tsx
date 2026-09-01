@@ -49,12 +49,18 @@ export default function HomePage() {
   };
 
   const withTimeout = useCallback(async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
-    return await Promise.race([
-      promise,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms);
-      }),
-    ]);
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timerId !== undefined) {
+        clearTimeout(timerId);
+      }
+    }
   }, []);
 
   useEffect(() => {

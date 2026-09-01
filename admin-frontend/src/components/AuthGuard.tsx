@@ -6,7 +6,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isAdmin, isLoading, isBackendTokenReady } = useAuth();
+  const { isAuthenticated, isLoading, isBackendTokenReady } = useAuth();
   const location = useLocation();
 
   if (isLoading || (isAuthenticated && !isBackendTokenReady)) {
@@ -30,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 }
 
 export function GuestGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
