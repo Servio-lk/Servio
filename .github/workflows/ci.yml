@@ -1,0 +1,112 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # Job 1: Backend Test Suite (Spring Boot 3.3.4, Java 17, Maven)
+  # ─────────────────────────────────────────────────────────────
+  backend:
+    name: Backend Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run Backend Tests
+        working-directory: backend
+        run: mvn -B clean test
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 2: Frontend Lint & Production Build (React 19 + TypeScript + Vite)
+  # ─────────────────────────────────────────────────────────────
+  frontend:
+    name: Frontend Lint & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build production bundle
+        working-directory: frontend
+        run: npm run build
+
+  # ─────────────────────────────────────────────────────────────
+  # Job 3: Mobile Multi-App Suite (Flutter, shared_core, customer_app, mechanic_app)
+  # ─────────────────────────────────────────────────────────────
+  mobile:
+    name: Mobile Apps Analysis & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Shared Core Package (Analyze & Test)
+        working-directory: mobile/packages/shared_core
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Customer App (Analyze & Test)
+        working-directory: mobile/apps/customer_app
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test
+
+      - name: Mechanic App (Analyze & Test)
+        working-directory: mobile/apps/mechanic_app
+        run: |
+          flutter pub get
+          flutter analyze
+          flutter test

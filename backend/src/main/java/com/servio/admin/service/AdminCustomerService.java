@@ -48,9 +48,7 @@ public class AdminCustomerService {
                 .filter(u -> u.getRole() != Role.ADMIN)
                 .filter(u -> u.getEmail() != null && !profileEmails.contains(u.getEmail()))
                 .map(u -> Profile.builder()
-                        // Use a deterministic UUID derived from the user's numeric ID so
-                        // the details endpoint can identify it as a local-user record.
-                        .id(new UUID(0L, u.getId()))
+                        .id(u.getId())
                         .fullName(u.getFullName())
                         .email(u.getEmail())
                         .phone(u.getPhone())
@@ -70,7 +68,16 @@ public class AdminCustomerService {
     public Profile getCustomerById(String id) {
         UUID uuid = UUID.fromString(id);
         return profileRepository.findById(uuid)
-                .orElseThrow(() -> new RuntimeException("Customer not found with id: " + id));
+                .or(() -> userRepository.findById(uuid).map(u -> Profile.builder()
+                        .id(u.getId())
+                        .fullName(u.getFullName())
+                        .email(u.getEmail())
+                        .phone(u.getPhone())
+                        .role(u.getRole().name())
+                        .createdAt(u.getCreatedAt() != null ? u.getCreatedAt().atOffset(ZoneOffset.UTC) : null)
+                        .joined(u.getCreatedAt() != null ? u.getCreatedAt().atOffset(ZoneOffset.UTC) : null)
+                        .build()))
+                .orElseThrow(() -> new com.servio.common.exception.ResourceNotFoundException("Customer not found with id: " + id));
     }
 
     public List<Profile> searchCustomers(String query) {
@@ -78,23 +85,23 @@ public class AdminCustomerService {
     }
 
     public AdminCustomerDetailsDto getCustomerDetails(String id) {
-        // Check if this is a synthetic UUID created from a local User numeric ID
-        // (getMostSignificantBits() == 0 is our marker)
+        UUID uuid;
         try {
-            UUID uuid = UUID.fromString(id);
-            if (uuid.getMostSignificantBits() == 0L) {
-                long userId = uuid.getLeastSignificantBits();
-                User localUser = userRepository.findById(userId)
-                        .orElseThrow(() -> new RuntimeException("Customer not found: " + id));
-                return buildDetailsFromUser(localUser);
-            }
-        } catch (IllegalArgumentException ignored) {
-            // Not a UUID — fall through
+            uuid = UUID.fromString(id);
+        } catch (IllegalArgumentException e) {
+            throw new com.servio.common.exception.ResourceNotFoundException("Invalid customer ID format: " + id);
         }
 
-        Profile profile = getCustomerById(id);
+        // First check userRepository directly
+        User user = userRepository.findById(uuid).orElse(null);
+        if (user != null) {
+            return buildDetailsFromUser(user);
+        }
 
-        User user = null;
+        // Otherwise check profileRepository
+        Profile profile = profileRepository.findById(uuid)
+                .orElseThrow(() -> new com.servio.common.exception.ResourceNotFoundException("Customer not found with id: " + id));
+
         if (profile.getEmail() != null && !profile.getEmail().isBlank()) {
             user = userRepository.findByEmail(profile.getEmail()).orElse(null);
         }
@@ -109,7 +116,7 @@ public class AdminCustomerService {
                         .createdAt(user.getCreatedAt())
                         .build();
 
-        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByProfileId(profile.getId()).stream()
+        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByUserId(profile.getId()).stream()
                 .map(vehicle -> CustomerVehicleHistoryDto.builder()
                         .vehicle(toVehicleDto(vehicle))
                         .serviceRecords(serviceRecordRepository.findByVehicleId(vehicle.getId()).stream()
@@ -126,8 +133,8 @@ public class AdminCustomerService {
     }
 
     private AdminCustomerDetailsDto buildDetailsFromUser(User user) {
-        Profile syntheticProfile = Profile.builder()
-                .id(new UUID(0L, user.getId()))
+        Profile profile = Profile.builder()
+                .id(user.getId())
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
@@ -147,8 +154,7 @@ public class AdminCustomerService {
                 .createdAt(user.getCreatedAt())
                 .build();
 
-        // Vehicles are linked via profile_id, use the synthetic UUID to look up
-        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByProfileId(syntheticProfile.getId()).stream()
+        List<CustomerVehicleHistoryDto> vehicles = vehicleRepository.findByUserId(user.getId()).stream()
                 .map(vehicle -> CustomerVehicleHistoryDto.builder()
                         .vehicle(toVehicleDto(vehicle))
                         .serviceRecords(serviceRecordRepository.findByVehicleId(vehicle.getId()).stream()
@@ -158,7 +164,7 @@ public class AdminCustomerService {
                 .collect(Collectors.toList());
 
         return AdminCustomerDetailsDto.builder()
-                .profile(syntheticProfile)
+                .profile(profile)
                 .user(userDto)
                 .vehicles(vehicles)
                 .build();
@@ -167,8 +173,9 @@ public class AdminCustomerService {
     private VehicleDto toVehicleDto(Vehicle vehicle) {
         return VehicleDto.builder()
                 .id(vehicle.getId())
-                .profileId(vehicle.getProfile() != null ? vehicle.getProfile().getId().toString() : null)
-                .ownerName(vehicle.getProfile() != null ? vehicle.getProfile().getFullName() : null)
+                .userId(vehicle.getUser() != null ? vehicle.getUser().getId() : null)
+                .profileId(vehicle.getUser() != null ? vehicle.getUser().getId().toString() : null)
+                .ownerName(vehicle.getUser() != null ? vehicle.getUser().getFullName() : null)
                 .make(vehicle.getMake())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())

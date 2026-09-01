@@ -13,6 +13,8 @@ import com.servio.admin.repository.MechanicDocumentRepository;
 import com.servio.admin.repository.MechanicRepository;
 import com.servio.admin.repository.MechanicStaffDetailsRepository;
 import com.servio.repair.repository.RepairJobRepository;
+import com.servio.common.exception.ConflictException;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +67,7 @@ public class MechanicService {
 
     public MechanicDto getMechanicById(Long id) {
         Mechanic mechanic = mechanicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
         return convertToDto(mechanic);
     }
 
@@ -79,10 +81,10 @@ public class MechanicService {
         try {
             MechanicStatus mechanicStatus = MechanicStatus.valueOf(status);
             return mechanicRepository.findByStatus(mechanicStatus).stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status: " + status);
+            throw new IllegalArgumentException("Invalid status: " + status);
         }
     }
 
@@ -130,7 +132,7 @@ public class MechanicService {
 
     public MechanicDto updateMechanic(Long id, MechanicDto dto) {
         Mechanic mechanic = mechanicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
         validateEmployeeCode(dto.getDetails(), id);
 
         if (dto.getFullName() != null) {
@@ -167,14 +169,14 @@ public class MechanicService {
 
     public void deleteMechanic(Long id) {
         Mechanic mechanic = mechanicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
         mechanic.setIsActive(false);
         mechanicRepository.save(mechanic);
     }
 
     public void updateMechanicStatus(Long id, String status) {
         Mechanic mechanic = mechanicRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
         mechanic.setStatus(MechanicStatus.valueOf(status));
         mechanicRepository.save(mechanic);
     }
@@ -229,7 +231,7 @@ public class MechanicService {
 
     private void validateMechanic(MechanicDto dto) {
         if (isBlank(dto.getFullName()) || isBlank(dto.getEmail()) || isBlank(dto.getPhone())) {
-            throw new RuntimeException("Name, email, and phone are required");
+            throw new IllegalArgumentException("Name, email, and phone are required");
         }
     }
 
@@ -238,13 +240,13 @@ public class MechanicService {
             return;
         }
         if (isBlank(details.getEmployeeCode())) {
-            throw new RuntimeException("Employee code is required");
+            throw new IllegalArgumentException("Employee code is required");
         }
         boolean duplicate = mechanicId == null
                 ? staffDetailsRepository.existsByEmployeeCode(details.getEmployeeCode())
                 : staffDetailsRepository.existsByEmployeeCodeAndMechanicIdNot(details.getEmployeeCode(), mechanicId);
         if (duplicate) {
-            throw new RuntimeException("Employee code already exists");
+            throw new ConflictException("Employee code already exists");
         }
     }
 

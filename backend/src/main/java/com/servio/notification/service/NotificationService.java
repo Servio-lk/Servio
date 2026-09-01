@@ -11,17 +11,22 @@ import com.servio.auth.entity.User;
 import com.servio.notification.repository.NotificationRepository;
 import com.servio.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import com.servio.common.event.AppointmentCreatedEvent;
 import com.servio.common.event.PaymentCompletedEvent;
 import com.servio.common.event.RepairStatusChangedEvent;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
@@ -48,13 +53,17 @@ public class NotificationService {
         NotificationDto dto = convertToDto(notification);
 
         // Push real-time notification via WebSocket
-        eventPublisher.publishNotification(request.getUserId(), dto);
+        try {
+            eventPublisher.publishNotification(request.getUserId(), dto);
+        } catch (Exception e) {
+            log.error("Failed to broadcast WebSocket notification to user {}: {}", request.getUserId(), e.getMessage());
+        }
 
         return dto;
     }
     
     @Transactional
-    public void createAppointmentNotification(Long userId, String appointmentDetails) {
+    public void createAppointmentNotification(UUID userId, String appointmentDetails) {
         NotificationRequest request = NotificationRequest.builder()
             .userId(userId)
             .title("Appointment Confirmation")
@@ -65,7 +74,7 @@ public class NotificationService {
     }
     
     @Transactional
-    public void createPaymentNotification(Long userId, String paymentDetails) {
+    public void createPaymentNotification(UUID userId, String paymentDetails) {
         NotificationRequest request = NotificationRequest.builder()
             .userId(userId)
             .title("Payment Received")
@@ -76,7 +85,7 @@ public class NotificationService {
     }
     
     @Transactional
-    public void createReminderNotification(Long userId, String reminderDetails) {
+    public void createReminderNotification(UUID userId, String reminderDetails) {
         NotificationRequest request = NotificationRequest.builder()
             .userId(userId)
             .title("Service Reminder")
@@ -86,50 +95,73 @@ public class NotificationService {
         createNotification(request);
     }
     
-    @EventListener
+    @Async("taskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onAppointmentCreated(AppointmentCreatedEvent event) {
-        if (event.getUserId() != null) {
-            String details = event.getServiceType() + " on " + event.getAppointmentDate();
-            createAppointmentNotification(event.getUserId(), details);
+        try {
+            log.info("Handling AppointmentCreatedEvent asynchronously: appointmentId={}, userId={}", 
+                    event.getAppointmentId(), event.getUserId());
+            if (event.getUserId() != null) {
+                String details = event.getServiceType() + " on " + event.getAppointmentDate();
+                createAppointmentNotification(event.getUserId(), details);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process AppointmentCreatedEvent for appointmentId={}: {}", 
+                    event.getAppointmentId(), e.getMessage(), e);
         }
     }
 
-    @EventListener
+    @Async("taskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onPaymentCompleted(PaymentCompletedEvent event) {
-        // Payment completed event listener
-        // The event doesn't directly have userId (but we could look it up via AppointmentRepository if we inject it,
-        // or we could add userId to PaymentCompletedEvent. 
-        // For now, if we need userId, we can just leave this empty or we can assume it's handled.
-        // I'll log or skip since PaymentCompletedEvent didn't include userId initially.
-        // If we needed to send notification we would need to pass userId in the event.
+        try {
+            log.info("Handling PaymentCompletedEvent asynchronously: appointmentId={}, userId={}, amount={}, method={}", 
+                    event.getAppointmentId(), event.getUserId(), event.getAmount(), event.getPaymentMethod());
+            if (event.getUserId() != null) {
+                String amountStr = (event.getAmount() != null) ? String.format("%.2f", event.getAmount()) : "0.00";
+                String details = "LKR " + amountStr + " via " + event.getPaymentMethod();
+                createPaymentNotification(event.getUserId(), details);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process PaymentCompletedEvent for appointmentId={}: {}", 
+                    event.getAppointmentId(), e.getMessage(), e);
+        }
     }
 
-    @EventListener
+    @Async("taskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onRepairStatusChanged(RepairStatusChangedEvent event) {
-        if (event.getUserId() != null) {
-            NotificationRequest request = NotificationRequest.builder()
-                .userId(event.getUserId())
-                .title("Repair Status Update")
-                .message(event.getMessage())
-                .type("REPAIR_UPDATE")
-                .build();
-            createNotification(request);
+        try {
+            log.info("Handling RepairStatusChangedEvent asynchronously: appointmentId={}, userId={}, status={}", 
+                    event.getAppointmentId(), event.getUserId(), event.getNewStatus());
+            if (event.getUserId() != null) {
+                NotificationRequest request = NotificationRequest.builder()
+                    .userId(event.getUserId())
+                    .title("Repair Status Update")
+                    .message(event.getMessage())
+                    .type("REPAIR_UPDATE")
+                    .build();
+                createNotification(request);
+            }
+        } catch (Exception e) {
+            log.error("Failed to process RepairStatusChangedEvent for appointmentId={}: {}", 
+                    event.getAppointmentId(), e.getMessage(), e);
         }
     }
     
-    public List<NotificationDto> getUserNotifications(Long userId) {
+    public List<NotificationDto> getUserNotifications(UUID userId) {
         return notificationRepository.findUserNotificationsOrderByDate(userId).stream()
             .map(this::convertToDto)
             .collect(Collectors.toList());
     }
     
-    public List<NotificationDto> getUnreadNotifications(Long userId) {
+    public List<NotificationDto> getUnreadNotifications(UUID userId) {
         return notificationRepository.findUnreadNotifications(userId).stream()
             .map(this::convertToDto)
             .collect(Collectors.toList());
     }
     
-    public Long getUnreadCount(Long userId) {
+    public Long getUnreadCount(UUID userId) {
         return notificationRepository.countUnreadNotifications(userId);
     }
     
@@ -150,7 +182,7 @@ public class NotificationService {
     }
     
     @Transactional
-    public void markAllAsRead(Long userId) {
+    public void markAllAsRead(UUID userId) {
         List<Notification> notifications = notificationRepository.findUnreadNotifications(userId);
         notifications.forEach(n -> n.setIsRead(true));
         notificationRepository.saveAll(notifications);
@@ -165,7 +197,7 @@ public class NotificationService {
     }
     
     @Transactional
-    public void deleteOldNotifications(Long userId, int daysOld) {
+    public void deleteOldNotifications(UUID userId, int daysOld) {
         List<Notification> notifications = notificationRepository.findUserNotificationsOrderByDate(userId);
         notifications.stream()
             .filter(n -> n.getCreatedAt().isBefore(

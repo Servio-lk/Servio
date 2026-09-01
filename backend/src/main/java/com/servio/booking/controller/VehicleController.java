@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/vehicles")
@@ -76,7 +77,7 @@ public class VehicleController {
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<VehicleDto>>> getVehiclesByUserId(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<VehicleDto>>> getVehiclesByUserId(@PathVariable UUID userId) {
         List<VehicleDto> vehicles = vehicleService.getVehiclesByUserId(userId);
         return ResponseEntity.ok(ApiResponse.<List<VehicleDto>>builder()
                 .success(true)

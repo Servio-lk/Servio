@@ -3,6 +3,7 @@ package com.servio.admin.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "walk_in_customers")
@@ -44,7 +45,7 @@ public class WalkInCustomer {
     private Boolean isRegistered = false; // Whether they later registered as a user
 
     @Column(name = "registered_user_id")
-    private Long registeredUserId; // If they later register
+    private UUID registeredUserId; // If they later register
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

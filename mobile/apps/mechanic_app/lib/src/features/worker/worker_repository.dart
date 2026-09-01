@@ -1,90 +1,85 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_core/shared_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_core/shared_core.dart';
 
 class WorkerRepository {
-  SupabaseClient get _client => Supabase.instance.client;
+  final ApiClient _apiClient;
 
-  /// Fetches all active appointments across the shop for the supervisor dashboard.
+  WorkerRepository({ApiClient? apiClient})
+      : _apiClient = apiClient ?? ApiClient();
+
+  /// Fetches all active appointments across the shop for the supervisor/mechanic dashboard via Spring Boot REST API.
   Future<List<AppointmentModel>> getActiveAppointments() async {
-    final mechanic = await SupabaseService().getCurrentMechanic();
-    if (mechanic == null) {
-      throw Exception(
-        'No active staff profile was found for this email. Ask HR to register or reactivate your staff record.',
+    try {
+      final inProgressFuture = _apiClient.get<List<AppointmentModel>>(
+        '/appointments/status/IN_PROGRESS',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <AppointmentModel>[];
+        },
       );
-    }
 
-    // 1. Fetch all appointments that are IN_PROGRESS or CONFIRMED
-    final response = await _client
-        .from('appointments')
-        .select('''
-          id, profile_id, vehicle_id, service_type, appointment_date,
-          status, location, notes, estimated_cost, actual_cost, created_at,
-          vehicles ( make, model, year, license_plate )
-        ''')
-        .inFilter('status', ['IN_PROGRESS', 'CONFIRMED'])
-        .order('appointment_date', ascending: true);
+      final confirmedFuture = _apiClient.get<List<AppointmentModel>>(
+        '/appointments/status/CONFIRMED',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <AppointmentModel>[];
+        },
+      );
 
-    final appointmentsData = response as List<dynamic>;
-    if (appointmentsData.isEmpty) return [];
+      final results = await Future.wait([inProgressFuture, confirmedFuture]);
+      final inProgressList = results[0].data ?? <AppointmentModel>[];
+      final confirmedList = results[1].data ?? <AppointmentModel>[];
 
-    final appointmentIds = appointmentsData
-        .map((e) => e['id'] as int)
-        .toList();
+      final combined = [...inProgressList, ...confirmedList];
+      // Sort by appointment date ascending
+      combined.sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
 
-    // 2. Fetch repair jobs for these appointments to get assigned_technician_id
-    final repairsResponse = await _client
-        .from('repair_jobs')
-        .select('appointment_id, assigned_technician_id')
-        .inFilter('appointment_id', appointmentIds)
-        .not('assigned_technician_id', 'is', null);
-
-    final Map<int, int> appointmentToMechanicId = {};
-    for (final repair in repairsResponse as List<dynamic>) {
-      final appId = repair['appointment_id'] as int;
-      final mechId = repair['assigned_technician_id'] as int;
-      appointmentToMechanicId[appId] = mechId;
-    }
-
-    // 3. Fetch mechanic names
-    final mechanicIds = appointmentToMechanicId.values.toSet().toList();
-    final Map<int, String> mechanicIdToName = {};
-    if (mechanicIds.isNotEmpty) {
-      final mechanicsResponse = await _client
-          .from('mechanics')
-          .select('id, full_name')
-          .inFilter('id', mechanicIds);
-      
-      for (final mech in mechanicsResponse as List<dynamic>) {
-        final id = mech['id'] as int;
-        final name = mech['full_name'] as String;
-        mechanicIdToName[id] = name;
+      return combined;
+    } catch (e) {
+      debugPrint('Error fetching active mechanic appointments from backend: $e');
+      // If status endpoint fails, try fetching recent/all appointments
+      try {
+        final fallbackResponse = await _apiClient.get<List<AppointmentModel>>(
+          '/appointments',
+          fromJson: (data) {
+            if (data is List) {
+              return data
+                  .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
+                  .where((a) => a.status == 'IN_PROGRESS' || a.status == 'CONFIRMED')
+                  .toList();
+            }
+            return <AppointmentModel>[];
+          },
+        );
+        return fallbackResponse.data ?? <AppointmentModel>[];
+      } catch (fallbackError) {
+        debugPrint('Fallback appointment fetch failed: $fallbackError');
+        rethrow;
       }
     }
-
-    // 4. Map the data back to AppointmentModel
-    return appointmentsData.map((e) {
-      final json = Map<String, dynamic>.from(e as Map<String, dynamic>);
-      final appId = json['id'] as int;
-      final mechId = appointmentToMechanicId[appId];
-      if (mechId != null) {
-        json['assignedMechanicName'] = mechanicIdToName[mechId];
-      }
-      return AppointmentModel.fromJson(json);
-    }).toList();
   }
 
-  /// Updates the status of an appointment.
+  /// Updates the status of an appointment via PATCH /api/appointments/{id}/status?status={newStatus}.
   Future<void> updateAppointmentStatus(
     int appointmentId,
     String newStatus,
   ) async {
-    await _client
-        .from('appointments')
-        .update({
-          'status': newStatus,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-        })
-        .eq('id', appointmentId);
+    try {
+      await _apiClient.patch(
+        '/appointments/$appointmentId/status',
+        queryParameters: {'status': newStatus},
+      );
+    } catch (e) {
+      debugPrint('Error updating appointment status via backend: $e');
+      rethrow;
+    }
   }
 }

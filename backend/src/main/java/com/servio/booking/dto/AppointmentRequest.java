@@ -7,13 +7,14 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class AppointmentRequest {
-    private Long userId; // Optional - if null, uses default user
+    private UUID userId; // Optional - if null, uses authenticated user
     private Long vehicleId;
     private String serviceType;
     private LocalDateTime appointmentDate;

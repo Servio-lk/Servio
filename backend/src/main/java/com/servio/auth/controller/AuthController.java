@@ -119,14 +119,8 @@ public class AuthController {
     @GetMapping("/profile")
     public ResponseEntity<ApiResponse<UserResponse>> getProfile(Authentication authentication) {
         try {
-            String userId = authentication.getPrincipal().toString();
-            UserResponse userResponse;
-
-            try {
-                userResponse = authService.getProfile(Long.parseLong(userId));
-            } catch (NumberFormatException ex) {
-                userResponse = authService.getProfileByUuid(userId);
-            }
+            String userIdStr = authentication.getPrincipal().toString();
+            UserResponse userResponse = authService.getProfileByUuid(userIdStr);
 
             return ResponseEntity.ok(ApiResponse.<UserResponse>builder()
                     .success(true)
@@ -145,8 +139,9 @@ public class AuthController {
     @Operation(summary = "Delete (anonymize) the current user account")
     public ResponseEntity<ApiResponse<String>> deleteProfile(Authentication authentication) {
         try {
-            String userId = authentication.getPrincipal().toString();
-            String supabaseUserId = authService.deleteCustomer(Long.parseLong(userId));
+            String userIdStr = authentication.getPrincipal().toString();
+            java.util.UUID userId = java.util.UUID.fromString(userIdStr);
+            String supabaseUserId = authService.deleteCustomer(userId);
             
             // Delete from Supabase Auth after the local DB transaction has successfully committed
             if (supabaseUserId != null) {
@@ -154,7 +149,7 @@ public class AuthController {
             }
             
             return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("Invalid user ID format", null));
         } catch (IllegalStateException e) {

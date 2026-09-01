@@ -1,24 +1,26 @@
 package com.servio.repair.service;
 
-import com.servio.booking.repository.AppointmentRepository;
-import com.servio.repair.repository.RepairProgressRepository;
-import com.servio.repair.entity.RepairProgress;
-import com.servio.booking.repository.VehicleRepository;
 import com.servio.auth.repository.UserRepository;
-import com.servio.repair.repository.RepairJobRepository;
-import com.servio.repair.repository.RepairActivityRepository;
+import com.servio.booking.entity.Appointment;
+import com.servio.booking.repository.AppointmentRepository;
+import com.servio.booking.repository.VehicleRepository;
+import com.servio.common.event.RepairStatusChangedEvent;
+import com.servio.common.exception.ResourceNotFoundException;
 import com.servio.repair.entity.RepairActivity;
 import com.servio.repair.entity.RepairJob;
-import com.servio.booking.entity.Appointment;
-import com.servio.common.event.RepairStatusChangedEvent;
-
+import com.servio.repair.entity.RepairProgress;
+import com.servio.repair.repository.RepairActivityRepository;
+import com.servio.repair.repository.RepairJobRepository;
+import com.servio.repair.repository.RepairProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +38,7 @@ public class RepairJobService {
     public RepairJob createRepairJob(Long appointmentId, String title, String description, 
                                      Integer estimatedHours, BigDecimal estimatedCost) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
         
         RepairJob repairJob = RepairJob.builder()
                 .appointment(appointment)
@@ -77,7 +79,7 @@ public class RepairJobService {
         return repairJobRepository.findFirstByAppointmentId(appointmentId)
                 .orElseGet(() -> {
                     Appointment appointment = appointmentRepository.findById(appointmentId)
-                            .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                            .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + appointmentId));
                     return createRepairJob(
                             appointmentId,
                             appointment.getServiceType(),
@@ -90,7 +92,7 @@ public class RepairJobService {
     
     public RepairJob updateRepairJobStatus(Long repairJobId, String newStatus) {
         RepairJob repairJob = repairJobRepository.findById(repairJobId)
-                .orElseThrow(() -> new RuntimeException("Repair job not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Repair job not found with id: " + repairJobId));
         
         repairJob.setStatus(newStatus);
         if ("COMPLETED".equals(newStatus)) {
@@ -118,7 +120,7 @@ public class RepairJobService {
                 .build();
         repairActivityRepository.save(activity);
         
-        Long userId = savedJob.getUser() != null ? savedJob.getUser().getId() : null;
+        UUID userId = savedJob.getUser() != null ? savedJob.getUser().getId() : null;
         applicationEventPublisher.publishEvent(new com.servio.common.event.RepairStatusChangedEvent(
             this,
             savedJob.getAppointment().getId(),
@@ -132,10 +134,10 @@ public class RepairJobService {
     
     public RepairJob getRepairJobById(Long id) {
         return repairJobRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Repair job not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Repair job not found with id: " + id));
     }
     
-    public List<RepairJob> getUserRepairJobs(Long userId) {
+    public List<RepairJob> getUserRepairJobs(UUID userId) {
         return repairJobRepository.findUserRepairJobsOrderByDate(userId);
     }
     

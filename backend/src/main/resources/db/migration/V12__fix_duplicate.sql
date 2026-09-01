@@ -33,9 +33,21 @@ WHERE id NOT IN (
 
 -- ─── 5. ADD UNIQUE CONSTRAINTS TO PREVENT THIS FROM HAPPENING AGAIN ─────────
 
-ALTER TABLE service_categories ADD CONSTRAINT uq_service_categories_name UNIQUE (name);
-ALTER TABLE services ADD CONSTRAINT uq_services_category_name UNIQUE (category_id, name);
-ALTER TABLE service_options ADD CONSTRAINT uq_service_options_service_name UNIQUE (service_id, name);
+DO $$
+BEGIN
+    BEGIN
+        ALTER TABLE service_categories ADD CONSTRAINT uq_service_categories_name UNIQUE (name);
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
+    END;
+    BEGIN
+        ALTER TABLE services ADD CONSTRAINT uq_services_category_name UNIQUE (category_id, name);
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
+    END;
+    BEGIN
+        ALTER TABLE service_options ADD CONSTRAINT uq_service_options_service_name UNIQUE (service_id, name);
+    EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
+    END;
+END $$;
 
 -- ─── 6. VERIFY ──────────────────────────────────────────────────────────────
 

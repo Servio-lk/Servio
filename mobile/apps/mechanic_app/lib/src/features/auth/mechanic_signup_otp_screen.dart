@@ -203,7 +203,7 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border:
-                              Border.all(color: Colors.black.withOpacity(0.1)),
+                              Border.all(color: Colors.black.withValues(alpha: 0.1)),
                         ),
                         child: TextField(
                           controller: _otpControllers[i],
@@ -289,7 +289,7 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: _isLoading ? 0 : 8,
-                    shadowColor: const Color(0xFFFF5D2E).withOpacity(0.5),
+                    shadowColor: const Color(0xFFFF5D2E).withValues(alpha: 0.5),
                   ),
                   child: _isLoading
                       ? const SizedBox(

@@ -52,7 +52,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityException(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return buildErrorResponse(new RuntimeException("Database constraint violation"), HttpStatus.CONFLICT, request);
+        return buildErrorResponse(new ConflictException("This time slot is already booked. Please choose another time."), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+    }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ErrorResponse> handleSecurityException(SecurityException ex, HttpServletRequest request) {
+        return buildErrorResponse(ex, HttpStatus.FORBIDDEN, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -1,19 +1,19 @@
 package com.servio.catalog.service;
 
-
-import com.servio.booking.dto.AppointmentDto;
 import com.servio.admin.dto.DashboardStatsDto;
+import com.servio.auth.repository.UserRepository;
+import com.servio.booking.dto.AppointmentDto;
 import com.servio.booking.entity.Appointment;
-import com.servio.payment.entity.Payment;
 import com.servio.booking.repository.AppointmentRepository;
+import com.servio.payment.entity.Payment;
 import com.servio.payment.repository.PaymentRepository;
-import com.servio.auth.repository.ProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -21,11 +21,11 @@ import java.util.stream.Collectors;
 public class AdminDashboardService {
 
     private final AppointmentRepository appointmentRepository;
-    private final ProfileRepository profileRepository;
+    private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
 
     public DashboardStatsDto getDashboardStats() {
-        long totalCustomers = profileRepository.count();
+        long totalCustomers = userRepository.count();
         long totalAppointments = appointmentRepository.count();
 
         // Payments table is the authoritative revenue source
@@ -70,14 +70,11 @@ public class AdminDashboardService {
     }
 
     AppointmentDto convertToDto(Appointment appointment) {
-        Long userId = null;
+        UUID userId = null;
         String userName = null;
         String userEmail = null;
 
-        if (appointment.getProfile() != null) {
-            userName = appointment.getProfile().getFullName();
-            userEmail = appointment.getProfile().getEmail();
-        } else if (appointment.getUser() != null) {
+        if (appointment.getUser() != null) {
             userId = appointment.getUser().getId();
             userName = appointment.getUser().getFullName();
             userEmail = appointment.getUser().getEmail();
@@ -92,6 +89,7 @@ public class AdminDashboardService {
         return AppointmentDto.builder()
                 .id(appointment.getId())
                 .userId(userId)
+                .profileId(userId != null ? userId.toString() : null)
                 .userName(userName)
                 .userEmail(userEmail)
                 .vehicleId(appointment.getVehicle() != null ? appointment.getVehicle().getId() : null)

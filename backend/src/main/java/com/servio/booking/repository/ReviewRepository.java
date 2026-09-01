@@ -7,11 +7,12 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     
-    List<Review> findByUserId(Long userId);
+    List<Review> findByUserId(UUID userId);
     
     List<Review> findByAppointmentId(Long appointmentId);
     

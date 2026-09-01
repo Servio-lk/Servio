@@ -143,15 +143,6 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
       final profilePhone = _nonEmptyText(registeredMechanic?['phone']) ?? phone;
 
       try {
-        await _supabaseService.client.from('profiles').upsert({
-          'id': user.id,
-          'email': _email,
-          if (profileName.isNotEmpty) 'full_name': profileName,
-          if (profilePhone.isNotEmpty) 'phone': profilePhone,
-          'role': role,
-          'is_admin': false,
-        }, onConflict: 'id');
-
         await _supabaseService.updateUserProfile(
           data: {
             'role': role,
@@ -167,15 +158,8 @@ class _SignUpOtpScreenState extends State<SignUpOtpScreen> {
             fallbackName: profileName,
             fallbackPhone: profilePhone,
           );
-        }
-
-        final profileRow = await _supabaseService.client
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .maybeSingle();
-        if (profileRow == null) {
-          hasFollowUpWarning = true;
+        } else {
+          await _supabaseService.syncWithBackend();
         }
       } catch (e) {
         hasFollowUpWarning = true;

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -21,7 +22,7 @@ public class WalkInCustomerDto {
     private String licensePlate;
     private String notes;
     private Boolean isRegistered;
-    private Long registeredUserId;
+    private UUID registeredUserId;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }

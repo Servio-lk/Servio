@@ -165,8 +165,7 @@ public class PayHereService {
 
             Payment payment = Payment.builder()
                     .appointment(appointment)
-                    .user(appointment.getUser())       // null for Supabase profile users
-                    .profile(appointment.getProfile()) // null for local users
+                    .user(appointment.getUser())
                     .amount(new BigDecimal(payhereAmount))
                     .paymentMethod("PAYHERE")
                     .paymentStatus("COMPLETED")
@@ -175,9 +174,11 @@ public class PayHereService {
                     .build();
             paymentRepository.save(payment);
             
+            UUID userId = appointment.getUser() != null ? appointment.getUser().getId() : null;
             applicationEventPublisher.publishEvent(new com.servio.common.event.PaymentCompletedEvent(
                 this, 
                 appointmentId, 
+                userId,
                 Double.parseDouble(payhereAmount), 
                 "PAYHERE"
             ));
@@ -221,50 +222,32 @@ public class PayHereService {
         }
         String principal = authentication.getPrincipal().toString();
         try {
-            UUID profileId = UUID.fromString(principal);
-            if (appointment.getProfile() == null
-                    || !appointment.getProfile().getId().equals(profileId)) {
+            UUID userUuid = UUID.fromString(principal);
+            if (appointment.getUser() == null
+                    || !appointment.getUser().getId().equals(userUuid)) {
                 throw new SecurityException(
                         "Access denied: appointment does not belong to this user");
             }
         } catch (IllegalArgumentException e) {
-            try {
-                Long userId = Long.parseLong(principal);
-                if (appointment.getUser() == null
-                        || !appointment.getUser().getId().equals(userId)) {
-                    throw new SecurityException(
-                            "Access denied: appointment does not belong to this user");
-                }
-            } catch (NumberFormatException nfe) {
-                throw new SecurityException("Invalid principal format: " + principal);
-            }
+            throw new SecurityException("Invalid user ID format: " + principal);
         }
     }
 
     private String resolveFullName(Appointment appointment) {
-        if (appointment.getUser() != null
-                && appointment.getUser().getFullName() != null) {
+        if (appointment.getUser() != null && appointment.getUser().getFullName() != null) {
             return appointment.getUser().getFullName();
-        }
-        if (appointment.getProfile() != null
-                && appointment.getProfile().getFullName() != null) {
-            return appointment.getProfile().getFullName();
         }
         return "Customer";
     }
 
     private String resolveEmail(Appointment appointment) {
         if (appointment.getUser() != null) return appointment.getUser().getEmail();
-        if (appointment.getProfile() != null) return appointment.getProfile().getEmail();
         return "";
     }
 
     private String resolvePhone(Appointment appointment) {
         String phone = null;
         if (appointment.getUser() != null) phone = appointment.getUser().getPhone();
-        if (phone == null && appointment.getProfile() != null) {
-            phone = appointment.getProfile().getPhone();
-        }
         return (phone != null && !phone.isBlank()) ? phone : "0000000000";
     }
 

@@ -1,10 +1,9 @@
 package com.servio.booking.entity;
-import com.servio.auth.entity.Profile;
+import com.servio.auth.entity.User;
 
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Entity
 @Table(name = "vehicles")
@@ -18,8 +17,8 @@ public class Vehicle {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id")
-    private Profile profile;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @Column(nullable = false)
     private String make;

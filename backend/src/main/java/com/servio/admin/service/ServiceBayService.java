@@ -6,6 +6,7 @@ import com.servio.admin.entity.ServiceBay;
 import com.servio.admin.entity.ServiceBayStatus;
 import com.servio.admin.entity.ServiceBayType;
 import com.servio.admin.repository.ServiceBayRepository;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -32,7 +33,7 @@ public class ServiceBayService {
 
     public ServiceBayDto getServiceBayById(Long id) {
         ServiceBay bay = serviceBayRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Service bay not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service bay not found with id: " + id));
         return convertToDto(bay);
     }
 
@@ -50,7 +51,7 @@ public class ServiceBayService {
 
     public ServiceBayDto updateServiceBay(Long id, ServiceBayDto dto) {
         ServiceBay bay = serviceBayRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Service bay not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service bay not found with id: " + id));
 
         bay.setBayNumber(dto.getBayNumber());
         bay.setDescription(dto.getDescription());
@@ -77,7 +78,7 @@ public class ServiceBayService {
 
     public void updateServiceBayStatus(Long id, String status) {
         ServiceBay bay = serviceBayRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Service bay not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Service bay not found with id: " + id));
         bay.setStatus(ServiceBayStatus.valueOf(status));
         serviceBayRepository.save(bay);
     }

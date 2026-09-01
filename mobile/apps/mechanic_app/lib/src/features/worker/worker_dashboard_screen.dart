@@ -204,7 +204,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                   ),
                   Container(
                     width: 1,
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                   ),
                   Padding(
                     padding: const EdgeInsets.all(8),
@@ -397,7 +397,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                 style: GoogleFonts.instrumentSans(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black.withOpacity(0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   letterSpacing: 0.06,
                   height: 13 / 11,
                 ),
@@ -795,7 +795,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
         children: [
           Container(
             height: 0.4,
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
           ),
           Padding(
             padding: const EdgeInsets.only(left: 24, right: 24, bottom: 4),
@@ -819,7 +819,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                             size: 24,
                             color: isActive
                                 ? Colors.black
-                                : Colors.black.withOpacity(0.5),
+                                : Colors.black.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 8),
                           Text(
@@ -831,7 +831,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                                   : FontWeight.w500,
                               color: isActive
                                   ? Colors.black
-                                  : Colors.black.withOpacity(0.5),
+                                  : Colors.black.withValues(alpha: 0.5),
                               height: 22 / 12,
                             ),
                             textAlign: TextAlign.center,

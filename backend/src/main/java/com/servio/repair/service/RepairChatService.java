@@ -18,12 +18,15 @@ import com.servio.auth.repository.ProfileRepository;
 import com.servio.repair.entity.RepairConversationMember;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -35,6 +38,7 @@ public class RepairChatService {
     private final MechanicRepository mechanicRepository;
     private final ProfileRepository profileRepository;
     private final RepairJobService repairJobService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public RepairConversation getOrCreateConversation(Long repairId) {
         return conversationRepository.findByRepairJobId(repairId)
@@ -46,18 +50,15 @@ public class RepairChatService {
                             .isReadOnly(isClosed(repairJob))
                             .build());
 
-                    String clientUserId = repairJob.getAppointment() != null
-                            && repairJob.getAppointment().getProfile() != null
-                            ? repairJob.getAppointment().getProfile().getId().toString()
-                            : repairJob.getUser() != null ? String.valueOf(repairJob.getUser().getId()) : null;
+                    String clientUserId = repairJob.getUser() != null
+                            ? repairJob.getUser().getId().toString()
+                            : (repairJob.getAppointment() != null && repairJob.getAppointment().getUser() != null
+                                ? repairJob.getAppointment().getUser().getId().toString() : null);
                     if (clientUserId != null) {
-                        String memberRef = repairJob.getUser() != null
-                                ? "user:" + repairJob.getUser().getId()
-                                : "profile:" + clientUserId;
                         ensureMember(
                                 conversation,
                                 ConversationMemberRole.CLIENT,
-                                memberRef,
+                                "user:" + clientUserId,
                                 clientUserId,
                                 null,
                                 true
@@ -111,7 +112,23 @@ public class RepairChatService {
                 .senderRole(senderRole)
                 .body(request.getBody().trim())
                 .build());
-        return toMessageDto(saved);
+
+        RepairMessageDto dto = toMessageDto(saved);
+
+        // Broadcast over STOMP WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/repairs/" + repairId + "/messages", dto);
+            if (conversation.getRepairJob() != null && conversation.getRepairJob().getAppointment() != null) {
+                Long appointmentId = conversation.getRepairJob().getAppointment().getId();
+                if (appointmentId != null) {
+                    messagingTemplate.convertAndSend("/topic/appointments/" + appointmentId + "/messages", dto);
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to broadcast WebSocket chat message for repairId={}: {}", repairId, e.getMessage());
+        }
+
+        return dto;
     }
 
     public RepairConversationDto assignMechanic(Long repairId, Long mechanicId) {
@@ -192,15 +209,13 @@ public class RepairChatService {
     }
 
     private boolean ownsRepair(RepairConversation conversation, Authentication authentication) {
-        if (conversation.getRepairJob().getUser() == null) {
-            return conversation.getRepairJob().getAppointment() != null
-                    && conversation.getRepairJob().getAppointment().getProfile() != null
-                    && conversation.getRepairJob().getAppointment().getProfile().getId().toString().equals(authentication.getName());
+        if (conversation.getRepairJob().getUser() != null) {
+            return conversation.getRepairJob().getUser().getId().toString().equals(authentication.getName());
         }
-        return String.valueOf(conversation.getRepairJob().getUser().getId()).equals(authentication.getName())
-                || (conversation.getRepairJob().getAppointment() != null
-                && conversation.getRepairJob().getAppointment().getProfile() != null
-                && conversation.getRepairJob().getAppointment().getProfile().getId().toString().equals(authentication.getName()));
+        if (conversation.getRepairJob().getAppointment() != null && conversation.getRepairJob().getAppointment().getUser() != null) {
+            return conversation.getRepairJob().getAppointment().getUser().getId().toString().equals(authentication.getName());
+        }
+        return false;
     }
 
     private String resolveProfileUserId(String email) {

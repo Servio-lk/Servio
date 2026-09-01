@@ -222,28 +222,17 @@ public class AuthService {
     public UserResponse getProfileByUuid(String userId) {
         try {
             UUID uuid = UUID.fromString(userId);
-            Profile profile = profileRepository.findById(uuid).orElse(null);
-            if (profile == null) {
-                throw new IllegalArgumentException("User not found");
-            }
-            return UserResponse.builder()
-                    .fullName(profile.getFullName())
-                    .email(profile.getEmail())
-                    .role(profile.getRole() != null ? profile.getRole() : "USER")
-                    .build();
+            return getProfile(uuid);
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("User not found: " + userId);
         }
     }
 
-    public UserResponse getProfile(Long userId) {
-        Optional<User> userOptional = userRepository.findById(userId);
+    public UserResponse getProfile(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
 
-        if (userOptional.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
-        }
-
-        return mapToUserResponse(userOptional.get());
+        return mapToUserResponse(user);
     }
 
     private UserResponse mapToUserResponse(User user) {
@@ -258,23 +247,18 @@ public class AuthService {
     }
 
     @Transactional
-    public String deleteCustomer(Long userId) {
+    public String deleteCustomer(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // 1. Find Supabase UUID before processing appointments
+        // 1. Find Supabase profile if any
         String oldEmail = user.getEmail();
         Optional<Profile> profileOpt = profileRepository.findByEmail(oldEmail);
 
-        // 2. Forcefully update the DB to link appointments to this user and unlink the profile
-        profileOpt.ifPresent(profile -> {
-            appointmentRepository.unlinkProfileAndSetUser(profile.getId(), user);
-        });
-
-        // 3. Fetch all appointments (now safely linked to user_id)
+        // 2. Fetch all appointments safely linked to user_id
         java.util.List<Appointment> allAppointments = appointmentRepository.findByUserId(userId);
 
-        // 4. Process appointments: cancel pending/past confirmed
+        // 3. Process appointments: cancel pending/past confirmed
         java.time.LocalDateTime now = java.time.LocalDateTime.now();
         for (Appointment appt : allAppointments) {
             boolean changed = false;
@@ -291,10 +275,6 @@ public class AuthService {
                 appointmentRepository.save(appt);
             }
         }
-        // FLUSH the changes to the database immediately!
-        // This is critical because the Supabase API call below will trigger a cascade delete
-        // on the profile, which triggers ON DELETE SET NULL for profile_id. 
-        // If the DB doesn't have the updated user_id yet, the check constraint fails.
         appointmentRepository.flush();
 
         // 4. Prevent deletion if there are still active (future) appointments

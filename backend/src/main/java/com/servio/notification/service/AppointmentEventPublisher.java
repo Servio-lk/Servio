@@ -40,7 +40,7 @@ public class AppointmentEventPublisher {
     }
 
     /** Push a persisted notification to the user's notification topic in real-time. */
-    public void publishNotification(Long userId, NotificationDto notification) {
+    public void publishNotification(java.util.UUID userId, NotificationDto notification) {
         if (userId != null) {
             messagingTemplate.convertAndSend("/topic/notifications/user/" + userId, notification);
         }

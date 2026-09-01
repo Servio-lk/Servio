@@ -41,6 +41,10 @@ public class CloudinaryService {
         return uploadImage(file, "servio/services/icons", "service-icon");
     }
 
+    public ServicePhotoUploadResponse uploadInspectionPhoto(MultipartFile file, Long jobCardId) {
+        return uploadImage(file, "servio/inspections/job-card-" + jobCardId, "inspection-photo");
+    }
+
     private ServicePhotoUploadResponse uploadImage(MultipartFile file, String folder, String fallbackName) {
         if (cloudName == null || cloudName.isBlank() || apiKey == null || apiKey.isBlank() || apiSecret == null || apiSecret.isBlank()) {
             throw new RuntimeException("Cloudinary configuration is missing");

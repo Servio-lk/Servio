@@ -1,14 +1,13 @@
 package com.servio.admin.controller;
 
-import com.servio.admin.entity.Mechanic;
-
-import com.servio.common.dto.ApiResponse;
 import com.servio.admin.dto.MechanicDto;
 import com.servio.admin.service.MechanicService;
+import com.servio.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -19,84 +18,50 @@ public class AdminMechanicController {
     private final MechanicService mechanicService;
 
     @PostMapping
-    public ResponseEntity<?> createMechanic(@RequestBody MechanicDto dto) {
-        try {
-            MechanicDto created = mechanicService.createMechanic(dto);
-            return ResponseEntity.ok(ApiResponse.success("Mechanic created successfully", created));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create mechanic", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<MechanicDto>> createMechanic(@RequestBody MechanicDto dto) {
+        MechanicDto created = mechanicService.createMechanic(dto);
+        return ResponseEntity.ok(ApiResponse.success("Mechanic created successfully", created));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getMechanicById(@PathVariable Long id) {
-        try {
-            MechanicDto mechanic = mechanicService.getMechanicById(id);
-            return ResponseEntity.ok(ApiResponse.success("Mechanic retrieved successfully", mechanic));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve mechanic", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<MechanicDto>> getMechanicById(@PathVariable Long id) {
+        MechanicDto mechanic = mechanicService.getMechanicById(id);
+        return ResponseEntity.ok(ApiResponse.success("Mechanic retrieved successfully", mechanic));
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllMechanics() {
-        try {
-            List<MechanicDto> mechanics = mechanicService.getAllMechanics();
-            return ResponseEntity.ok(ApiResponse.success("Mechanics retrieved successfully", mechanics));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve mechanics", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<MechanicDto>>> getAllMechanics() {
+        List<MechanicDto> mechanics = mechanicService.getAllMechanics();
+        return ResponseEntity.ok(ApiResponse.success("Mechanics retrieved successfully", mechanics));
     }
 
     @GetMapping("/status/{status}")
-    public ResponseEntity<?> getMechanicsByStatus(@PathVariable String status) {
-        try {
-            List<MechanicDto> mechanics = mechanicService.getMechanicsByStatus(status);
-            return ResponseEntity.ok(ApiResponse.success("Mechanics retrieved successfully", mechanics));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve mechanics", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<MechanicDto>>> getMechanicsByStatus(@PathVariable String status) {
+        List<MechanicDto> mechanics = mechanicService.getMechanicsByStatus(status);
+        return ResponseEntity.ok(ApiResponse.success("Mechanics retrieved successfully", mechanics));
     }
 
     @GetMapping("/available")
-    public ResponseEntity<?> getAvailableMechanics() {
-        try {
-            List<MechanicDto> mechanics = mechanicService.getAvailableMechanics();
-            return ResponseEntity.ok(ApiResponse.success("Available mechanics retrieved successfully", mechanics));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to retrieve available mechanics", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<MechanicDto>>> getAvailableMechanics() {
+        List<MechanicDto> mechanics = mechanicService.getAvailableMechanics();
+        return ResponseEntity.ok(ApiResponse.success("Available mechanics retrieved successfully", mechanics));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateMechanic(@PathVariable Long id, @RequestBody MechanicDto dto) {
-        try {
-            MechanicDto updated = mechanicService.updateMechanic(id, dto);
-            return ResponseEntity.ok(ApiResponse.success("Mechanic updated successfully", updated));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to update mechanic", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<MechanicDto>> updateMechanic(@PathVariable Long id, @RequestBody MechanicDto dto) {
+        MechanicDto updated = mechanicService.updateMechanic(id, dto);
+        return ResponseEntity.ok(ApiResponse.success("Mechanic updated successfully", updated));
     }
 
     @PatchMapping("/{id}/status/{status}")
-    public ResponseEntity<?> updateMechanicStatus(@PathVariable Long id, @PathVariable String status) {
-        try {
-            mechanicService.updateMechanicStatus(id, status);
-            return ResponseEntity.ok(ApiResponse.success("Mechanic status updated successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to update mechanic status", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Void>> updateMechanicStatus(@PathVariable Long id, @PathVariable String status) {
+        mechanicService.updateMechanicStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success("Mechanic status updated successfully", null));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteMechanic(@PathVariable Long id) {
-        try {
-            mechanicService.deleteMechanic(id);
-            return ResponseEntity.ok(ApiResponse.success("Mechanic deleted successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to delete mechanic", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteMechanic(@PathVariable Long id) {
+        mechanicService.deleteMechanic(id);
+        return ResponseEntity.ok(ApiResponse.success("Mechanic deleted successfully", null));
     }
 }

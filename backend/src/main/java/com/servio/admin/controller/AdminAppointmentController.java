@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -91,14 +92,11 @@ public class AdminAppointmentController {
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {
-        Long userId = null;
+        UUID userId = null;
         String userName = null;
         String userEmail = null;
 
-        if (appointment.getProfile() != null) {
-            userName = appointment.getProfile().getFullName();
-            userEmail = appointment.getProfile().getEmail();
-        } else if (appointment.getUser() != null) {
+        if (appointment.getUser() != null) {
             userId = appointment.getUser().getId();
             userName = appointment.getUser().getFullName();
             userEmail = appointment.getUser().getEmail();
@@ -113,6 +111,7 @@ public class AdminAppointmentController {
         return AppointmentDto.builder()
                 .id(appointment.getId())
                 .userId(userId)
+                .profileId(userId != null ? userId.toString() : null)
                 .userName(userName)
                 .userEmail(userEmail)
                 .vehicleId(appointment.getVehicle() != null ? appointment.getVehicle().getId() : null)

@@ -64,4 +64,14 @@ class EmailValidator {
     if (tld.length == 2) return true; // country-code TLDs, e.g. .lk, .uk
     return _commonGenericTlds.contains(tld);
   }
+
+  static String? validate(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Please enter your email';
+    }
+    if (!isValid(value)) {
+      return 'Please enter a valid email';
+    }
+    return null;
+  }
 }

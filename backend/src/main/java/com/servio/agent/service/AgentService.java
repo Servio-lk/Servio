@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.servio.agent.config.GeminiConfig;
 import com.servio.agent.dto.AgentChatRequest;
 import com.servio.agent.dto.AgentChatResponse;
+import com.servio.agent.entity.AgentConversation;
+import com.servio.agent.repository.AgentConversationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -17,8 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -27,11 +29,9 @@ public class AgentService {
 
     private final GeminiConfig geminiConfig;
     private final AgentToolService agentToolService;
+    private final AgentConversationRepository agentConversationRepository;
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
-
-    // Cache of recent conversations: conversationId -> List of turns (Jackson ObjectNodes)
-    private final Map<String, List<ObjectNode>> conversationHistory = new ConcurrentHashMap<>();
 
     private static final String SYSTEM_INSTRUCTION = """
             You are Servio AI, an intelligent, helpful, and courteous automotive assistant for the Servio vehicle service and repair center.
@@ -62,7 +62,30 @@ public class AgentService {
                     .build();
         }
 
-        List<ObjectNode> history = conversationHistory.computeIfAbsent(conversationId, k -> Collections.synchronizedList(new ArrayList<>()));
+        UUID userId = null;
+        if (authentication != null && authentication.isAuthenticated()) {
+            try {
+                userId = UUID.fromString(authentication.getName());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        AgentConversation agentConversation = agentConversationRepository.findById(conversationId).orElse(null);
+        List<ObjectNode> history = new ArrayList<>();
+        if (agentConversation != null && agentConversation.getHistoryJson() != null && !agentConversation.getHistoryJson().isBlank()) {
+            try {
+                JsonNode historyArray = objectMapper.readTree(agentConversation.getHistoryJson());
+                if (historyArray.isArray()) {
+                    for (JsonNode node : historyArray) {
+                        if (node instanceof ObjectNode objectNode) {
+                            history.add(objectNode);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to deserialize history JSON for conversation {}: {}", conversationId, e.getMessage());
+            }
+        }
+
         List<String> executedTools = new ArrayList<>();
 
         try {
@@ -98,34 +121,35 @@ public class AgentService {
                 JsonNode content = candidate.path("content");
                 JsonNode parts = content.path("parts");
 
-                if (parts.isMissingNode() || parts.isEmpty()) {
-                    break;
-                }
-
-                // Append model's response to history
-                ObjectNode modelTurn = (ObjectNode) content;
-                history.add(modelTurn);
-
-                // Check if the model made any function calls
+                // Check for text content or function calls
                 List<JsonNode> functionCalls = new ArrayList<>();
                 StringBuilder textAccumulator = new StringBuilder();
 
-                for (JsonNode part : parts) {
-                    if (part.has("functionCall")) {
-                        functionCalls.add(part.get("functionCall"));
-                    }
-                    if (part.has("text")) {
-                        textAccumulator.append(part.get("text").asText());
+                if (parts.isArray()) {
+                    for (JsonNode part : parts) {
+                        if (part.has("text")) {
+                            textAccumulator.append(part.get("text").asText());
+                        }
+                        if (part.has("functionCall")) {
+                            functionCalls.add(part.get("functionCall"));
+                        }
                     }
                 }
 
+                // Append model's response turn to history
+                if (content.isObject()) {
+                    history.add((ObjectNode) content);
+                }
+
+                // If no tool calls were requested, we are done
                 if (functionCalls.isEmpty()) {
-                    // No function call: final answer reached
-                    finalResponseText = textAccumulator.toString();
+                    if (textAccumulator.length() > 0) {
+                        finalResponseText = textAccumulator.toString();
+                    }
                     break;
                 }
 
-                // Execute function calls and send function responses
+                // Execute all requested tool calls and build the function response turn
                 ObjectNode functionTurn = objectMapper.createObjectNode();
                 functionTurn.put("role", "function");
                 ArrayNode funcParts = functionTurn.putArray("parts");
@@ -152,8 +176,27 @@ public class AgentService {
 
             // Cap history to last 20 turns to conserve token budget
             if (history.size() > 20) {
-                history.subList(0, history.size() - 20).clear();
+                history = new ArrayList<>(history.subList(history.size() - 20, history.size()));
             }
+
+            // Persist updated conversation history to database
+            String historyJson = objectMapper.writeValueAsString(history);
+            if (agentConversation == null) {
+                agentConversation = AgentConversation.builder()
+                        .id(conversationId)
+                        .userId(userId)
+                        .historyJson(historyJson)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
+                        .build();
+            } else {
+                agentConversation.setHistoryJson(historyJson);
+                agentConversation.setUpdatedAt(LocalDateTime.now());
+                if (agentConversation.getUserId() == null && userId != null) {
+                    agentConversation.setUserId(userId);
+                }
+            }
+            agentConversationRepository.save(agentConversation);
 
             return AgentChatResponse.builder()
                     .conversationId(conversationId)

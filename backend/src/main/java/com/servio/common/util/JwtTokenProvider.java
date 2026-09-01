@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtTokenProvider {
@@ -17,6 +18,10 @@ public class JwtTokenProvider {
 
     @Value("${jwt.expiration:86400000}") // Default 24 hours in milliseconds
     private long jwtExpirationMs;
+
+    public String generateToken(UUID userId, Role role) {
+        return generateToken(userId.toString(), role.name());
+    }
 
     // Updated to include Role in the token generation (Long userId - legacy)
     public String generateToken(Long userId, Role role) {

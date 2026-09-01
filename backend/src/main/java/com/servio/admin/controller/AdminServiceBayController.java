@@ -1,94 +1,61 @@
 package com.servio.admin.controller;
 
-import com.servio.catalog.entity.Service;
-
-import com.servio.common.dto.ApiResponse;
 import com.servio.admin.dto.ServiceBayDto;
 import com.servio.admin.service.ServiceBayService;
+import com.servio.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/service-bays")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class AdminServiceBayController {
     private final ServiceBayService serviceBayService;
 
     @PostMapping
-    public ResponseEntity<?> createServiceBay(@RequestBody ServiceBayDto dto) {
-        try {
-            ServiceBayDto created = serviceBayService.createServiceBay(dto);
-            return ResponseEntity.ok(ApiResponse.success("Service bay created successfully", created));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to create service bay", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<ServiceBayDto>> createServiceBay(@RequestBody ServiceBayDto dto) {
+        ServiceBayDto created = serviceBayService.createServiceBay(dto);
+        return ResponseEntity.ok(ApiResponse.success("Service bay created successfully", created));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getServiceBayById(@PathVariable Long id) {
-        try {
-            ServiceBayDto bay = serviceBayService.getServiceBayById(id);
-            return ResponseEntity.ok(ApiResponse.success("Service bay retrieved successfully", bay));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to retrieve service bay", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<ServiceBayDto>> getServiceBayById(@PathVariable Long id) {
+        ServiceBayDto bay = serviceBayService.getServiceBayById(id);
+        return ResponseEntity.ok(ApiResponse.success("Service bay retrieved successfully", bay));
     }
 
     @GetMapping
-    public ResponseEntity<?> getAllServiceBays() {
-        try {
-            List<ServiceBayDto> bays = serviceBayService.getAllServiceBays();
-            return ResponseEntity.ok(ApiResponse.success("Service bays retrieved successfully", bays));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to retrieve service bays", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<ServiceBayDto>>> getAllServiceBays() {
+        List<ServiceBayDto> bays = serviceBayService.getAllServiceBays();
+        return ResponseEntity.ok(ApiResponse.success("Service bays retrieved successfully", bays));
     }
 
     @GetMapping("/available")
-    public ResponseEntity<?> getAvailableBays() {
-        try {
-            List<ServiceBayDto> bays = serviceBayService.getAvailableBays();
-            return ResponseEntity.ok(ApiResponse.success("Available bays retrieved successfully", bays));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to retrieve available bays", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<ServiceBayDto>>> getAvailableBays() {
+        List<ServiceBayDto> bays = serviceBayService.getAvailableBays();
+        return ResponseEntity.ok(ApiResponse.success("Available bays retrieved successfully", bays));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateServiceBay(@PathVariable Long id, @RequestBody ServiceBayDto dto) {
-        try {
-            ServiceBayDto updated = serviceBayService.updateServiceBay(id, dto);
-            return ResponseEntity.ok(ApiResponse.success("Service bay updated successfully", updated));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to update service bay", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<ServiceBayDto>> updateServiceBay(@PathVariable Long id, @RequestBody ServiceBayDto dto) {
+        ServiceBayDto updated = serviceBayService.updateServiceBay(id, dto);
+        return ResponseEntity.ok(ApiResponse.success("Service bay updated successfully", updated));
     }
 
     @PatchMapping("/{id}/status/{status}")
-    public ResponseEntity<?> updateServiceBayStatus(@PathVariable Long id, @PathVariable String status) {
-        try {
-            serviceBayService.updateServiceBayStatus(id, status);
-            return ResponseEntity.ok(ApiResponse.success("Service bay status updated successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Failed to update service bay status", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Void>> updateServiceBayStatus(@PathVariable Long id, @PathVariable String status) {
+        serviceBayService.updateServiceBayStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success("Service bay status updated successfully", null));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteServiceBay(@PathVariable Long id) {
-        try {
-            serviceBayService.deleteServiceBay(id);
-            return ResponseEntity.ok(ApiResponse.success("Service bay deleted successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to delete service bay", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteServiceBay(@PathVariable Long id) {
+        serviceBayService.deleteServiceBay(id);
+        return ResponseEntity.ok(ApiResponse.success("Service bay deleted successfully", null));
     }
 }

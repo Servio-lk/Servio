@@ -78,7 +78,7 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8),
@@ -98,7 +98,7 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
                   hintStyle: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -116,9 +116,9 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFBFB),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
@@ -127,28 +127,27 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 20),
                 Text(
-                  'Mechanic Registration',
+                  'Enter Your Email',
                   style: GoogleFonts.instrumentSans(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Text(
-                  "Enter your email address to check your admin pre-registration.",
+                  'We need to verify if your email is registered in our mechanic database.',
                   style: GoogleFonts.instrumentSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.black,
-                    height: 22 / 16,
+                    fontSize: 14,
+                    color: const Color(0xFF707070),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -156,15 +155,7 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
                   controller: _emailController,
                   label: 'Email Address',
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!EmailValidator.isValid(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
+                  validator: EmailValidator.validate,
                 ),
                 const SizedBox(height: 32),
                 SizedBox(
@@ -178,7 +169,7 @@ class _MechanicSignupEmailScreenState extends State<MechanicSignupEmailScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: _isLoading ? 0 : 8,
-                      shadowColor: const Color(0xFFFF5D2E).withOpacity(0.5),
+                      shadowColor: const Color(0xFFFF5D2E).withValues(alpha: 0.5),
                     ),
                     child: _isLoading
                         ? const SizedBox(

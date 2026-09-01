@@ -32,49 +32,20 @@ public class VehicleService {
     private final ServiceRecordRepository serviceRecordRepository;
     private final ProfileRepository profileRepository;
 
-    /**
-     * Resolves the Profile for the authenticated principal.
-     * The principal may be a UUID (Supabase profile id) or a numeric backend user id.
-     * When it's a numeric id, we look up the backend User, then find the Profile by email.
-     */
-    private Profile resolveProfile(String principalId) {
-        // Try UUID first (Supabase profile id)
-        try {
-            UUID profileId = UUID.fromString(principalId);
-            return profileRepository.findById(profileId).orElse(null);
-        } catch (IllegalArgumentException ignored) {
-            // Not a UUID — try as numeric backend user id
-        }
-
-        try {
-            Long userId = Long.parseLong(principalId);
-            User user = userRepository.findById(userId).orElse(null);
-            if (user != null && user.getEmail() != null) {
-                return profileRepository.findByEmail(user.getEmail()).orElse(null);
-            }
-        } catch (NumberFormatException ignored) {
-            // Not a valid number either
-        }
-
-        return null;
-    }
-
-    /**
-     * Returns vehicles for the currently authenticated user.
-     */
     @Transactional(readOnly = true)
     public List<VehicleDto> getMyVehicles(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             return List.of();
         }
         String principalId = authentication.getPrincipal().toString();
-        Profile profile = resolveProfile(principalId);
-        if (profile == null) {
+        try {
+            UUID userId = UUID.fromString(principalId);
+            return vehicleRepository.findByUserId(userId).stream()
+                    .map(this::convertToDto)
+                    .collect(Collectors.toList());
+        } catch (IllegalArgumentException e) {
             return List.of();
         }
-        return vehicleRepository.findByProfileId(profile.getId()).stream()
-                .map(this::convertToDto)
-                .collect(Collectors.toList());
     }
 
     /**
@@ -83,14 +54,18 @@ public class VehicleService {
     @Transactional
     public VehicleDto createMyVehicle(VehicleRequest request, Authentication authentication) {
         String principalId = authentication.getPrincipal().toString();
-        Profile profile = resolveProfile(principalId);
-
-        if (profile == null) {
-            throw new RuntimeException("Profile not found for authenticated user: " + principalId);
+        UUID userId;
+        try {
+            userId = UUID.fromString(principalId);
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid user ID format: " + principalId);
         }
 
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found for authenticated ID: " + userId));
+
         Vehicle vehicle = Vehicle.builder()
-                .profile(profile)
+                .user(user)
                 .make(request.getMake())
                 .model(request.getModel())
                 .year(request.getYear())
@@ -104,14 +79,13 @@ public class VehicleService {
 
     @Transactional
     public VehicleDto createVehicle(VehicleRequest request) {
-        Profile profile = null;
+        User user = null;
         if (request.getUserId() != null) {
-            // Try as UUID profile id first, then as numeric user id
-            profile = resolveProfile(String.valueOf(request.getUserId()));
+            user = userRepository.findById(request.getUserId()).orElse(null);
         }
 
         Vehicle vehicle = Vehicle.builder()
-                .profile(profile)
+                .user(user)
                 .make(request.getMake())
                 .model(request.getModel())
                 .year(request.getYear())
@@ -129,18 +103,10 @@ public class VehicleService {
                 .collect(Collectors.toList());
     }
 
-    public List<VehicleDto> getVehiclesByUserId(Long userId) {
-        // Legacy method — resolve profile from user id, then find vehicles
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null && user.getEmail() != null) {
-            Profile profile = profileRepository.findByEmail(user.getEmail()).orElse(null);
-            if (profile != null) {
-                return vehicleRepository.findByProfileId(profile.getId()).stream()
-                        .map(this::convertToDto)
-                        .collect(Collectors.toList());
-            }
-        }
-        return List.of();
+    public List<VehicleDto> getVehiclesByUserId(UUID userId) {
+        return vehicleRepository.findByUserId(userId).stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     public VehicleDto getVehicleById(Long id) {
@@ -216,8 +182,9 @@ public class VehicleService {
     private VehicleDto convertToDto(Vehicle vehicle) {
         return VehicleDto.builder()
                 .id(vehicle.getId())
-                .profileId(vehicle.getProfile() != null ? vehicle.getProfile().getId().toString() : null)
-                .ownerName(vehicle.getProfile() != null ? vehicle.getProfile().getFullName() : null)
+                .userId(vehicle.getUser() != null ? vehicle.getUser().getId() : null)
+                .profileId(vehicle.getUser() != null ? vehicle.getUser().getId().toString() : null)
+                .ownerName(vehicle.getUser() != null ? vehicle.getUser().getFullName() : null)
                 .make(vehicle.getMake())
                 .model(vehicle.getModel())
                 .year(vehicle.getYear())

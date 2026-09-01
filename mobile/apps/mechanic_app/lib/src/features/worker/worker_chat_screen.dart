@@ -1,41 +1,45 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_core/shared_core.dart';
 
 class WorkerChatScreen extends StatefulWidget {
   final int appointmentId;
+  final ApiClient? apiClient;
 
-  const WorkerChatScreen({super.key, required this.appointmentId});
+  const WorkerChatScreen({
+    super.key,
+    required this.appointmentId,
+    this.apiClient,
+  });
 
   @override
   State<WorkerChatScreen> createState() => _WorkerChatScreenState();
 }
 
 class _WorkerChatScreenState extends State<WorkerChatScreen> {
-  final _client = Supabase.instance.client;
+  late final ApiClient _apiClient;
   final _messageController = TextEditingController();
   final _scrollController = ScrollController();
 
-  RealtimeChannel? _channel;
+  Timer? _pollingTimer;
   int? _repairId;
-  int? _conversationId;
   bool _loading = true;
   bool _sending = false;
   String? _error;
-  List<Map<String, dynamic>> _messages = [];
+  List<RepairMessageModel> _messages = [];
 
   @override
   void initState() {
     super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
     _loadConversation();
   }
 
   @override
   void dispose() {
-    if (_channel != null) {
-      _client.removeChannel(_channel!);
-    }
+    _pollingTimer?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -48,53 +52,33 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
         _error = null;
       });
 
-      final repair = await _client
-          .from('repair_jobs')
-          .select('id')
-          .eq('appointment_id', widget.appointmentId)
-          .maybeSingle();
+      // Fetch conversation associated with this appointment
+      final convResponse = await _apiClient.get<RepairConversationModel>(
+        '/appointments/${widget.appointmentId}/conversation',
+        fromJson: (data) =>
+            RepairConversationModel.fromJson(data as Map<String, dynamic>),
+      );
 
-      if (repair == null) {
-        setState(() {
-          _loading = false;
-          _error = 'Chat will be available after this appointment becomes a repair job.';
-        });
-        return;
-      }
-
-      final repairId = repair['id'] as int;
-      final conversation = await _client
-          .from('repair_conversations')
-          .select('id')
-          .eq('repair_job_id', repairId)
-          .maybeSingle();
-
+      final conversation = convResponse.data;
       if (conversation == null) {
         setState(() {
-          _repairId = repairId;
           _loading = false;
-          _error = 'This repair conversation has not been opened yet.';
+          _error =
+              'Chat will be available after this appointment becomes an active repair job.';
         });
         return;
       }
 
-      final conversationId = conversation['id'] as int;
-      final messages = await _client
-          .from('repair_messages')
-          .select()
-          .eq('conversation_id', conversationId)
-          .order('created_at', ascending: true);
+      final repairId = conversation.repairJobId;
 
       setState(() {
         _repairId = repairId;
-        _conversationId = conversationId;
-        _messages = List<Map<String, dynamic>>.from(messages as List);
-        _loading = false;
       });
 
-      _subscribe(conversationId);
-      _scrollToBottom();
+      await _fetchMessages(repairId, isInitialLoad: true);
+      _startPolling(repairId);
     } catch (e) {
+      debugPrint('Error loading conversation: $e');
       setState(() {
         _loading = false;
         _error = 'Could not load chat. Please check your connection.';
@@ -102,59 +86,88 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
     }
   }
 
-  void _subscribe(int conversationId) {
-    if (_channel != null) {
-      _client.removeChannel(_channel!);
-    }
+  void _startPolling(int repairId) {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (mounted && !_loading && !_sending) {
+        _fetchMessages(repairId, isInitialLoad: false);
+      }
+    });
+  }
 
-    _channel = _client
-        .channel('repair-conversation:$conversationId')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'repair_messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'conversation_id',
-            value: conversationId,
-          ),
-          callback: (payload) {
-            final row = payload.newRecord;
-            if (mounted && row['id'] != null) {
-              setState(() {
-                final exists = _messages.any((message) => message['id'] == row['id']);
-                if (!exists) _messages = [..._messages, row];
-              });
-              _scrollToBottom();
-            }
-          },
-        )
-        .subscribe();
+  Future<void> _fetchMessages(int repairId, {bool isInitialLoad = false}) async {
+    try {
+      final msgResponse = await _apiClient.get<List<RepairMessageModel>>(
+        '/repairs/$repairId/messages',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) =>
+                    RepairMessageModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <RepairMessageModel>[];
+        },
+      );
+
+      final fetched = msgResponse.data ?? <RepairMessageModel>[];
+
+      if (mounted) {
+        final previousCount = _messages.length;
+        setState(() {
+          _messages = fetched;
+          _loading = false;
+          _error = null;
+        });
+
+        if (fetched.length > previousCount || isInitialLoad) {
+          _scrollToBottom();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching messages: $e');
+      if (isInitialLoad && mounted) {
+        setState(() {
+          _loading = false;
+          _error = 'Could not load chat messages.';
+        });
+      }
+    }
   }
 
   Future<void> _sendMessage() async {
     final body = _messageController.text.trim();
-    final conversationId = _conversationId;
     final repairId = _repairId;
-    final user = _client.auth.currentUser;
 
-    if (body.isEmpty || conversationId == null || repairId == null || user == null) return;
+    if (body.isEmpty || repairId == null) return;
 
     setState(() => _sending = true);
     try {
-      await _client.from('repair_messages').insert({
-        'conversation_id': conversationId,
-        'repair_job_id': repairId,
-        'sender_id': user.id,
-        'sender_role': 'MECHANIC',
-        'body': body,
-      });
+      final response = await _apiClient.post<RepairMessageModel>(
+        '/repairs/$repairId/messages',
+        body: {'body': body},
+        fromJson: (data) =>
+            RepairMessageModel.fromJson(data as Map<String, dynamic>),
+      );
+
       _messageController.clear();
+      final sent = response.data;
+      if (sent != null && mounted) {
+        setState(() {
+          if (!_messages.any((m) => m.id == sent.id)) {
+            _messages = [..._messages, sent];
+          }
+        });
+        _scrollToBottom();
+      }
     } catch (e) {
+      debugPrint('Error sending message: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Message not sent. It will work again when you are back online and authorized.'),
+            content: Text(
+              'Message not sent. Please check your connection.',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -198,7 +211,9 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: Color(0xFFFF5D2E)));
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
+      );
     }
 
     if (_error != null) {
@@ -208,16 +223,26 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const PhosphorIcon(PhosphorIconsRegular.chatCircleDots, size: 48, color: Colors.black38),
+              const PhosphorIcon(
+                PhosphorIconsRegular.chatCircleDots,
+                size: 48,
+                color: Colors.black38,
+              ),
               const SizedBox(height: 16),
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.instrumentSans(fontSize: 16, color: Colors.black54),
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
               ),
               TextButton(
                 onPressed: _loadConversation,
-                child: const Text('Retry', style: TextStyle(color: Color(0xFFFF5D2E))),
+                child: const Text(
+                  'Retry',
+                  style: TextStyle(color: Color(0xFFFF5D2E)),
+                ),
               ),
             ],
           ),
@@ -239,7 +264,8 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
-                  itemBuilder: (context, index) => _MessageBubble(message: _messages[index]),
+                  itemBuilder: (context, index) =>
+                      _MessageBubble(message: _messages[index]),
                 ),
         ),
         SafeArea(
@@ -265,19 +291,27 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
                   onPressed: _sending ? null : _sendMessage,
-                  style: IconButton.styleFrom(backgroundColor: const Color(0xFFFF5D2E)),
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF5D2E),
+                  ),
                   icon: _sending
                       ? const SizedBox(
                           height: 18,
                           width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.send, color: Colors.white),
                 ),
@@ -291,14 +325,13 @@ class _WorkerChatScreenState extends State<WorkerChatScreen> {
 }
 
 class _MessageBubble extends StatelessWidget {
-  final Map<String, dynamic> message;
+  final RepairMessageModel message;
 
   const _MessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    final role = (message['sender_role'] ?? '').toString();
-    final isMechanic = role == 'MECHANIC';
+    final isMechanic = message.isMechanicSender;
     final color = isMechanic ? const Color(0xFFFF5D2E) : Colors.white;
     final textColor = isMechanic ? Colors.white : Colors.black87;
 
@@ -311,7 +344,8 @@ class _MessageBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           borderRadius: BorderRadius.circular(12),
-          border: isMechanic ? null : Border.all(color: const Color(0x11000000)),
+          border:
+              isMechanic ? null : Border.all(color: const Color(0x11000000)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,7 +354,7 @@ class _MessageBubble extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  role == 'ADMIN' ? 'Admin' : 'Customer',
+                  message.isAdminSender ? 'Admin' : 'Customer',
                   style: GoogleFonts.instrumentSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -329,8 +363,9 @@ class _MessageBubble extends StatelessWidget {
                 ),
               ),
             Text(
-              (message['body'] ?? '').toString(),
-              style: GoogleFonts.instrumentSans(fontSize: 14, color: textColor),
+              message.body,
+              style:
+                  GoogleFonts.instrumentSans(fontSize: 14, color: textColor),
             ),
           ],
         ),

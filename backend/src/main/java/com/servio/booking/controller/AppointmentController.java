@@ -29,24 +29,13 @@ public class AppointmentController {
         public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(
                         @RequestBody AppointmentRequest request,
                         Authentication authentication) {
-                try {
-                        AppointmentDto appointment = appointmentService.createAppointment(request, authentication);
-                        return ResponseEntity.status(HttpStatus.CREATED)
-                                        .body(ApiResponse.<AppointmentDto>builder()
-                                                        .success(true)
-                                                        .message("Appointment created successfully")
-                                                        .data(appointment)
-                                                        .build());
-                } catch (RuntimeException e) {
-                        if (e.getMessage().contains("already booked")) {
-                                return ResponseEntity.status(HttpStatus.CONFLICT)
-                                                .body(ApiResponse.<AppointmentDto>builder()
-                                                                .success(false)
-                                                                .message(e.getMessage())
-                                                                .build());
-                        }
-                        throw e;
-                }
+                AppointmentDto appointment = appointmentService.createAppointment(request, authentication);
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(ApiResponse.<AppointmentDto>builder()
+                                                .success(true)
+                                                .message("Appointment created successfully")
+                                                .data(appointment)
+                                                .build());
         }
 
         @GetMapping
@@ -167,19 +156,11 @@ public class AppointmentController {
         public ResponseEntity<ApiResponse<AppointmentDto>> cancelOwnAppointment(
                         @PathVariable Long id,
                         Authentication authentication) {
-                try {
-                        AppointmentDto appointment = appointmentService.cancelOwnAppointment(id, authentication);
-                        return ResponseEntity.ok(ApiResponse.<AppointmentDto>builder()
-                                        .success(true)
-                                        .message("Appointment cancelled successfully")
-                                        .data(appointment)
-                                        .build());
-                } catch (SecurityException e) {
-                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                        .body(ApiResponse.<AppointmentDto>builder()
-                                                        .success(false)
-                                                        .message(e.getMessage())
-                                                        .build());
-                }
+                AppointmentDto appointment = appointmentService.cancelOwnAppointment(id, authentication);
+                return ResponseEntity.ok(ApiResponse.<AppointmentDto>builder()
+                                .success(true)
+                                .message("Appointment cancelled successfully")
+                                .data(appointment)
+                                .build());
         }
 }

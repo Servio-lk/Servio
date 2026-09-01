@@ -1,5 +1,23 @@
 -- Servio staff registration details and Cloudinary document metadata.
 
+CREATE TABLE IF NOT EXISTS mechanics (
+    id BIGSERIAL PRIMARY KEY,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    specialization VARCHAR(255),
+    experience_years INTEGER,
+    status VARCHAR(50) NOT NULL DEFAULT 'AVAILABLE',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW(),
+    CONSTRAINT mechanic_status_check CHECK (status IN ('AVAILABLE', 'BUSY', 'ON_LEAVE'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_mechanics_email ON mechanics(email);
+CREATE INDEX IF NOT EXISTS idx_mechanics_status ON mechanics(status);
+CREATE INDEX IF NOT EXISTS idx_mechanics_is_active ON mechanics(is_active);
+
 CREATE TABLE IF NOT EXISTS mechanic_staff_details (
     id BIGSERIAL PRIMARY KEY,
     mechanic_id BIGINT NOT NULL UNIQUE REFERENCES mechanics(id) ON DELETE CASCADE,

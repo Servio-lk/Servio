@@ -170,26 +170,34 @@ CREATE INDEX IF NOT EXISTS idx_repair_history_repair_job ON repair_history(repai
 CREATE INDEX IF NOT EXISTS idx_repair_history_repair_date ON repair_history(repair_date);
 
 -- Create triggers for updated_at columns
+DROP TRIGGER IF EXISTS update_repair_jobs_updated_at ON repair_jobs;
 CREATE TRIGGER update_repair_jobs_updated_at BEFORE UPDATE ON repair_jobs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_progress_updates_updated_at ON repair_progress_updates;
 CREATE TRIGGER update_repair_progress_updates_updated_at BEFORE UPDATE ON repair_progress_updates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_progress_updated_at ON repair_progress;
 CREATE TRIGGER update_repair_progress_updated_at BEFORE UPDATE ON repair_progress
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_activities_updated_at ON repair_activities;
 CREATE TRIGGER update_repair_activities_updated_at BEFORE UPDATE ON repair_activities
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_parts_updated_at ON repair_parts;
 CREATE TRIGGER update_repair_parts_updated_at BEFORE UPDATE ON repair_parts
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_images_updated_at ON repair_images;
 CREATE TRIGGER update_repair_images_updated_at BEFORE UPDATE ON repair_images
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_estimates_updated_at ON repair_estimates;
 CREATE TRIGGER update_repair_estimates_updated_at BEFORE UPDATE ON repair_estimates
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_repair_history_updated_at ON repair_history;
 CREATE TRIGGER update_repair_history_updated_at BEFORE UPDATE ON repair_history
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

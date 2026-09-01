@@ -100,7 +100,7 @@ class _MechanicSignupPasswordScreenState
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(8),
@@ -120,7 +120,7 @@ class _MechanicSignupPasswordScreenState
                   hintStyle: GoogleFonts.instrumentSans(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                   ),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -133,7 +133,7 @@ class _MechanicSignupPasswordScreenState
               icon: Icon(
                 isVisible ? Icons.visibility : Icons.visibility_off,
                 size: 20,
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
               ),
               onPressed: onToggleVisibility,
               padding: EdgeInsets.zero,
@@ -232,7 +232,7 @@ class _MechanicSignupPasswordScreenState
                         borderRadius: BorderRadius.circular(8),
                       ),
                       elevation: _isLoading ? 0 : 8,
-                      shadowColor: const Color(0xFFFF5D2E).withOpacity(0.5),
+                      shadowColor: const Color(0xFFFF5D2E).withValues(alpha: 0.5),
                     ),
                     child: _isLoading
                         ? const SizedBox(

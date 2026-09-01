@@ -1,58 +1,43 @@
 package com.servio.admin.controller;
 
-import com.servio.common.dto.ApiResponse;
 import com.servio.admin.dto.JobCardNoteDto;
 import com.servio.admin.service.JobCardNoteService;
+import com.servio.common.dto.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/job-card-notes")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('ADMIN')")
 public class AdminJobCardNoteController {
     private final JobCardNoteService jobCardNoteService;
 
     @PostMapping
-    public ResponseEntity<?> addNote(@RequestBody JobCardNoteDto dto) {
-        try {
-            JobCardNoteDto created = jobCardNoteService.addNote(dto);
-            return ResponseEntity.ok(ApiResponse.success("Note added successfully", created));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to add note", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<JobCardNoteDto>> addNote(@RequestBody JobCardNoteDto dto) {
+        JobCardNoteDto created = jobCardNoteService.addNote(dto);
+        return ResponseEntity.ok(ApiResponse.success("Note added successfully", created));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getNoteById(@PathVariable Long id) {
-        try {
-            JobCardNoteDto note = jobCardNoteService.getNoteById(id);
-            return ResponseEntity.ok(ApiResponse.success("Note retrieved successfully", note));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve note", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<JobCardNoteDto>> getNoteById(@PathVariable Long id) {
+        JobCardNoteDto note = jobCardNoteService.getNoteById(id);
+        return ResponseEntity.ok(ApiResponse.success("Note retrieved successfully", note));
     }
 
     @GetMapping("/job-card/{jobCardId}")
-    public ResponseEntity<?> getNotesByJobCard(@PathVariable Long jobCardId) {
-        try {
-            List<JobCardNoteDto> notes = jobCardNoteService.getNotesByJobCard(jobCardId);
-            return ResponseEntity.ok(ApiResponse.success("Notes retrieved successfully", notes));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to retrieve notes", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<List<JobCardNoteDto>>> getNotesByJobCard(@PathVariable Long jobCardId) {
+        List<JobCardNoteDto> notes = jobCardNoteService.getNotesByJobCard(jobCardId);
+        return ResponseEntity.ok(ApiResponse.success("Notes retrieved successfully", notes));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteNote(@PathVariable Long id) {
-        try {
-            jobCardNoteService.deleteNote(id);
-            return ResponseEntity.ok(ApiResponse.success("Note deleted successfully", null));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to delete note", e.getMessage()));
-        }
+    public ResponseEntity<ApiResponse<Void>> deleteNote(@PathVariable Long id) {
+        jobCardNoteService.deleteNote(id);
+        return ResponseEntity.ok(ApiResponse.success("Note deleted successfully", null));
     }
 }

@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,8 @@ import java.time.LocalDateTime;
 @Builder
 public class AppointmentDto {
     private Long id;
-    private Long userId;
+    private UUID userId;
+    private String profileId;
     private String userName;
     private String userEmail;
     private Long vehicleId;

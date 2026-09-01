@@ -9,7 +9,7 @@ final servicesRepositoryProvider = Provider<ServicesRepository>(
   (_) => ServicesRepository(),
 );
 
-/// All service categories with nested services & options from Supabase.
+/// All service categories with nested services & options from Spring Boot REST API.
 /// Uses .autoDispose so it re-fetches when navigating back to the screen.
 final serviceCategoriesProvider =
     FutureProvider.autoDispose<List<ServiceCategoryModel>>((ref) async {
@@ -42,5 +42,20 @@ final featuredServicesProvider = FutureProvider.autoDispose<List<ServiceModel>>(
   } catch (e) {
     debugPrint('🔴 [Provider] featuredServicesProvider error: $e');
     rethrow;
+  }
+});
+
+/// Active promotional offers.
+final activeOffersProvider = FutureProvider.autoDispose<List<OfferModel>>((
+  ref,
+) async {
+  try {
+    final result = await ref
+        .read(servicesRepositoryProvider)
+        .getActiveOffers();
+    return result;
+  } catch (e) {
+    debugPrint('🔴 [Provider] activeOffersProvider error: $e');
+    return <OfferModel>[];
   }
 });

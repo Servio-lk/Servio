@@ -1,29 +1,5 @@
 import { apiFetch } from './apiFetch';
-
-const getApiBaseUrl = () => {
-  let envApi = import.meta.env.VITE_API_URL;
-
-  // Ignore hardcoded localhost env vars if we are deployed on a real domain
-  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
-  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
-  if (isLocalEnvApi && !isLocalHost) {
-    envApi = undefined;
-  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
-    envApi = undefined;
-  }
-
-  if (envApi) return envApi;
-
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return `http://${host}:3001/api`;
-  }
-
-  return `${window.location.origin}/api`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {

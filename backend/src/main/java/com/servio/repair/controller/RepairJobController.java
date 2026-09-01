@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -25,48 +26,36 @@ public class RepairJobController {
     
     @PostMapping
     public ResponseEntity<ApiResponse<RepairJobDto>> createRepairJob(@RequestBody RepairJobRequest request) {
-        try {
-            RepairJob repairJob = repairJobService.createRepairJob(
-                    request.getAppointmentId(),
-                    request.getTitle(),
-                    request.getDescription(),
-                    request.getEstimatedDurationHours(),
-                    request.getEstimatedCost()
-            );
-            
-            RepairJobDto dto = convertToDto(repairJob);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.<RepairJobDto>builder()
-                            .success(true)
-                            .message("Repair job created successfully")
-                            .data(dto)
-                            .build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest()
-                    .body(ApiResponse.<RepairJobDto>builder()
-                            .success(false)
-                            .message(e.getMessage())
-                            .build());
-        }
+        RepairJob repairJob = repairJobService.createRepairJob(
+                request.getAppointmentId(),
+                request.getTitle(),
+                request.getDescription(),
+                request.getEstimatedDurationHours(),
+                request.getEstimatedCost()
+        );
+        
+        RepairJobDto dto = convertToDto(repairJob);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.<RepairJobDto>builder()
+                        .success(true)
+                        .message("Repair job created successfully")
+                        .data(dto)
+                        .build());
     }
     
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<RepairJobDto>> getRepairJob(@PathVariable Long id) {
-        try {
-            RepairJob repairJob = repairJobService.getRepairJobById(id);
-            RepairJobDto dto = convertToDto(repairJob);
-            return ResponseEntity.ok(ApiResponse.<RepairJobDto>builder()
-                    .success(true)
-                    .message("Repair job retrieved successfully")
-                    .data(dto)
-                    .build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        RepairJob repairJob = repairJobService.getRepairJobById(id);
+        RepairJobDto dto = convertToDto(repairJob);
+        return ResponseEntity.ok(ApiResponse.<RepairJobDto>builder()
+                .success(true)
+                .message("Repair job retrieved successfully")
+                .data(dto)
+                .build());
     }
     
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<RepairJobDto>>> getUserRepairJobs(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<RepairJobDto>>> getUserRepairJobs(@PathVariable UUID userId) {
         List<RepairJob> repairJobs = repairJobService.getUserRepairJobs(userId);
         List<RepairJobDto> dtos = repairJobs.stream()
                 .map(this::convertToDto)
@@ -112,30 +101,22 @@ public class RepairJobController {
             @PathVariable Long id,
             @RequestParam String status
     ) {
-        try {
-            RepairJob repairJob = repairJobService.updateRepairJobStatus(id, status);
-            RepairJobDto dto = convertToDto(repairJob);
-            return ResponseEntity.ok(ApiResponse.<RepairJobDto>builder()
-                    .success(true)
-                    .message("Repair job status updated successfully")
-                    .data(dto)
-                    .build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        RepairJob repairJob = repairJobService.updateRepairJobStatus(id, status);
+        RepairJobDto dto = convertToDto(repairJob);
+        return ResponseEntity.ok(ApiResponse.<RepairJobDto>builder()
+                .success(true)
+                .message("Repair job status updated successfully")
+                .data(dto)
+                .build());
     }
     
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteRepairJob(@PathVariable Long id) {
-        try {
-            repairJobService.deleteRepairJob(id);
-            return ResponseEntity.ok(ApiResponse.<Void>builder()
-                    .success(true)
-                    .message("Repair job deleted successfully")
-                    .build());
-        } catch (RuntimeException e) {
-            return ResponseEntity.notFound().build();
-        }
+        repairJobService.deleteRepairJob(id);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .message("Repair job deleted successfully")
+                .build());
     }
     
     private RepairJobDto convertToDto(RepairJob repairJob) {

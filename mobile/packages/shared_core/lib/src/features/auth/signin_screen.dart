@@ -205,8 +205,8 @@ class _SignInScreenState extends State<SignInScreen> {
               color: const Color(0xFFFBFBFB),
               gradient: LinearGradient(
                 colors: [
-                  Colors.black.withOpacity(0.2),
-                  Colors.black.withOpacity(0.2),
+                  Colors.black.withValues(alpha: 0.2),
+                  Colors.black.withValues(alpha: 0.2),
                 ],
               ),
             ),
@@ -330,11 +330,11 @@ class _SignInScreenState extends State<SignInScreen> {
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
                                   color: _isLoading
-                                      ? const Color(0xFFFF5D2E).withOpacity(0.6)
+                                      ? const Color(0xFFFF5D2E).withValues(alpha: 0.6)
                                       : const Color(0xFFFF5D2E),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
+                                    color: Colors.white.withValues(alpha: 0.2),
                                   ),
                                   boxShadow: _isLoading
                                       ? []
@@ -342,7 +342,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                           BoxShadow(
                                             color: const Color(
                                               0xFFFF5D2E,
-                                            ).withOpacity(0.5),
+                                            ).withValues(alpha: 0.5),
                                             blurRadius: 8,
                                             offset: const Offset(0, 4),
                                           ),
@@ -398,7 +398,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                     style: GoogleFonts.instrumentSans(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w400,
-                                      color: Colors.black.withOpacity(0.7),
+                                      color: Colors.black.withValues(alpha: 0.7),
                                       decoration: TextDecoration.underline,
                                       height: 22 / 14,
                                     ),
@@ -421,7 +421,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                       style: GoogleFonts.instrumentSans(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
-                                        color: Colors.black.withOpacity(0.7),
+                                        color: Colors.black.withValues(alpha: 0.7),
                                         height: 22 / 14,
                                       ),
                                     ),
@@ -438,7 +438,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(alpha: 0.1),
                                     ),
                                   ),
                                   const Padding(
@@ -458,7 +458,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   Expanded(
                                     child: Container(
                                       height: 1,
-                                      color: Colors.black.withOpacity(0.1),
+                                      color: Colors.black.withValues(alpha: 0.1),
                                     ),
                                   ),
                                 ],
@@ -516,7 +516,7 @@ class _SignInScreenState extends State<SignInScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black.withOpacity(0.1)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(8),
@@ -537,7 +537,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     hintStyle: GoogleFonts.instrumentSans(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black.withOpacity(0.5),
+                      color: Colors.black.withValues(alpha: 0.5),
                     ),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
@@ -553,7 +553,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         ? Icons.visibility
                         : Icons.visibility_off,
                     size: 20,
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                   ),
                   onPressed: () {
                     setState(() {

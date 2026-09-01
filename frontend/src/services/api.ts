@@ -1,6 +1,6 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   let envApi = import.meta.env.VITE_API_URL;
 
   // Ignore hardcoded localhost env vars if we are deployed on a real domain
@@ -28,7 +28,7 @@ const getApiBaseUrl = () => {
   return `${window.location.origin}/api`;
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 interface ApiResponse<T = any> {
   success: boolean;

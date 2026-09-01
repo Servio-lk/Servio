@@ -14,6 +14,7 @@ import com.servio.booking.entity.Appointment;
 import com.servio.admin.entity.JobCardStatus;
 
 import com.servio.admin.dto.JobCardDto;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -33,25 +34,25 @@ public class JobCardService {
         Appointment appointment = null;
         if (dto.getAppointmentId() != null) {
             appointment = appointmentRepository.findById(dto.getAppointmentId())
-                    .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + dto.getAppointmentId()));
         }
 
         Mechanic mechanic = null;
         if (dto.getMechanicId() != null) {
             mechanic = mechanicRepository.findById(dto.getMechanicId())
-                    .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + dto.getMechanicId()));
         }
 
         ServiceBay bay = null;
         if (dto.getServiceBayId() != null) {
             bay = serviceBayRepository.findById(dto.getServiceBayId())
-                    .orElseThrow(() -> new RuntimeException("Service bay not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Service bay not found with id: " + dto.getServiceBayId()));
         }
 
         WalkInCustomer walkIn = null;
         if (dto.getWalkInCustomerId() != null) {
             walkIn = walkInCustomerRepository.findById(dto.getWalkInCustomerId())
-                    .orElseThrow(() -> new RuntimeException("Walk-in customer not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Walk-in customer not found with id: " + dto.getWalkInCustomerId()));
         }
 
         JobCard jobCard = JobCard.builder()
@@ -73,7 +74,7 @@ public class JobCardService {
 
     public JobCardDto getJobCardById(Long id) {
         JobCard jobCard = jobCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + id));
         return convertToDto(jobCard);
     }
 
@@ -104,19 +105,19 @@ public class JobCardService {
 
     public JobCardDto updateJobCard(Long id, JobCardDto dto) {
         JobCard jobCard = jobCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + id));
 
         if (dto.getMechanicId() != null && !dto.getMechanicId()
                 .equals(jobCard.getAssignedMechanic() != null ? jobCard.getAssignedMechanic().getId() : null)) {
             Mechanic mechanic = mechanicRepository.findById(dto.getMechanicId())
-                    .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + dto.getMechanicId()));
             jobCard.setAssignedMechanic(mechanic);
         }
 
         if (dto.getServiceBayId() != null && !dto.getServiceBayId()
                 .equals(jobCard.getAssignedBay() != null ? jobCard.getAssignedBay().getId() : null)) {
             ServiceBay bay = serviceBayRepository.findById(dto.getServiceBayId())
-                    .orElseThrow(() -> new RuntimeException("Service bay not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Service bay not found with id: " + dto.getServiceBayId()));
             jobCard.setAssignedBay(bay);
         }
 
@@ -142,7 +143,7 @@ public class JobCardService {
 
     public JobCardDto updateJobCardStatus(Long id, String status) {
         JobCard jobCard = jobCardRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + id));
 
         JobCardStatus newStatus = JobCardStatus.valueOf(status);
         jobCard.setStatus(newStatus);

@@ -1,36 +1,66 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import '../config/api_config.dart';
+import '../network/api_client.dart';
 
 class SupabaseService {
   static final SupabaseService _instance = SupabaseService._internal();
   factory SupabaseService() => _instance;
   SupabaseService._internal();
 
-  SupabaseClient get client => Supabase.instance.client;
+  final ApiClient _apiClient = ApiClient();
+
+  /// Safe accessor to check if Supabase is initialized
+  bool get isInitialized {
+    try {
+      // Accessing Supabase.instance throws if not initialized
+      final _ = Supabase.instance;
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Safe client accessor that returns null instead of throwing in uninitialized environments (like widget tests)
+  SupabaseClient? get safeClient {
+    try {
+      return Supabase.instance.client;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  SupabaseClient get client {
+    final c = safeClient;
+    if (c == null) {
+      throw StateError('Supabase has not been initialized. Call Supabase.initialize(...) first.');
+    }
+    return c;
+  }
 
   // Get current user
-  User? get currentUser => client.auth.currentUser;
+  User? get currentUser => safeClient?.auth.currentUser;
 
   // Get current session
-  Session? get currentSession => client.auth.currentSession;
+  Session? get currentSession => safeClient?.auth.currentSession;
 
   // Check if user is logged in
   bool get isLoggedIn => currentUser != null;
+
+  // Get access token
+  String? get accessToken => currentSession?.accessToken;
 
   // Sign in with email and password
   Future<AuthResponse> signInWithEmail({
     required String email,
     required String password,
   }) async {
-    return await client.auth.signInWithPassword(
+    final res = await client.auth.signInWithPassword(
       email: email,
       password: password,
     );
+    await syncWithBackend();
+    return res;
   }
 
   // Sign up with email and password
@@ -39,11 +69,13 @@ class SupabaseService {
     required String password,
     Map<String, dynamic>? data,
   }) async {
-    return await client.auth.signUp(
+    final res = await client.auth.signUp(
       email: email,
       password: password,
       data: data,
     );
+    await syncWithBackend();
+    return res;
   }
 
   // Request email OTP via /auth/v1/otp (higher default rate limit).
@@ -62,11 +94,13 @@ class SupabaseService {
     required String email,
     required String otp,
   }) async {
-    return await client.auth.verifyOTP(
+    final res = await client.auth.verifyOTP(
       type: OtpType.email,
       email: email,
       token: otp,
     );
+    await syncWithBackend();
+    return res;
   }
 
   Future<void> resendEmailOtp({required String email}) async {
@@ -107,7 +141,11 @@ class SupabaseService {
 
   // Sign out
   Future<void> signOut() async {
-    await client.auth.signOut();
+    try {
+      await safeClient?.auth.signOut();
+    } catch (e) {
+      debugPrint('Error during sign out: $e');
+    }
   }
 
   // Reset password
@@ -116,127 +154,85 @@ class SupabaseService {
   }
 
   // Listen to auth state changes
-  Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
+  Stream<AuthState> get authStateChanges =>
+      safeClient?.auth.onAuthStateChange ?? const Stream.empty();
 
   // Update user profile
   Future<UserResponse> updateUserProfile({Map<String, dynamic>? data}) async {
     return await client.auth.updateUser(UserAttributes(data: data));
   }
 
-  Future<Map<String, dynamic>?> getActiveMechanicByEmail(String email) async {
-    final normalizedEmail = email.trim().toLowerCase();
-    if (normalizedEmail.isEmpty) return null;
-
-    final backendMechanic = await _getActiveMechanicFromBackend(
-      normalizedEmail,
-    );
-    if (backendMechanic != null) return backendMechanic;
+  /// Syncs the authenticated Supabase session with Spring Boot backend via /api/auth/supabase-login
+  Future<Map<String, dynamic>?> syncWithBackend() async {
+    final session = currentSession;
+    final user = currentUser;
+    if (session == null || user == null) return null;
 
     try {
-      final response = await client
-          .from('mechanics')
-          .select(
-            'id, full_name, email, phone, specialization, experience_years, status, is_active',
-          )
-          .ilike('email', normalizedEmail)
-          .eq('is_active', true)
-          .maybeSingle();
-      return response;
+      final token = session.accessToken;
+      final email = user.email ?? '';
+      final fullName = user.userMetadata?['full_name'] as String? ?? '';
+      final role = user.userMetadata?['role'] as String? ?? 'CUSTOMER';
+
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/auth/supabase-login',
+        body: {
+          'accessToken': token,
+          'email': email,
+          'fullName': fullName,
+          'role': role,
+        },
+      );
+      return response.data;
     } catch (e) {
-      debugPrint('Error fetching mechanic by email: $e');
+      debugPrint('Backend sync during login: $e');
       return null;
     }
   }
 
-  Future<Map<String, dynamic>?> _getActiveMechanicFromBackend(
-    String email,
-  ) async {
-    final checkedUrls = <String>{};
-    final baseUrls = [
-      ApiConfig.apiBaseUrl,
-      ...ApiConfig.fallbackApiBaseUrls,
-    ].where((url) => checkedUrls.add(url)).toList();
+  /// Queries mechanic pre-registration from Spring Boot REST API
+  Future<Map<String, dynamic>?> getActiveMechanicByEmail(String email) async {
+    final normalizedEmail = email.trim().toLowerCase();
+    if (normalizedEmail.isEmpty) return null;
 
-    for (final baseUrl in baseUrls) {
-      try {
-        final uri = Uri.parse(
-          '$baseUrl/auth/mechanic-registration',
-        ).replace(queryParameters: {'email': email});
-        final client = HttpClient()
-          ..connectionTimeout = const Duration(milliseconds: 1200);
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/auth/mechanic-registration',
+        queryParameters: {'email': normalizedEmail},
+        fromJson: (data) => data as Map<String, dynamic>,
+      );
 
-        try {
-          final request = await client.getUrl(uri);
-          request.headers.set(HttpHeaders.acceptHeader, 'application/json');
-          final response = await request.close().timeout(
-            const Duration(milliseconds: 1800),
-          );
-          final body = await response.transform(utf8.decoder).join();
-
-          if (response.statusCode == HttpStatus.notFound) {
-            return null;
-          }
-
-          if (response.statusCode < 200 || response.statusCode >= 300) {
-            continue;
-          }
-
-          final decoded = jsonDecode(body) as Map<String, dynamic>;
-          final data = decoded['data'];
-          if (data is Map<String, dynamic>) {
-            return {
-              'id': data['id'],
-              'full_name': data['fullName'],
-              'email': data['email'],
-              'phone': data['phone'],
-              'specialization': data['specialization'],
-              'experience_years': data['experienceYears'],
-              'status': data['status'],
-              'is_active': data['isActive'],
-            };
-          }
-        } finally {
-          client.close(force: true);
-        }
-      } catch (e) {
-        debugPrint('Mechanic backend lookup failed for $baseUrl: $e');
+      if (response.success && response.data != null) {
+        final data = response.data!;
+        return {
+          'id': data['id'],
+          'full_name': data['fullName'] ?? data['full_name'],
+          'email': data['email'],
+          'phone': data['phone'],
+          'specialization': data['specialization'],
+          'experience_years': data['experienceYears'] ?? data['experience_years'],
+          'status': data['status'],
+          'is_active': data['isActive'] ?? data['is_active'] ?? true,
+        };
       }
+    } catch (e) {
+      debugPrint('Error fetching mechanic registration from backend: $e');
     }
-
     return null;
   }
 
+  /// Reports mechanic registration error to Spring Boot REST API
   Future<bool> reportMechanicErrorToBackend(String email) async {
-    final checkedUrls = <String>{};
-    final baseUrls = [
-      ApiConfig.apiBaseUrl,
-      ...ApiConfig.fallbackApiBaseUrls,
-    ].where((url) => checkedUrls.add(url)).toList();
-
-    for (final baseUrl in baseUrls) {
-      try {
-        final uri = Uri.parse('$baseUrl/auth/mechanic-registration/report-error');
-        final client = HttpClient()
-          ..connectionTimeout = const Duration(milliseconds: 1200);
-
-        try {
-          final request = await client.postUrl(uri);
-          request.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-          request.write(jsonEncode({'email': email}));
-          final response = await request.close().timeout(
-            const Duration(milliseconds: 1800),
-          );
-          if (response.statusCode >= 200 && response.statusCode < 300) {
-            return true;
-          }
-        } finally {
-          client.close(force: true);
-        }
-      } catch (e) {
-        debugPrint('Report error failed for $baseUrl: $e');
-      }
+    try {
+      final response = await _apiClient.post(
+        '/auth/mechanic-registration/report-error',
+        body: {'email': email},
+      );
+      return response.success;
+    } catch (e) {
+      debugPrint('Report error to backend failed: $e');
+      return false;
     }
-    return false;
   }
 
   Future<Map<String, dynamic>?> getCurrentMechanic() async {
@@ -245,6 +241,7 @@ class SupabaseService {
     return getActiveMechanicByEmail(email);
   }
 
+  /// Updates user metadata and syncs with Spring Boot
   Future<void> syncMechanicProfile({
     required User user,
     Map<String, dynamic>? mechanic,
@@ -264,15 +261,6 @@ class SupabaseService {
       user.userMetadata?['phone'],
     ]);
 
-    await client.from('profiles').upsert({
-      'id': user.id,
-      'email': user.email,
-      if (name != null) 'full_name': name,
-      if (phone != null) 'phone': phone,
-      'role': 'MECHANIC',
-      'is_admin': false,
-    }, onConflict: 'id');
-
     await updateUserProfile(
       data: {
         'role': 'MECHANIC',
@@ -280,6 +268,8 @@ class SupabaseService {
         if (phone != null) 'phone': phone,
       },
     );
+
+    await syncWithBackend();
   }
 
   Future<String> resolveUserRole(
@@ -317,17 +307,16 @@ class SupabaseService {
         : profileRole;
   }
 
-  // Fetch full user profile from profiles table
+  // Fetch full user profile from Spring Boot backend /api/auth/profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     try {
-      final response = await client
-          .from('profiles')
-          .select()
-          .eq('id', userId)
-          .maybeSingle();
-      return response;
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/auth/profile',
+        fromJson: (data) => data as Map<String, dynamic>,
+      );
+      return response.data;
     } catch (e) {
-      debugPrint('Error fetching user profile: $e');
+      debugPrint('Error fetching user profile from backend: $e');
       return null;
     }
   }

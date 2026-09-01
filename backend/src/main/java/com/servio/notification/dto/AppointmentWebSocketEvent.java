@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.UUID;
 
 /**
  * Payload pushed over WebSocket whenever an appointment changes.
@@ -19,8 +20,8 @@ public class AppointmentWebSocketEvent {
     /** CREATED | UPDATED | CANCELLED | DELETED */
     private String type;
     private Long appointmentId;
-    /** Numeric backend user ID (null for Supabase-only users) */
-    private Long userId;
+    /** UUID user identity */
+    private UUID userId;
     private String serviceType;
     private String status;
     private String appointmentDate;

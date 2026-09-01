@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/notifications")
@@ -36,7 +37,7 @@ public class NotificationController {
     
     @GetMapping("/user/{userId}")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUserNotifications(
-        @PathVariable Long userId
+        @PathVariable UUID userId
     ) {
         List<NotificationDto> notifications = notificationService.getUserNotifications(userId);
         return ResponseEntity.ok(ApiResponse.<List<NotificationDto>>builder()
@@ -48,7 +49,7 @@ public class NotificationController {
     
     @GetMapping("/user/{userId}/unread")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(
-        @PathVariable Long userId
+        @PathVariable UUID userId
     ) {
         List<NotificationDto> notifications = notificationService.getUnreadNotifications(userId);
         return ResponseEntity.ok(ApiResponse.<List<NotificationDto>>builder()
@@ -59,7 +60,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}/unread/count")
-    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable UUID userId) {
         Long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.<Long>builder()
             .success(true)
@@ -89,11 +90,12 @@ public class NotificationController {
     }
     
     @PatchMapping("/user/{userId}/read-all")
-    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead(@PathVariable UUID userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
             .success(true)
             .message("All notifications marked as read")
+            .data(null)
             .build());
     }
     
@@ -103,18 +105,20 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.<Void>builder()
             .success(true)
             .message("Notification deleted successfully")
+            .data(null)
             .build());
     }
     
     @DeleteMapping("/user/{userId}/old")
     public ResponseEntity<ApiResponse<Void>> deleteOldNotifications(
-        @PathVariable Long userId,
+        @PathVariable UUID userId,
         @RequestParam(defaultValue = "30") int daysOld
     ) {
         notificationService.deleteOldNotifications(userId, daysOld);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
             .success(true)
             .message("Old notifications deleted successfully")
+            .data(null)
             .build());
     }
 }

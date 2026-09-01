@@ -2,7 +2,6 @@ package com.servio.payment.entity;
 
 import com.servio.booking.entity.Appointment;
 import com.servio.auth.entity.User;
-import com.servio.auth.entity.Profile;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -27,11 +26,6 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = true)
     private User user;
-
-    /** Set for Supabase-authenticated users (mutually exclusive with user). */
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "profile_id", nullable = true)
-    private Profile profile;
 
     @Column(nullable = false)
     private BigDecimal amount;

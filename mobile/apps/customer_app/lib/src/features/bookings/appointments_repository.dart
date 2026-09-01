@@ -1,37 +1,39 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_core/shared_core.dart';
 
-// ─── APPOINTMENTS REPOSITORY (queries Supabase directly) ─────────────────────
+// ─── APPOINTMENTS REPOSITORY (communicates with Spring Boot REST API) ────────
 
 class AppointmentsRepository {
-  SupabaseClient get _client => Supabase.instance.client;
+  final ApiClient _apiClient;
 
-  /// Fetches all appointments for the current authenticated user.
-  /// Joins with vehicles table to get make/model.
+  AppointmentsRepository({ApiClient? apiClient})
+      : _apiClient = apiClient ?? ApiClient();
+
+  /// Fetches all appointments for the current authenticated user via GET /api/appointments/my.
   Future<List<AppointmentModel>> getUserAppointments({
     String? profileId,
   }) async {
-    final activeProfileId = profileId ?? _client.auth.currentUser?.id;
-    if (activeProfileId == null) return [];
+    try {
+      final response = await _apiClient.get<List<AppointmentModel>>(
+        '/appointments/my',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <AppointmentModel>[];
+        },
+      );
 
-    final response = await _client
-        .from('appointments')
-        .select('''
-          id, profile_id, vehicle_id, service_type, appointment_date,
-          status, location, notes, estimated_cost, actual_cost, created_at,
-          vehicles ( make, model )
-        ''')
-        .eq('profile_id', activeProfileId)
-        .order('appointment_date', ascending: false);
-
-    final data = response as List<dynamic>;
-    return data
-        .map((e) => AppointmentModel.fromJson(e as Map<String, dynamic>))
-        .toList();
+      return response.data ?? <AppointmentModel>[];
+    } catch (e) {
+      debugPrint('Error fetching user appointments from backend: $e');
+      rethrow;
+    }
   }
 
-  /// Creates a new appointment for the current user.
+  /// Creates a new appointment for the current user via POST /api/appointments.
   Future<AppointmentModel> createAppointment({
     int? vehicleId,
     required String serviceType,
@@ -40,70 +42,93 @@ class AppointmentsRepository {
     String? notes,
     required double estimatedCost,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
-
     final payload = <String, dynamic>{
-      'profile_id': user.id,
-      if (vehicleId != null) 'vehicle_id': vehicleId,
-      'service_type': serviceType,
-      'appointment_date': appointmentDate.toIso8601String(),
-      'status': 'PENDING',
-      if (location != null) 'location': location,
-      if (notes != null) 'notes': notes,
-      'estimated_cost': estimatedCost,
-      'created_at': DateTime.now().toUtc().toIso8601String(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      if (vehicleId != null) 'vehicleId': vehicleId,
+      'serviceType': serviceType,
+      'appointmentDate': appointmentDate.toIso8601String(),
+      if (location != null && location.isNotEmpty) 'location': location,
+      if (notes != null && notes.isNotEmpty) 'notes': notes,
+      'estimatedCost': estimatedCost,
     };
 
-    final response = await _client.from('appointments').insert(payload).select(
-      '''
-          id, profile_id, vehicle_id, service_type, appointment_date,
-          status, location, notes, estimated_cost, actual_cost, created_at,
-          vehicles ( make, model )
-        ''',
-    ).single();
+    try {
+      final response = await _apiClient.post<AppointmentModel>(
+        '/appointments',
+        body: payload,
+        fromJson: (data) => AppointmentModel.fromJson(data as Map<String, dynamic>),
+      );
 
-    return AppointmentModel.fromJson(response);
+      if (response.data != null) {
+        return response.data!;
+      }
+      throw ApiException(response.message ?? 'Failed to create appointment');
+    } catch (e) {
+      debugPrint('Error creating appointment via backend: $e');
+      rethrow;
+    }
   }
 
-  /// Fetches a list of booked time slots (as "HH:mm" strings) for a specific date.
-  /// Ignores appointments with status 'CANCELLED'.
+  /// Fetches a list of booked time slots (as "HH:mm" strings) for a specific date via GET /api/appointments/booked-slots?date=YYYY-MM-DD.
   Future<List<String>> getBookedSlotsForDate(
     DateTime date,
     String serviceType,
   ) async {
-    // 1. Compute start and end of the given date (in local time)
-    final startOfDay = DateTime(date.year, date.month, date.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final dateStr =
+        '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
     try {
-      final response = await _client
-          .from('appointments')
-          .select('appointment_date')
-          .gte('appointment_date', startOfDay.toUtc().toIso8601String())
-          .lt('appointment_date', endOfDay.toUtc().toIso8601String())
-          .eq('service_type', serviceType)
-          .neq('status', 'CANCELLED');
+      final response = await _apiClient.get<List<String>>(
+        '/appointments/booked-slots',
+        queryParameters: {'date': dateStr},
+        fromJson: (data) {
+          if (data is List) {
+            final result = <String>[];
+            for (final item in data) {
+              if (item is String) {
+                // If it's already "HH:mm" format (e.g. "09:00")
+                if (item.contains(':') && item.length <= 5) {
+                  result.add(item);
+                } else {
+                  // If ISO timestamp format
+                  final dt = DateTime.tryParse(item)?.toLocal();
+                  if (dt != null) {
+                    final h = dt.hour.toString().padLeft(2, '0');
+                    final m = dt.minute.toString().padLeft(2, '0');
+                    result.add('$h:$m');
+                  } else {
+                    result.add(item);
+                  }
+                }
+              }
+            }
+            return result;
+          }
+          return <String>[];
+        },
+      );
 
-      final data = response as List<dynamic>;
-
-      final bookedSlots = <String>[];
-      for (final row in data) {
-        final dateStr = row['appointment_date'] as String?;
-        if (dateStr != null) {
-          final dt = DateTime.parse(dateStr).toLocal();
-          // Format as "HH:mm"
-          final h = dt.hour.toString().padLeft(2, '0');
-          final m = dt.minute.toString().padLeft(2, '0');
-          bookedSlots.add('$h:$m');
-        }
-      }
-
-      return bookedSlots;
+      return response.data ?? <String>[];
     } catch (e) {
-      debugPrint('Error fetching booked slots: $e');
+      debugPrint('Error fetching booked slots from backend: $e');
       return [];
+    }
+  }
+
+  /// Cancels an appointment via POST /api/appointments/{id}/cancel.
+  Future<AppointmentModel> cancelAppointment(int appointmentId) async {
+    try {
+      final response = await _apiClient.post<AppointmentModel>(
+        '/appointments/$appointmentId/cancel',
+        fromJson: (data) => AppointmentModel.fromJson(data as Map<String, dynamic>),
+      );
+
+      if (response.data != null) {
+        return response.data!;
+      }
+      throw ApiException(response.message ?? 'Failed to cancel appointment');
+    } catch (e) {
+      debugPrint('Error cancelling appointment: $e');
+      rethrow;
     }
   }
 }

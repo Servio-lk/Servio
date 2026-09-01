@@ -9,6 +9,7 @@ import com.servio.admin.entity.TaskStatus;
 import com.servio.admin.repository.MechanicRepository;
 
 import com.servio.admin.dto.JobTaskDto;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
@@ -24,12 +25,12 @@ public class JobTaskService {
 
     public JobTaskDto createJobTask(JobTaskDto dto) {
         JobCard jobCard = jobCardRepository.findById(dto.getJobCardId())
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + dto.getJobCardId()));
 
         Mechanic mechanic = null;
         if (dto.getMechanicId() != null) {
             mechanic = mechanicRepository.findById(dto.getMechanicId())
-                    .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + dto.getMechanicId()));
         }
 
         JobTask task = JobTask.builder()
@@ -48,7 +49,7 @@ public class JobTaskService {
 
     public JobTaskDto getJobTaskById(Long id) {
         JobTask task = jobTaskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job task not found with id: " + id));
         return convertToDto(task);
     }
 
@@ -73,7 +74,7 @@ public class JobTaskService {
 
     public JobTaskDto updateJobTask(Long id, JobTaskDto dto) {
         JobTask task = jobTaskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job task not found with id: " + id));
 
         if (dto.getDescription() != null) {
             task.setDescription(dto.getDescription());
@@ -84,7 +85,7 @@ public class JobTaskService {
         if (dto.getMechanicId() != null && !dto.getMechanicId()
                 .equals(task.getAssignedMechanic() != null ? task.getAssignedMechanic().getId() : null)) {
             Mechanic mechanic = mechanicRepository.findById(dto.getMechanicId())
-                    .orElseThrow(() -> new RuntimeException("Mechanic not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + dto.getMechanicId()));
             task.setAssignedMechanic(mechanic);
         }
         if (dto.getSequenceOrder() != null) {
@@ -100,7 +101,7 @@ public class JobTaskService {
 
     public JobTaskDto updateTaskStatus(Long id, String status) {
         JobTask task = jobTaskRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Job task not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job task not found with id: " + id));
 
         TaskStatus newStatus = TaskStatus.valueOf(status);
         task.setStatus(newStatus);

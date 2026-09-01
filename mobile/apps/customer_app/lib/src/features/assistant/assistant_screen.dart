@@ -1,11 +1,8 @@
-import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:shared_core/shared_core.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AssistantScreen extends ConsumerStatefulWidget {
   const AssistantScreen({super.key});
@@ -96,34 +93,15 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     _scrollToBottom();
 
     try {
-      final session = Supabase.instance.client.auth.currentSession;
-      final token = session?.accessToken;
-
-      final url = Uri.parse('${ApiConfig.apiBaseUrl}/agent/chat');
-      final client = HttpClient();
-      final request = await client.postUrl(url);
-
-      request.headers.set(
-        HttpHeaders.contentTypeHeader,
-        'application/json; charset=UTF-8',
+      final response = await ApiClient().post<Map<String, dynamic>>(
+        '/agent/chat',
+        body: {
+          'message': query,
+          if (_conversationId != null) 'conversationId': _conversationId,
+        },
       );
-      if (token != null) {
-        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
-      }
 
-      final payload = jsonEncode({
-        'message': query,
-        if (_conversationId != null) 'conversationId': _conversationId,
-      });
-
-      request.write(payload);
-      final response = await request.close();
-      final responseBody = await response.transform(utf8.decoder).join();
-      client.close();
-
-      final json = jsonDecode(responseBody) as Map<String, dynamic>;
-      final data = json['data'] as Map<String, dynamic>?;
-
+      final data = response.data;
       if (data != null) {
         _conversationId = data['conversationId'] as String?;
         final msg = data['message'] as String? ?? 'No response received.';
@@ -145,7 +123,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
         });
       } else {
         final errorMsg =
-            json['message'] as String? ?? 'Failed to reach AI service';
+            response.message ?? 'Failed to reach AI service';
         setState(() {
           _messages.add(
             _ChatMessage(

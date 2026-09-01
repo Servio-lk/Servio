@@ -44,7 +44,7 @@ EXPOSE 3001
 
 # Health check — matches server.port=3001
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:3001/api/services || exit 1
+  CMD curl -f http://localhost:3001/actuator/health || exit 1
 
 # JVM tuned for AWS t3.micro (1 GB RAM total, ~512 MB for JVM)
 ENTRYPOINT ["dumb-init", "--", "java", \

@@ -1,28 +1,35 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_core/shared_core.dart';
 
 class VehiclesRepository {
-  SupabaseClient get _client => Supabase.instance.client;
+  final ApiClient _apiClient;
+
+  VehiclesRepository({ApiClient? apiClient})
+      : _apiClient = apiClient ?? ApiClient();
+
+  /// Fetches vehicles for the authenticated user via GET /api/vehicles/my
   Future<List<VehicleModel>> getUserVehicles({String? profileId}) async {
-    final activeProfileId = profileId ?? _client.auth.currentUser?.id;
-    if (activeProfileId == null) return [];
     try {
-      final response = await _client
-          .from('vehicles')
-          .select()
-          .eq('profile_id', activeProfileId)
-          .order('created_at', ascending: false);
-      final data = response as List<dynamic>;
-      return data
-          .map((e) => VehicleModel.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final response = await _apiClient.get<List<VehicleModel>>(
+        '/vehicles/my',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) => VehicleModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <VehicleModel>[];
+        },
+      );
+
+      return response.data ?? <VehicleModel>[];
     } catch (e) {
-      debugPrint('Error fetching vehicles: $e');
+      debugPrint('Error fetching vehicles from backend: $e');
       rethrow;
     }
   }
 
+  /// Creates a vehicle for the authenticated user via POST /api/vehicles/my
   Future<VehicleModel> createVehicle({
     required String make,
     required String model,
@@ -30,39 +37,33 @@ class VehiclesRepository {
     String? licensePlate,
     String? vin,
   }) async {
-    final user = _client.auth.currentUser;
-    final session = _client.auth.currentSession;
-    if (user == null) throw Exception('User not authenticated');
-    if (session == null) {
-      throw Exception(
-        'No active session. Please verify your email and sign in again.',
-      );
-    }
-    final nowIso = DateTime.now().toIso8601String();
     final payload = <String, dynamic>{
-      'profile_id': user.id,
       'make': make,
       'model': model,
-      'created_at': nowIso,
-      'updated_at': nowIso,
       if (year != null) 'year': year,
       if (licensePlate != null && licensePlate.isNotEmpty)
-        'license_plate': licensePlate,
+        'licensePlate': licensePlate,
       if (vin != null && vin.isNotEmpty) 'vin': vin,
     };
+
     try {
-      final response = await _client
-          .from('vehicles')
-          .insert(payload)
-          .select()
-          .single();
-      return VehicleModel.fromJson(response);
+      final response = await _apiClient.post<VehicleModel>(
+        '/vehicles/my',
+        body: payload,
+        fromJson: (data) => VehicleModel.fromJson(data as Map<String, dynamic>),
+      );
+
+      if (response.data != null) {
+        return response.data!;
+      }
+      throw ApiException(response.message ?? 'Failed to create vehicle');
     } catch (e) {
-      debugPrint('Error creating vehicle: $e');
+      debugPrint('Error creating vehicle via backend: $e');
       rethrow;
     }
   }
 
+  /// Updates a vehicle via PUT /api/vehicles/{id}
   Future<VehicleModel> updateVehicle({
     required int vehicleId,
     required String make,
@@ -71,42 +72,38 @@ class VehiclesRepository {
     String? licensePlate,
     String? vin,
   }) async {
-    final user = _client.auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
     final payload = <String, dynamic>{
       'make': make,
       'model': model,
-      'year': year,
-      'license_plate': licensePlate,
-      'vin': vin,
-      'updated_at': DateTime.now().toIso8601String(),
+      if (year != null) 'year': year,
+      if (licensePlate != null && licensePlate.isNotEmpty)
+        'licensePlate': licensePlate,
+      if (vin != null && vin.isNotEmpty) 'vin': vin,
     };
+
     try {
-      final response = await _client
-          .from('vehicles')
-          .update(payload)
-          .eq('id', vehicleId)
-          .eq('profile_id', user.id)
-          .select()
-          .single();
-      return VehicleModel.fromJson(response);
+      final response = await _apiClient.put<VehicleModel>(
+        '/vehicles/$vehicleId',
+        body: payload,
+        fromJson: (data) => VehicleModel.fromJson(data as Map<String, dynamic>),
+      );
+
+      if (response.data != null) {
+        return response.data!;
+      }
+      throw ApiException(response.message ?? 'Failed to update vehicle');
     } catch (e) {
-      debugPrint('Error updating vehicle: $e');
+      debugPrint('Error updating vehicle via backend: $e');
       rethrow;
     }
   }
 
+  /// Deletes a vehicle via DELETE /api/vehicles/{id}
   Future<void> deleteVehicle(int vehicleId) async {
-    final user = _client.auth.currentUser;
-    if (user == null) throw Exception('User not authenticated');
     try {
-      await _client
-          .from('vehicles')
-          .delete()
-          .eq('id', vehicleId)
-          .eq('profile_id', user.id);
+      await _apiClient.delete('/vehicles/$vehicleId');
     } catch (e) {
-      debugPrint('Error deleting vehicle: $e');
+      debugPrint('Error deleting vehicle via backend: $e');
       rethrow;
     }
   }

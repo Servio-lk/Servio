@@ -63,7 +63,7 @@ class _MechanicSignupVerifyScreenState
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.black.withOpacity(0.1)),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,7 +73,7 @@ class _MechanicSignupVerifyScreenState
               style: GoogleFonts.instrumentSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 4),
@@ -154,7 +154,7 @@ class _MechanicSignupVerifyScreenState
                       borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: _isLoading ? 0 : 8,
-                    shadowColor: const Color(0xFFFF5D2E).withOpacity(0.5),
+                    shadowColor: const Color(0xFFFF5D2E).withValues(alpha: 0.5),
                   ),
                   child: Text(
                     'Looks Good, Proceed',
@@ -176,7 +176,7 @@ class _MechanicSignupVerifyScreenState
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    side: BorderSide(color: Colors.red.withOpacity(0.5)),
+                    side: BorderSide(color: Colors.red.withValues(alpha: 0.5)),
                   ),
                   child: _isLoading
                       ? const SizedBox(

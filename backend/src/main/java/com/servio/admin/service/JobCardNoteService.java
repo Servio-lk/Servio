@@ -9,6 +9,7 @@ import com.servio.auth.entity.User;
 import com.servio.admin.repository.JobCardNoteRepository;
 import com.servio.admin.repository.JobCardRepository;
 import com.servio.auth.repository.UserRepository;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -23,12 +24,12 @@ public class JobCardNoteService {
 
     public JobCardNoteDto addNote(JobCardNoteDto dto) {
         JobCard jobCard = jobCardRepository.findById(dto.getJobCardId())
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + dto.getJobCardId()));
 
         User createdBy = null;
         if (dto.getCreatedById() != null) {
             createdBy = userRepository.findById(dto.getCreatedById())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + dto.getCreatedById()));
         }
 
         JobCardNote note = JobCardNote.builder()
@@ -44,7 +45,7 @@ public class JobCardNoteService {
 
     public JobCardNoteDto getNoteById(Long id) {
         JobCardNote note = noteRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Note not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Note not found with id: " + id));
         return convertToDto(note);
     }
 

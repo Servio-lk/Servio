@@ -4,9 +4,11 @@ package com.servio.admin.service;
 import com.servio.admin.dto.WalkInCustomerDto;
 import com.servio.admin.entity.WalkInCustomer;
 import com.servio.admin.repository.WalkInCustomerRepository;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -33,7 +35,7 @@ public class WalkInCustomerService {
 
     public WalkInCustomerDto getWalkInCustomerById(Long id) {
         WalkInCustomer customer = walkInCustomerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Walk-in customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Walk-in customer not found with id: " + id));
         return convertToDto(customer);
     }
 
@@ -51,7 +53,7 @@ public class WalkInCustomerService {
 
     public WalkInCustomerDto updateWalkInCustomer(Long id, WalkInCustomerDto dto) {
         WalkInCustomer customer = walkInCustomerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Walk-in customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Walk-in customer not found with id: " + id));
 
         customer.setFullName(dto.getFullName());
         customer.setPhone(dto.getPhone());
@@ -72,9 +74,9 @@ public class WalkInCustomerService {
         walkInCustomerRepository.deleteById(id);
     }
 
-    public void markAsRegistered(Long id, Long userId) {
+    public void markAsRegistered(Long id, UUID userId) {
         WalkInCustomer customer = walkInCustomerRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Walk-in customer not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Walk-in customer not found with id: " + id));
         customer.setIsRegistered(true);
         customer.setRegisteredUserId(userId);
         walkInCustomerRepository.save(customer);

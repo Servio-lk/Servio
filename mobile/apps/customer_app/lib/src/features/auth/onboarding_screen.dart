@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 import 'package:shared_core/shared_core.dart';
-import 'package:shared_core/shared_core.dart';
 
 // ---------------------------------------------------------------------------
 // Data model for each onboarding page

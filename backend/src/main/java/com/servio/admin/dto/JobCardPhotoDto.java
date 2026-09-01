@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ public class JobCardPhotoDto {
     private String photoUrl;
     private String description;
     private String photoType;
-    private Long uploadedById;
+    private UUID uploadedById;
     private String uploadedByName;
     private LocalDateTime createdAt;
 }

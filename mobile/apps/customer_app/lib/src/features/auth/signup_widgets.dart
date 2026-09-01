@@ -195,7 +195,7 @@ class SignUpInputField extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kInputBg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
       padding: const EdgeInsets.all(8),
       child: Row(
@@ -259,7 +259,7 @@ class SignUpPasswordField extends StatelessWidget {
       decoration: BoxDecoration(
         color: _kInputBg,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withOpacity(0.1)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
       padding: const EdgeInsets.all(8),
       child: Row(

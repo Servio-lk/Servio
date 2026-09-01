@@ -9,11 +9,12 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
-    List<Payment> findByUserId(Long userId);
+    List<Payment> findByUserId(UUID userId);
     
     List<Payment> findByPaymentStatus(String paymentStatus);
     
@@ -31,7 +32,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findRecentPayments();
     
     @Query("SELECT p FROM Payment p WHERE p.user.id = :userId ORDER BY p.paymentDate DESC")
-    List<Payment> findUserPaymentsOrderByDate(@Param("userId") Long userId);
+    List<Payment> findUserPaymentsOrderByDate(@Param("userId") UUID userId);
 
     /** Returns all completed payments for a given appointment, newest first. */
     @Query("SELECT p FROM Payment p WHERE p.appointment.id = :appointmentId AND p.paymentStatus = 'COMPLETED' ORDER BY p.paymentDate DESC, p.createdAt DESC")

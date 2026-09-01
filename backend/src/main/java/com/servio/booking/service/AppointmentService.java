@@ -1,27 +1,28 @@
 package com.servio.booking.service;
 
-import com.servio.common.event.AppointmentCreatedEvent;
-import com.servio.common.event.RepairStatusChangedEvent;
-import com.servio.booking.dto.AppointmentRequest;
-import com.servio.booking.dto.AppointmentDto;
-
-
-import com.servio.booking.entity.Appointment;
-import com.servio.auth.entity.Profile;
+import com.servio.auth.entity.Role;
 import com.servio.auth.entity.User;
+import com.servio.auth.repository.UserRepository;
+import com.servio.booking.dto.AppointmentDto;
+import com.servio.booking.dto.AppointmentRequest;
+import com.servio.booking.entity.Appointment;
 import com.servio.booking.entity.Vehicle;
 import com.servio.booking.repository.AppointmentRepository;
-import com.servio.auth.repository.ProfileRepository;
-import com.servio.auth.repository.UserRepository;
 import com.servio.booking.repository.VehicleRepository;
+import com.servio.common.event.AppointmentCreatedEvent;
+import com.servio.common.event.RepairStatusChangedEvent;
+import com.servio.common.exception.ConflictException;
+import com.servio.common.exception.ResourceNotFoundException;
+import com.servio.notification.service.AppointmentEventPublisher;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import com.servio.notification.service.AppointmentEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -38,73 +39,62 @@ public class AppointmentService {
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
-    private final ProfileRepository profileRepository;
     private final JdbcTemplate jdbcTemplate;
     private final EntityManager entityManager;
     private final AppointmentEventPublisher eventPublisher;
-    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
-    @Transactional
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentDto createAppointment(AppointmentRequest request, Authentication authentication) {
         User user = null;
-        Profile profile = null;
 
         // Get user from authentication context
         if (authentication != null && authentication.isAuthenticated()) {
-            String userId = authentication.getPrincipal().toString();
-            String role = resolveRole(authentication);
-
-            // Try to parse as UUID (Supabase user)
+            String userIdStr = authentication.getPrincipal().toString();
             try {
-                UUID profileId = UUID.fromString(userId);
-                profile = profileRepository.findById(profileId).orElse(null);
-                if (profile == null) {
-                    createProfileIfMissing(profileId, request, role);
-                    profile = profileRepository.findById(profileId)
-                            .orElseThrow(() -> new RuntimeException("Profile not found with ID: " + userId));
-                } else {
-                    // Profile exists from Supabase auth, but may not have full_name
-                    // Update it if the customer name is provided
-                    ensureProfileHasName(profileId, request);
-                    // Refresh the profile to get the latest data
-                    profile = profileRepository.findById(profileId).orElse(profile);
-                }
+                UUID userUuid = UUID.fromString(userIdStr);
+                user = userRepository.findById(userUuid).orElseGet(() -> {
+                    String role = resolveRole(authentication);
+                    Role userRole = "ADMIN".equalsIgnoreCase(role) ? Role.ADMIN : Role.USER;
+                    return userRepository.save(User.builder()
+                            .id(userUuid)
+                            .fullName(request.getCustomerName() != null && !request.getCustomerName().isBlank() 
+                                    ? request.getCustomerName() : "Customer")
+                            .email(request.getCustomerEmail() != null && !request.getCustomerEmail().isBlank() 
+                                    ? request.getCustomerEmail() : userUuid + "@servio.lk")
+                            .phone(request.getCustomerPhone())
+                            .passwordHash("")
+                            .role(userRole)
+                            .build());
+                });
             } catch (IllegalArgumentException e) {
-                // Not a UUID, try as Long (local user)
-                try {
-                    Long localUserId = Long.parseLong(userId);
-                    user = userRepository.findById(localUserId)
-                            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-                } catch (NumberFormatException nfe) {
-                    throw new RuntimeException("Invalid user ID format: " + userId);
-                }
+                throw new IllegalArgumentException("Invalid user UUID format: " + userIdStr);
             }
         } else if (request.getUserId() != null) {
-            // Fallback to request userId for backwards compatibility
             user = userRepository.findById(request.getUserId())
-                    .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + request.getUserId()));
         } else {
-            throw new RuntimeException("User authentication required to create appointment");
+            throw new IllegalArgumentException("User authentication required to create appointment");
         }
 
-        // Check if the time slot is already booked
+        // Check if the time slot is already booked with pessimistic locking
         List<Appointment> existingAppointments = appointmentRepository
-                .findByAppointmentDateAndStatusNotIn(
+                .findForUpdateByAppointmentDateAndStatusNotIn(
                         request.getAppointmentDate(),
                         List.of("CANCELLED"));
 
         if (!existingAppointments.isEmpty()) {
-            throw new RuntimeException("This time slot is already booked. Please choose another time.");
+            throw new ConflictException("This time slot is already booked. Please choose another time.");
         }
 
         Vehicle vehicle = null;
         if (request.getVehicleId() != null) {
             vehicle = vehicleRepository.findById(request.getVehicleId())
-                    .orElseThrow(() -> new RuntimeException("Vehicle not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + request.getVehicleId()));
         }
 
         Appointment appointment = Appointment.builder()
                 .user(user)
-                .profile(profile)
                 .vehicle(vehicle)
                 .serviceType(request.getServiceType())
                 .appointmentDate(request.getAppointmentDate())
@@ -114,11 +104,15 @@ public class AppointmentService {
                 .status("PENDING")
                 .build();
 
-        appointment = appointmentRepository.save(appointment);
+        try {
+            appointment = appointmentRepository.saveAndFlush(appointment);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ConflictException("This time slot is already booked. Please choose another time.");
+        }
         AppointmentDto dto = convertToDto(appointment);
         eventPublisher.publish("CREATED", dto);
 
-        // Send booking confirmation notification to the user (local users only)
+        // Send booking confirmation notification to the user
         if (user != null) {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a");
             String dateStr = appointment.getAppointmentDate().format(fmt);
@@ -149,35 +143,6 @@ public class AppointmentService {
         return "USER";
     }
 
-    private void createProfileIfMissing(UUID profileId, AppointmentRequest request, String role) {
-        jdbcTemplate.update(
-                "INSERT INTO profiles (id, full_name, email, phone, role, is_admin, created_at, joined) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) ON CONFLICT (id) DO NOTHING",
-                profileId,
-                request.getCustomerName(),
-                request.getCustomerEmail(),
-                request.getCustomerPhone(),
-                role,
-                "ADMIN".equalsIgnoreCase(role));
-    }
-
-    private void ensureProfileHasName(UUID profileId, AppointmentRequest request) {
-        // Update profile with customer name and contact info if they're empty
-        if (request.getCustomerName() != null && !request.getCustomerName().trim().isEmpty()) {
-            jdbcTemplate.update(
-                    "UPDATE profiles SET full_name = COALESCE(NULLIF(full_name, ''), ?), "
-                            + "email = COALESCE(NULLIF(email, ''), ?), "
-                            + "phone = COALESCE(NULLIF(phone, ''), ?) "
-                            + "WHERE id = ? AND (full_name IS NULL OR full_name = '')",
-                    request.getCustomerName(),
-                    request.getCustomerEmail(),
-                    request.getCustomerPhone(),
-                    profileId);
-            // Ensure Hibernate doesn't cache the old value
-            entityManager.getEntityManagerFactory().getCache().evict(Profile.class, profileId);
-        }
-    }
-
     @Transactional(readOnly = true)
     public List<AppointmentDto> getAllAppointments() {
         return appointmentRepository.findAll().stream()
@@ -203,60 +168,43 @@ public class AppointmentService {
     @Transactional(readOnly = true)
     public List<AppointmentDto> getUserAppointments(String userId) {
         try {
-            Long localUserId = Long.parseLong(userId);
-            return appointmentRepository.findUserAppointmentsOrderByCreatedAt(localUserId).stream()
+            UUID userUuid = UUID.fromString(userId);
+            return appointmentRepository.findUserAppointmentsOrderByCreatedAt(userUuid).stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
-        } catch (NumberFormatException e) {
-            try {
-                UUID profileId = UUID.fromString(userId);
-                return appointmentRepository.findProfileAppointmentsOrderByDate(profileId).stream()
-                        .map(this::convertToDto)
-                        .collect(Collectors.toList());
-            } catch (IllegalArgumentException ex) {
-                return List.of();
-            }
+        } catch (IllegalArgumentException ex) {
+            return List.of();
         }
     }
 
     @Transactional(readOnly = true)
     public List<AppointmentDto> getMyAppointments(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("User not authenticated");
+            throw new SecurityException("User not authenticated");
         }
 
         String userId = authentication.getPrincipal().toString();
-
-        // Try to parse as UUID (Supabase user)
         try {
-            UUID profileId = UUID.fromString(userId);
-            return appointmentRepository.findProfileAppointmentsOrderByDate(profileId).stream()
+            UUID userUuid = UUID.fromString(userId);
+            return appointmentRepository.findUserAppointmentsOrderByDate(userUuid).stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
         } catch (IllegalArgumentException e) {
-            // Not a UUID, try as Long (local user)
-            try {
-                Long localUserId = Long.parseLong(userId);
-                return appointmentRepository.findUserAppointmentsOrderByDate(localUserId).stream()
-                        .map(this::convertToDto)
-                        .collect(Collectors.toList());
-            } catch (NumberFormatException nfe) {
-                throw new RuntimeException("Invalid user ID format: " + userId);
-            }
+            throw new IllegalArgumentException("Invalid user ID format: " + userId);
         }
     }
 
     @Transactional(readOnly = true)
     public AppointmentDto getAppointmentById(Long id) {
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
         return convertToDto(appointment);
     }
 
     @Transactional
     public AppointmentDto updateAppointmentStatus(Long id, String status) {
         Appointment appointment = appointmentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
 
         appointment.setStatus(status);
         appointment = appointmentRepository.save(appointment);
@@ -307,16 +255,10 @@ public class AppointmentService {
         String userId = authentication.getPrincipal().toString();
         boolean isOwner = false;
         try {
-            UUID profileId = UUID.fromString(userId);
-            isOwner = appointment.getProfile() != null
-                    && profileId.equals(appointment.getProfile().getId());
-        } catch (IllegalArgumentException e) {
-            try {
-                Long localUserId = Long.parseLong(userId);
-                isOwner = appointment.getUser() != null
-                        && localUserId.equals(appointment.getUser().getId());
-            } catch (NumberFormatException ignored) {}
-        }
+            UUID userUuid = UUID.fromString(userId);
+            isOwner = appointment.getUser() != null
+                    && userUuid.equals(appointment.getUser().getId());
+        } catch (IllegalArgumentException ignored) {}
 
         if (!isOwner) {
             throw new SecurityException("You can only cancel your own appointments");
@@ -342,23 +284,14 @@ public class AppointmentService {
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {
-        Long userId = null;
-        String userName = null;
-        String userEmail = null;
-
-        // Check if this is a profile-based appointment (Supabase) or user-based (local)
-        if (appointment.getProfile() != null) {
-            userName = appointment.getProfile().getFullName();
-            userEmail = appointment.getProfile().getEmail();
-        } else if (appointment.getUser() != null) {
-            userId = appointment.getUser().getId();
-            userName = appointment.getUser().getFullName();
-            userEmail = appointment.getUser().getEmail();
-        }
+        UUID userId = appointment.getUser() != null ? appointment.getUser().getId() : null;
+        String userName = appointment.getUser() != null ? appointment.getUser().getFullName() : null;
+        String userEmail = appointment.getUser() != null ? appointment.getUser().getEmail() : null;
 
         return AppointmentDto.builder()
                 .id(appointment.getId())
                 .userId(userId)
+                .profileId(userId != null ? userId.toString() : null)
                 .userName(userName)
                 .userEmail(userEmail)
                 .vehicleId(appointment.getVehicle() != null ? appointment.getVehicle().getId() : null)

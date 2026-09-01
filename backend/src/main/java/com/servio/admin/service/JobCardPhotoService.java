@@ -9,9 +9,14 @@ import com.servio.auth.entity.User;
 import com.servio.admin.repository.JobCardPhotoRepository;
 import com.servio.admin.repository.JobCardRepository;
 import com.servio.auth.repository.UserRepository;
+import com.servio.admin.dto.ServicePhotoUploadResponse;
+import com.servio.catalog.service.CloudinaryService;
+import com.servio.common.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -20,15 +25,39 @@ public class JobCardPhotoService {
     private final JobCardPhotoRepository photoRepository;
     private final JobCardRepository jobCardRepository;
     private final UserRepository userRepository;
+    private final CloudinaryService cloudinaryService;
+
+    public JobCardPhotoDto uploadPhoto(Long jobCardId, MultipartFile file, PhotoType photoType, String description, UUID uploadedById) {
+        JobCard jobCard = jobCardRepository.findById(jobCardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + jobCardId));
+
+        ServicePhotoUploadResponse uploadResponse = cloudinaryService.uploadInspectionPhoto(file, jobCardId);
+
+        User uploadedBy = null;
+        if (uploadedById != null) {
+            uploadedBy = userRepository.findById(uploadedById).orElse(null);
+        }
+
+        JobCardPhoto photo = JobCardPhoto.builder()
+                .jobCard(jobCard)
+                .photoUrl(uploadResponse.getUrl())
+                .description(description)
+                .photoType(photoType != null ? photoType : PhotoType.WORK_IN_PROGRESS)
+                .uploadedBy(uploadedBy)
+                .build();
+
+        JobCardPhoto saved = photoRepository.save(photo);
+        return convertToDto(saved);
+    }
 
     public JobCardPhotoDto addPhoto(JobCardPhotoDto dto) {
         JobCard jobCard = jobCardRepository.findById(dto.getJobCardId())
-                .orElseThrow(() -> new RuntimeException("Job card not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Job card not found with id: " + dto.getJobCardId()));
 
         User uploadedBy = null;
         if (dto.getUploadedById() != null) {
             uploadedBy = userRepository.findById(dto.getUploadedById())
-                    .orElseThrow(() -> new RuntimeException("User not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + dto.getUploadedById()));
         }
 
         JobCardPhoto photo = JobCardPhoto.builder()
@@ -44,9 +73,10 @@ public class JobCardPhotoService {
     }
 
     public JobCardPhotoDto getPhotoById(Long id) {
-        JobCardPhoto photo = photoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Photo not found"));
-        return convertToDto(photo);
+        JobCard photo = null;
+        JobCardPhoto photoEntity = photoRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Photo not found with id: " + id));
+        return convertToDto(photoEntity);
     }
 
     public List<JobCardPhotoDto> getPhotosByJobCard(Long jobCardId) {

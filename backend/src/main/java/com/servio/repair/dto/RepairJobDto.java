@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -16,7 +17,7 @@ public class RepairJobDto {
     private Long id;
     private Long appointmentId;
     private Long vehicleId;
-    private Long userId;
+    private UUID userId;
     private String title;
     private String description;
     private String status;

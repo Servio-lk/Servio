@@ -142,3 +142,5 @@ vite.config.ts.timestamp-*
 servio-key.pem
 servio-key-new.pem
 *.pem
+
+.agents/

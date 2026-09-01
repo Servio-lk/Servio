@@ -2,6 +2,7 @@ package com.servio.common.config;
 
 import com.servio.auth.entity.Role;
 
+import com.servio.auth.security.RateLimitingFilter;
 import com.servio.common.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -24,6 +25,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
     @Bean
@@ -56,12 +58,13 @@ public class SecurityConfig {
                         // PayHere server-to-server payment notification (no JWT, verified by md5sig)
                         .requestMatchers("/api/payments/payhere/notify").permitAll()
                         // WebSocket handshake and SockJS fallback endpoints
-                        .requestMatchers("/ws", "/ws/**", "/ws-sockjs/**").permitAll()
+                        .requestMatchers("/api/ws", "/api/ws/**", "/api/ws-sockjs/**", "/ws", "/ws/**", "/ws-sockjs/**").permitAll()
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/actuator/metrics/**", "/actuator/prometheus").hasAuthority("ADMIN")
                         .requestMatchers("/api/servicerecords/**").authenticated()
                         .anyRequest().authenticated())
+                .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

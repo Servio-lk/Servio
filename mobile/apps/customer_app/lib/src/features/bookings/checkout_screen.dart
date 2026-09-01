@@ -450,14 +450,14 @@ class _PriceBreakdownSection extends StatelessWidget {
                 children: [
                   _PriceLineItem(
                     label: 'Service Fee',
-                    amount: '+${basePriceStr}',
+                    amount: '+$basePriceStr',
                     isBoldLabel: false,
                   ),
                   const SizedBox(height: 4),
                   if (optionName != null && optionPriceStr != null) ...[
                     _PriceLineItem(
                       label: optionName!,
-                      amount: '+${optionPriceStr!}',
+                      amount: '+$optionPriceStr',
                       isBoldLabel: false,
                     ),
                     const SizedBox(height: 4),
@@ -573,11 +573,10 @@ class _InfoItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            children: [
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
               // Icon (24x24)
               PhosphorIcon(icon, size: 24, color: Colors.black),
               const SizedBox(width: 12),
@@ -604,8 +603,7 @@ class _InfoItem extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }
 

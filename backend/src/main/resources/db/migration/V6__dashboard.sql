@@ -70,12 +70,15 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
 
 -- Create triggers
+DROP TRIGGER IF EXISTS update_appointments_updated_at ON appointments;
 CREATE TRIGGER update_appointments_updated_at BEFORE UPDATE ON appointments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON reviews;
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
