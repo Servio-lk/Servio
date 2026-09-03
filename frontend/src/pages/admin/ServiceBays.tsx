@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Warehouse, Search, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api';
 
 export function AdminServiceBays() {
   const [bays, setBays] = useState<any[]>([]);
@@ -21,14 +22,7 @@ export function AdminServiceBays() {
   const loadBays = async () => {
     try {
       setLoading(true);
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -50,14 +44,7 @@ const apiBaseUrl = (() => {
     }
 
     try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/service-bays`, {
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -82,7 +69,7 @@ const apiBaseUrl = (() => {
       } else {
         toast.error('Failed to add service bay');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error adding service bay');
     }
   };
@@ -90,14 +77,7 @@ const apiBaseUrl = (() => {
   const handleDeleteBay = async (id: number) => {
     if (confirm('Are you sure you want to delete this service bay?')) {
       try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-        const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/service-bays/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -110,7 +90,7 @@ const apiBaseUrl = (() => {
         } else {
           toast.error('Failed to delete service bay');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Error deleting service bay');
       }
     }
@@ -118,14 +98,7 @@ const apiBaseUrl = (() => {
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/service-bays/${id}/status/${newStatus}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -138,7 +111,7 @@ const apiBaseUrl = (() => {
       } else {
         toast.error('Failed to update status');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error updating status');
     }
   };
@@ -324,3 +297,6 @@ const apiBaseUrl = (() => {
     </div>
   );
 }
+
+export default AdminServiceBays;
+

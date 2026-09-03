@@ -65,7 +65,7 @@ export default function ServiceHistoryPage() {
       await apiService.deleteServiceRecord(id);
       toast.success('Record deleted');
       setRecords(records.filter(r => r.id !== id));
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to delete record');
     }
   };

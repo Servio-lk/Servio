@@ -151,7 +151,7 @@ export default function ResetPassword() {
                   </Button>
                 </div>
               ) : (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col text-left gap-4">
                   <PasswordField
                     id="new-password"
                     label="New password"

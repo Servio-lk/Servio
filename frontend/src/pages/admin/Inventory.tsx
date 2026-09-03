@@ -325,7 +325,7 @@ function AddItemModal({ onClose, onSuccess }: { onClose: () => void, onSuccess: 
     try {
       const res = await inventoryApi.createItem(formData);
       if (res.success) onSuccess();
-    } catch(err) {
+    } catch(_err) {
       alert("Failed to create item.");
     }
   };
@@ -372,7 +372,7 @@ function ReceiveStockModal({ item, onClose, onSuccess }: { item: InventoryItem, 
         notes: notes
       });
       if (res.success) onSuccess();
-    } catch(err) {
+    } catch(_err) {
       alert("Failed to receive stock.");
     }
   };
@@ -416,7 +416,7 @@ function ConsumeStockModal({ item, onClose, onSuccess }: { item: InventoryItem, 
         notes: notes
       });
       if (res.success) onSuccess();
-    } catch(err) {
+    } catch(_err) {
       alert("Failed to issue stock.");
     }
   };
@@ -468,3 +468,6 @@ function HistoryModal({ item, transactions, onClose }: { item: InventoryItem, tr
     </div>
   )
 }
+
+export default AdminInventory;
+

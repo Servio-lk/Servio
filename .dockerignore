@@ -1,20 +1,34 @@
+# Git and IDE
 .git
 .gitignore
-.DS_Store
-.vscode
+.gitattributes
 .idea
-*.log
+.vscode
+*.swp
+*.swo
+.DS_Store
+
+# Credentials and secrets (CRITICAL)
+*.pem
+*.key
+*.cert
+*.crt
+.env
+.env.*
+!.env.example
+
+# Documentation & agent context
 *.md
 docs/
-mobile/
-database/
-node_modules
-*/node_modules
-.env
-*/.env
-.env.local
-*/.env.local
-*.ps1
-*.bat
-boot.log
-.github/
+.agents/
+
+# Build artifacts and temp
+dist/
+build/
+target/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+*.log

@@ -8,33 +8,34 @@ ARG VITE_API_URL
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
 
-# Copy package files
+# Copy package files first to optimize Docker layer caching
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies with npm cache mount
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit
 
-# Copy source code
+# Copy source code (clean context via .dockerignore)
 COPY . .
 
-# Build the application (Vite reads VITE_* from the environment at build time)
+# Build static production assets
 RUN npm run build
 
-# Production stage with nginx
-FROM nginx:alpine
+# Production runtime stage with unprivileged Nginx (non-root)
+FROM nginxinc/nginx-unprivileged:alpine AS runner
 
-# Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy custom nginx configuration
+COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built files from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Copy built static files from builder
+COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# Expose port 80
-EXPOSE 80
+# Expose unprivileged port 8080
+EXPOSE 8080
 
-# Health check
+# Health check against unprivileged endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start nginx
+# Start nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]

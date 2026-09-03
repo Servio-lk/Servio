@@ -61,6 +61,7 @@ function getPaymentInfo(appt: any) {
 
 export function AdminAppointments() {
   const [appointments, setAppointments] = useState<any[]>([]);
+  const [mechanics, setMechanics] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -68,8 +69,11 @@ export function AdminAppointments() {
   const [cashModal, setCashModal] = useState<{ open: boolean; appointment: any | null }>({ open: false, appointment: null });
   const [cashAmount, setCashAmount] = useState('');
   const [cashLoading, setCashLoading] = useState(false);
+  const [assigningId, setAssigningId] = useState<number | null>(null);
+  const [assignedMechanics, setAssignedMechanics] = useState<Record<number, number>>({});
 
   useEffect(() => { loadAppointments(); }, [statusFilter]);
+  useEffect(() => { loadMechanics(); }, []);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -97,6 +101,15 @@ export function AdminAppointments() {
       toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMechanics = async () => {
+    try {
+      const response = await adminApi.getStaff();
+      setMechanics((response.data || []).filter((member: any) => member.isActive !== false));
+    } catch {
+      toast.error('Failed to load mechanics');
     }
   };
 
@@ -145,11 +158,40 @@ export function AdminAppointments() {
     }
   };
 
-  const formatDateTime = (dateString: string) =>
-    new Date(dateString).toLocaleString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
+  const handleAssignMechanic = async (appointmentId: number, mechanicId: number) => {
+    if (!mechanicId) return;
+    setAssigningId(appointmentId);
+    try {
+      const response = await adminApi.assignMechanicToAppointment(appointmentId, mechanicId);
+      if (!response.success) throw new Error(response.message);
+      setAssignedMechanics(prev => ({ ...prev, [appointmentId]: mechanicId }));
+      toast.success('Mechanic assigned and chat opened');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to assign mechanic');
+    } finally {
+      setAssigningId(null);
+    }
+  };
+
+  const formatDateParts = (dateString: string) => {
+    const date = new Date(dateString);
+    return {
+      date: date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      }),
+      time: date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+      }),
+    };
+  };
+
+  const formatDateTime = (dateString: string) => {
+    const parts = formatDateParts(dateString);
+    return `${parts.date}, ${parts.time}`;
+  };
 
   const countByStatus = (s: string) => appointments.filter(a => a.status === s).length;
 
@@ -240,23 +282,35 @@ export function AdminAppointments() {
 
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="min-w-[1500px] table-fixed text-left">
+            <colgroup>
+              <col className="w-[80px]" />
+              <col className="w-[290px]" />
+              <col className="w-[210px]" />
+              <col className="w-[180px]" />
+              <col className="w-[180px]" />
+              <col className="w-[170px]" />
+              <col className="w-[290px]" />
+              <col className="w-[190px]" />
+              <col className="w-[130px]" />
+            </colgroup>
             <thead>
               <tr className="bg-gray-50/50 border-b border-black/5">
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date &amp; Time</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</th>
-                <th className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Cost</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Customer</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Service</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date &amp; Time</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vehicle</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Mechanic</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="px-5 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Cost</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {appointments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center">
+                  <td colSpan={9} className="px-6 py-16 text-center">
                     <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                       <Calendar className="h-8 w-8 text-gray-400" />
                     </div>
@@ -269,45 +323,51 @@ export function AdminAppointments() {
                   const transitions = STATUS_TRANSITIONS[appt.status] ?? [];
                   const payInfo = getPaymentInfo(appt);
                   const isUpdating = updatingId === appt.id;
+                  const dateParts = formatDateParts(appt.appointmentDate);
 
                   return (
-                    <tr key={appt.id} className="hover:bg-gray-50/40 transition-colors">
+                    <tr key={appt.id} className="h-[96px] hover:bg-gray-50/40 transition-colors">
                       {/* ID */}
-                      <td className="px-4 py-4 text-sm font-mono text-gray-400">#{appt.id}</td>
+                      <td className="px-5 py-5 text-sm font-mono text-gray-400 align-middle">#{appt.id}</td>
 
                       {/* Customer */}
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-[#ff5d2e] font-bold text-xs flex-shrink-0">
+                      <td className="px-5 py-5 align-middle">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center text-[#ff5d2e] font-bold text-xs flex-shrink-0">
                             {(appt.userName || 'U').charAt(0).toUpperCase()}
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium text-black leading-tight truncate">{appt.userName || 'Unknown'}</p>
-                            <p className="text-xs text-gray-400 truncate">{appt.userEmail}</p>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold leading-tight text-black">{appt.userName || 'Unknown'}</p>
+                            <p className="truncate text-xs text-gray-400">{appt.userEmail || 'No email'}</p>
                           </div>
                         </div>
                       </td>
 
                       {/* Service */}
-                      <td className="px-4 py-4 text-sm font-medium text-black">{appt.serviceType}</td>
+                      <td className="px-5 py-5 align-middle">
+                        <p className="line-clamp-2 text-sm font-semibold leading-5 text-black">{appt.serviceType}</p>
+                      </td>
 
                       {/* Date */}
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
+                      <td className="px-5 py-5 align-middle">
+                        <div className="flex items-start gap-2 text-sm text-gray-600">
                           <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                          {formatDateTime(appt.appointmentDate)}
+                          <div className="leading-tight">
+                            <p className="whitespace-nowrap font-medium text-gray-700">{dateParts.date}</p>
+                            <p className="mt-1 whitespace-nowrap text-gray-500">{dateParts.time}</p>
+                          </div>
                         </div>
                       </td>
 
                       {/* Vehicle */}
-                      <td className="px-4 py-4 text-sm text-gray-600">
+                      <td className="px-5 py-5 align-middle text-sm text-gray-600">
                         {appt.vehicleMake && appt.vehicleModel
-                          ? `${appt.vehicleMake} ${appt.vehicleModel}`
+                          ? <span className="line-clamp-2">{appt.vehicleMake} {appt.vehicleModel}</span>
                           : <span className="text-gray-400">—</span>}
                       </td>
 
                       {/* Status — clickable dropdown for valid transitions */}
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-5 align-middle">
                         {transitions.length > 0 ? (
                           <div className="relative" data-dropdown>
                             <button
@@ -358,8 +418,32 @@ export function AdminAppointments() {
                         )}
                       </td>
 
+                      {/* Mechanic assignment */}
+                      <td className="px-5 py-5 align-middle">
+                        {['CONFIRMED', 'IN_PROGRESS'].includes(appt.status) ? (
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={assignedMechanics[appt.id] || ''}
+                              onChange={(event) => handleAssignMechanic(appt.id, Number(event.target.value))}
+                              disabled={assigningId === appt.id}
+                              className="w-full rounded-lg border border-black/10 bg-white px-3 py-2 text-sm focus:border-[#ff5d2e] focus:outline-none disabled:opacity-60"
+                            >
+                              <option value="">{assigningId === appt.id ? 'Assigning...' : 'Assign mechanic'}</option>
+                              {mechanics.map((mechanic) => (
+                                <option key={mechanic.id} value={mechanic.id}>
+                                  {mechanic.fullName}
+                                  {mechanic.specialization ? ` · ${mechanic.specialization}` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">Confirm first</span>
+                        )}
+                      </td>
+
                       {/* Payment column */}
-                      <td className="px-4 py-4">
+                      <td className="px-5 py-5 align-middle">
                         <div className="flex flex-col gap-1">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border w-fit ${payInfo.color}`}
@@ -381,8 +465,8 @@ export function AdminAppointments() {
                       </td>
 
                       {/* Cost column */}
-                      <td className="px-4 py-4 text-sm font-medium text-black">
-                        <div className="flex items-center gap-1">
+                      <td className="px-5 py-5 align-middle text-right text-sm font-semibold text-black">
+                        <div className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                           <Banknote className="w-3 h-3 text-gray-400" />
                           {appt.actualCost
                             ? `Rs. ${appt.actualCost.toLocaleString()}`
@@ -492,3 +576,6 @@ export function AdminAppointments() {
     </div>
   );
 }
+
+export default AdminAppointments;
+

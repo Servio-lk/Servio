@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, List, FileText, User, Settings, LogOut } from 'lucide-react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
@@ -12,16 +12,17 @@ interface AppLayoutProps {
 
 // Tab bar items for both mobile and desktop
 const navItems = [
-  { icon: Home, label: 'Home', path: '/home' },
+  { icon: House, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
-  { icon: FileText, label: 'Activity', path: '/activity' },
-  { icon: User, label: 'Account', path: '/account' }
+  { icon: ClipboardText, label: 'Activity', path: '/activity' },
+  { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
+  { icon: Robot, label: 'AI Assistant', path: '/assistant' },
 ];
 
 // Desktop sidebar component
 function DesktopSidebar() {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
@@ -46,7 +47,7 @@ function DesktopSidebar() {
                       : 'text-black/70 hover:bg-[#fff7f5]'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-5 h-5" weight={isActive ? 'fill' : 'regular'} />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
@@ -58,18 +59,27 @@ function DesktopSidebar() {
       {/* Quick actions */}
       <div className="p-4 border-t border-black/10">
         <div className="flex flex-col gap-2">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#ff5d2e] bg-[#fff7f5] hover:bg-[#ffe7df] transition-colors"
+            >
+              <ShieldCheck className="w-5 h-5" weight="fill" />
+              <span className="font-medium">Admin Portal</span>
+            </Link>
+          )}
           <Link
-            to="/settings"
+            to="/account"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
           >
-            <Settings className="w-5 h-5" />
+            <GearSix className="w-5 h-5" />
             <span className="font-medium">Settings</span>
           </Link>
           <button
             onClick={logout}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
           >
-            <LogOut className="w-5 h-5" />
+            <SignOut className="w-5 h-5" />
             <span className="font-medium">Logout</span>
           </button>
         </div>
@@ -80,7 +90,7 @@ function DesktopSidebar() {
 
 // Desktop header component
 function DesktopHeader() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
@@ -89,15 +99,29 @@ function DesktopHeader() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#ffe7df] text-[#ff5d2e] text-xs font-semibold rounded-lg hover:bg-[#ffd9cc] transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4" weight="fill" />
+            <span>Admin Portal</span>
+          </Link>
+        )}
         <NotificationBell />
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
-          <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-[#ff5d2e]" />
+        <div className="flex items-center gap-1 px-3 py-2 rounded-lg">
+          <Link
+            to="/account"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
+          >
+          <div className="w-6 h-6 rounded-full flex items-center justify-center">
+            <UserCircle className="w-6 h-6" weight="regular" />
           </div>
           <span className="text-sm font-medium text-black">
             {user?.fullName?.split(' ')[0] || 'User'}
           </span>
+          </Link>
         </div>
       </div>
     </header>
@@ -106,14 +130,27 @@ function DesktopHeader() {
 
 // Mobile header component
 function MobileHeader() {
+  const { isAdmin } = useAuth();
+
   return (
     <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-black/10 sticky top-0 z-20">
       <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="px-2.5 py-1 bg-[#ffe7df] text-[#ff5d2e] text-xs font-semibold rounded-md flex items-center gap-1"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" weight="fill" />
+            <span>Admin</span>
+          </Link>
+        )}
         <NotificationBell />
-        <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-          <User className="w-4 h-4 text-[#ff5d2e]" />
-        </div>
+        <Link to="/account">
+          <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
+            <UserCircle className="w-4 h-4 text-[#ff5d2e]" weight="fill" />
+          </div>
+        </Link>
       </div>
     </header>
   );
@@ -137,6 +174,7 @@ function MobileTabBar() {
             >
               <item.icon
                 className={`w-6 h-6 ${isActive ? 'text-black' : 'text-black/50'}`}
+                weight={isActive ? 'fill' : 'regular'}
               />
               <span
                 className={`text-xs ${

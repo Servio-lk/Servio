@@ -1,0 +1,133 @@
+package com.servio.admin.controller;
+
+import com.servio.admin.entity.Mechanic;
+
+import com.servio.common.dto.ApiResponse;
+import com.servio.admin.dto.AssignMechanicRequest;
+import com.servio.booking.dto.AppointmentDto;
+import com.servio.repair.dto.RepairConversationDto;
+import com.servio.admin.dto.AppointmentUpdateRequest;
+import com.servio.admin.dto.PaymentCollectionRequest;
+import com.servio.booking.entity.Appointment;
+import com.servio.payment.entity.Payment;
+import com.servio.payment.repository.PaymentRepository;
+import com.servio.admin.service.AdminAppointmentService;
+import com.servio.booking.service.AppointmentService;
+import com.servio.repair.service.RepairChatService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/admin/appointments")
+@RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ADMIN')")
+public class AdminAppointmentController {
+
+    private final AdminAppointmentService adminAppointmentService;
+    private final AppointmentService appointmentService;
+    private final PaymentRepository paymentRepository;
+    private final RepairChatService repairChatService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
+            @RequestParam(required = false) String status) {
+        List<Appointment> appointments = status != null
+                ? adminAppointmentService.getAppointmentsByStatus(status)
+                : adminAppointmentService.getAllAppointments();
+
+        List<AppointmentDto> appointmentDtos = appointments.stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.success("Appointments retrieved successfully", appointmentDtos));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(@PathVariable Long id) {
+        Appointment appointment = adminAppointmentService.getAppointmentById(id);
+        AppointmentDto appointmentDto = convertToDto(appointment);
+        return ResponseEntity.ok(ApiResponse.success("Appointment retrieved successfully", appointmentDto));
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointment(
+            @PathVariable Long id,
+            @Valid @RequestBody AppointmentUpdateRequest request) {
+        Appointment appointment = adminAppointmentService.updateAppointment(id, request);
+        AppointmentDto appointmentDto = convertToDto(appointment);
+        return ResponseEntity.ok(ApiResponse.success("Appointment updated successfully", appointmentDto));
+    }
+
+    @PostMapping("/{id}/payments")
+    public ResponseEntity<ApiResponse<AppointmentDto>> recordPayment(
+            @PathVariable Long id,
+            @Valid @RequestBody PaymentCollectionRequest request) {
+        adminAppointmentService.recordPayment(id, request);
+        Appointment appointment = adminAppointmentService.getAppointmentById(id);
+        AppointmentDto appointmentDto = convertToDto(appointment);
+        return ResponseEntity.ok(ApiResponse.success("Payment recorded successfully", appointmentDto));
+    }
+
+    @PostMapping("/{id}/assign-mechanic")
+    public ResponseEntity<ApiResponse<RepairConversationDto>> assignMechanic(
+            @PathVariable Long id,
+            @RequestBody AssignMechanicRequest request) {
+        Appointment appointment = adminAppointmentService.getAppointmentById(id);
+        if (!"CONFIRMED".equalsIgnoreCase(appointment.getStatus())
+                && !"IN_PROGRESS".equalsIgnoreCase(appointment.getStatus())) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Mechanic assignment requires a confirmed appointment", appointment.getStatus()));
+        }
+
+        RepairConversationDto conversation = repairChatService.assignMechanicToAppointment(id, request.getMechanicId());
+        return ResponseEntity.ok(ApiResponse.success("Mechanic assigned successfully", conversation));
+    }
+
+    private AppointmentDto convertToDto(Appointment appointment) {
+        UUID userId = null;
+        String userName = null;
+        String userEmail = null;
+
+        if (appointment.getUser() != null) {
+            userId = appointment.getUser().getId();
+            userName = appointment.getUser().getFullName();
+            userEmail = appointment.getUser().getEmail();
+        }
+
+        List<Payment> completedPayments = paymentRepository.findCompletedPaymentsByAppointmentId(appointment.getId());
+        BigDecimal paidAmount = completedPayments.stream()
+                .map(Payment::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        String paymentMethod = completedPayments.isEmpty() ? null : completedPayments.get(0).getPaymentMethod();
+
+        return AppointmentDto.builder()
+                .id(appointment.getId())
+                .userId(userId)
+                .profileId(userId != null ? userId.toString() : null)
+                .userName(userName)
+                .userEmail(userEmail)
+                .vehicleId(appointment.getVehicle() != null ? appointment.getVehicle().getId() : null)
+                .vehicleMake(appointment.getVehicle() != null ? appointment.getVehicle().getMake() : null)
+                .vehicleModel(appointment.getVehicle() != null ? appointment.getVehicle().getModel() : null)
+                .serviceType(appointment.getServiceType())
+                .appointmentDate(appointment.getAppointmentDate())
+                .status(appointment.getStatus())
+                .location(appointment.getLocation())
+                .notes(appointment.getNotes())
+                .estimatedCost(appointment.getEstimatedCost())
+                .actualCost(appointment.getActualCost())
+                .paidAmount(paidAmount)
+                .paymentMethod(paymentMethod)
+                .createdAt(appointment.getCreatedAt())
+                .updatedAt(appointment.getUpdatedAt())
+                .build();
+    }
+}

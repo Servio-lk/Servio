@@ -6,7 +6,7 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isAdmin, isLoading, isBackendTokenReady } = useAuth();
+  const { isAuthenticated, isLoading, isBackendTokenReady } = useAuth();
   const location = useLocation();
 
   if (isLoading || (isAuthenticated && !isBackendTokenReady)) {
@@ -26,16 +26,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Redirect admin users to admin dashboard if they try to access customer pages
-  if (isAdmin && location.pathname === '/home') {
-    return <Navigate to="/admin" replace />;
-  }
-
   return <>{children}</>;
 }
 
 export function GuestGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -50,9 +45,7 @@ export function GuestGuard({ children }: AuthGuardProps) {
   }
 
   if (isAuthenticated) {
-    // Redirect admins to admin dashboard, customers to home
-    const defaultPath = isAdmin ? '/admin' : '/home';
-    const from = location.state?.from?.pathname || defaultPath;
+    const from = location.state?.from?.pathname || '/home';
     return <Navigate to={from} replace />;
   }
 

@@ -20,7 +20,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ["react", "react-dom", "react-router-dom"],
-          ui: ["lucide-react", "clsx", "tailwind-merge"],
+          ui: ["lucide-react", "@phosphor-icons/react", "clsx", "tailwind-merge"],
+          pdf: ["jspdf", "jspdf-autotable"],
         },
       },
     },

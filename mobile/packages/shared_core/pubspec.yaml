@@ -1,0 +1,23 @@
+name: shared_core
+description: Shared core package for Servio apps.
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.2.1
+  supabase_flutter: ^2.0.0
+  go_router: ^17.1.0
+  google_fonts: ^8.0.1
+  flutter_svg: ^2.2.3
+  phosphoricons_flutter: ^1.0.0
+  http: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0

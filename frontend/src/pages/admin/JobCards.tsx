@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Clipboard, Search, MoreVertical, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api';
 
 export function AdminJobCards() {
   const [jobCards, setJobCards] = useState<any[]>([]);
@@ -9,23 +10,12 @@ export function AdminJobCards() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedJobCard, setSelectedJobCard] = useState<any>(null);
 
-  useEffect(() => {
-    loadJobCards();
-  }, [statusFilter]);
-
-  const loadJobCards = async () => {
+  const loadJobCards = useCallback(async () => {
     try {
       setLoading(true);
-      const apiBaseUrl = (() => {
-        let url = import.meta.env.VITE_API_URL;
-        if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-        if (url) return url;
-        const h = window.location.hostname;
-        return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-      })();
       const url = statusFilter
-        ? `${apiBaseUrl}/admin/job-cards/status/${statusFilter}`
-        : `${apiBaseUrl}/admin/job-cards`;
+        ? `${API_BASE_URL}/admin/job-cards/status/${statusFilter}`
+        : `${API_BASE_URL}/admin/job-cards`;
       
       const response = await fetch(url, {
         headers: {
@@ -40,18 +30,15 @@ export function AdminJobCards() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    loadJobCards();
+  }, [loadJobCards]);
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}/status/${newStatus}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/job-cards/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -67,7 +54,7 @@ const apiBaseUrl = (() => {
       } else {
         toast.error('Failed to update status');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error updating status');
     }
   };
@@ -75,14 +62,7 @@ const apiBaseUrl = (() => {
   const handleDeleteJobCard = async (id: number) => {
     if (confirm('Are you sure you want to delete this job card?')) {
       try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-        const response = await fetch(`${apiBaseUrl}/admin/job-cards/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/job-cards/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -96,7 +76,7 @@ const apiBaseUrl = (() => {
         } else {
           toast.error('Failed to delete job card');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Error deleting job card');
       }
     }
@@ -330,3 +310,6 @@ const apiBaseUrl = (() => {
     </div>
   );
 }
+
+export default AdminJobCards;
+

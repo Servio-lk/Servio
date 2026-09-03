@@ -88,9 +88,7 @@ function mapSupabaseUser(supabaseUser: SupabaseUser): User {
     fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
     email: supabaseUser.email || '',
     phone: supabaseUser.user_metadata?.phone || null,
-    role:
-      supabaseUser.user_metadata?.role?.toUpperCase() ||
-      (supabaseUser.email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
+    role: 'USER', // The authoritative role is fetched from the backend via syncBackendToken
   };
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Users, Search, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api';
 
 export function AdminWalkInCustomers() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -25,14 +26,7 @@ export function AdminWalkInCustomers() {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/walk-in-customers`, {
+      const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -54,14 +48,7 @@ const apiBaseUrl = (() => {
     }
 
     try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-      const response = await fetch(`${apiBaseUrl}/admin/walk-in-customers`, {
+      const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -90,7 +77,7 @@ const apiBaseUrl = (() => {
       } else {
         toast.error('Failed to add customer');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error adding customer');
     }
   };
@@ -98,14 +85,7 @@ const apiBaseUrl = (() => {
   const handleDeleteCustomer = async (id: number) => {
     if (confirm('Are you sure you want to delete this customer?')) {
       try {
-const apiBaseUrl = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  if (url && url.startsWith('http://') && window.location.protocol === 'https:') url = undefined;
-  if (url) return url;
-  const h = window.location.hostname;
-  return (h === 'localhost' || h === '127.0.0.1') ? `http://${h}:3001/api` : `${window.location.origin}/api`;
-})();
-        const response = await fetch(`${apiBaseUrl}/admin/walk-in-customers/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/walk-in-customers/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -118,7 +98,7 @@ const apiBaseUrl = (() => {
         } else {
           toast.error('Failed to delete customer');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Error deleting customer');
       }
     }
@@ -324,3 +304,6 @@ const apiBaseUrl = (() => {
     </div>
   );
 }
+
+export default AdminWalkInCustomers;
+

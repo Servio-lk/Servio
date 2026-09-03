@@ -1,6 +1,6 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   let envApi = import.meta.env.VITE_API_URL;
 
   // Ignore hardcoded localhost env vars if we are deployed on a real domain
@@ -28,7 +28,7 @@ const getApiBaseUrl = () => {
   return `${window.location.origin}/api`;
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -218,6 +218,25 @@ interface AppointmentRequest {
   customerPhone?: string;
 }
 
+interface RepairConversationDto {
+  id: number;
+  conversationId: number;
+  repairId: number;
+  realtimeChannel: string;
+  isReadOnly: boolean;
+}
+
+interface RepairMessageDto {
+  id: number;
+  conversationId: number;
+  repairId: number;
+  senderId: string;
+  senderRole: string;
+  body: string;
+  createdAt: string;
+  readAt?: string | null;
+}
+
 class ApiService {
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
@@ -286,6 +305,15 @@ class ApiService {
     });
 
     return this.handleResponse<User>(response);
+  }
+
+  async deleteProfile(): Promise<ApiResponse<string>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+
+    return this.handleResponse<string>(response);
   }
 
   logout(): void {
@@ -445,6 +473,31 @@ class ApiService {
     return this.handleResponse<AppointmentDto>(response);
   }
 
+  async getAppointmentConversation(appointmentId: number): Promise<ApiResponse<RepairConversationDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${appointmentId}/conversation`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<RepairConversationDto>(response);
+  }
+
+  async getRepairMessages(repairId: number): Promise<ApiResponse<RepairMessageDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<RepairMessageDto[]>(response);
+  }
+
+  async sendRepairMessage(repairId: number, body: string): Promise<ApiResponse<RepairMessageDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ body }),
+    });
+    return this.handleResponse<RepairMessageDto>(response);
+  }
+
   /**
    * Requests the backend to generate PayHere checkout form data (including
    * the secure hash).  The merchant_secret never leaves the server.
@@ -529,7 +582,25 @@ class ApiService {
     });
     return this.handleResponse<void>(response);
   }
+
+  // AI Agent endpoints
+  async sendAgentMessage(message: string, conversationId?: string): Promise<ApiResponse<AgentChatResponse>> {
+    const response = await apiFetch(`${API_BASE_URL}/agent/chat`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ message, conversationId }),
+    });
+    return this.handleResponse<AgentChatResponse>(response);
+  }
 }
+
+export interface AgentChatResponse {
+  conversationId: string;
+  message: string;
+  toolCallsExecuted: string[];
+  actionData?: any;
+}
+
 
 export interface NotificationDto {
   id: number;
@@ -558,6 +629,8 @@ export type {
   ServiceRecordRequest,
   AppointmentDto,
   AppointmentRequest,
+  RepairConversationDto,
+  RepairMessageDto,
   VehicleDto,
   VehicleRequest,
   PayHereInitiateResponse,

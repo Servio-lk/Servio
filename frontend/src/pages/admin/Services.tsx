@@ -985,3 +985,6 @@ function ServicePreview({
     </div>
   );
 }
+
+export default AdminServices;
+

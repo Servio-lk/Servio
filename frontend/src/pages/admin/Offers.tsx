@@ -158,3 +158,6 @@ export function AdminOffers() {
     </div>
   );
 }
+
+export default AdminOffers;
+

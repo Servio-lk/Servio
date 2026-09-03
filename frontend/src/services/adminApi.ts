@@ -1,29 +1,5 @@
 import { apiFetch } from './apiFetch';
-
-const getApiBaseUrl = () => {
-  let envApi = import.meta.env.VITE_API_URL;
-
-  // Ignore hardcoded localhost env vars if we are deployed on a real domain
-  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
-  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
-  if (isLocalEnvApi && !isLocalHost) {
-    envApi = undefined;
-  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
-    envApi = undefined;
-  }
-
-  if (envApi) return envApi;
-
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return `http://${host}:3001/api`;
-  }
-
-  return `${window.location.origin}/api`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
+import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {
@@ -200,6 +176,108 @@ class AdminApiService {
     return response.json();
   }
 
+  async getStaff() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async generateStaffEmployeeCode() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/next-employee-code`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createStaff(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateStaff(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async uploadStaffFile(file: File, documentType: string, staffId?: number) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const params = new URLSearchParams({ documentType });
+    if (staffId) params.set('staffId', String(staffId));
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/uploads?${params.toString()}`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return response.json();
+  }
+
+  async getStaffSchedule(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async updateStaffSchedule(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async assignMechanic(repairId: number, mechanicId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/assign-mechanic`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ mechanicId }),
+    });
+    return response.json();
+  }
+
+  async assignMechanicToAppointment(appointmentId: number, mechanicId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/assign-mechanic`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ mechanicId }),
+    });
+    return response.json();
+  }
+
+  async getRepairMessages(repairId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async sendRepairMessage(repairId: number, body: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ body }),
+    });
+    return response.json();
+  }
 
 }
 

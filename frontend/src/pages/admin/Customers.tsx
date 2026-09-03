@@ -672,3 +672,6 @@ export function AdminCustomers() {
     </div>
   );
 }
+
+export default AdminCustomers;
+

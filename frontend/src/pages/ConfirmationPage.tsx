@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useParams } from 'react-router-dom';
 import { Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
+import { ChatCircleDots } from '@phosphor-icons/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -155,6 +156,7 @@ export default function ConfirmationPage() {
     location: appointment.location || 'Service Center',
     notes: appointment.notes,
   };
+  const canMessageServiceTeam = ['CONFIRMED', 'IN_PROGRESS'].includes(appointment.status);
 
   return (
     <AppLayout showNav={false}>
@@ -278,6 +280,15 @@ export default function ConfirmationPage() {
 
               {/* Desktop buttons */}
               <div className="hidden lg:flex flex-col gap-3">
+                {canMessageServiceTeam && (
+                  <Link
+                    to={`/messages/${appointment.id}`}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-[#ff5d2e] text-white rounded-xl font-medium hover:bg-[#e54d1e] transition-colors shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
+                  >
+                    <ChatCircleDots className="w-5 h-5" weight="duotone" />
+                    Message your service team
+                  </Link>
+                )}
                 <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black hover:bg-[#fff7f5] transition-colors">
                   <Calendar className="w-5 h-5" />
                   Add to Calendar
@@ -296,6 +307,15 @@ export default function ConfirmationPage() {
 
         {/* Mobile bottom buttons */}
         <div className="lg:hidden sticky bottom-0 bg-white border-t border-black/10 p-4 safe-area-pb flex flex-col gap-2">
+          {canMessageServiceTeam && (
+            <Link
+              to={`/messages/${appointment.id}`}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-[#ff5d2e] text-white rounded-xl font-medium shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
+            >
+              <ChatCircleDots className="w-5 h-5" weight="duotone" />
+              Message your service team
+            </Link>
+          )}
           <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black">
             <Calendar className="w-5 h-5" />
             Add to Calendar

@@ -588,3 +588,6 @@ export function AdminBilling() {
     </div>
   );
 }
+
+export default AdminBilling;
+
