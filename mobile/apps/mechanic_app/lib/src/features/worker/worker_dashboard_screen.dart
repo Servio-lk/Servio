@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:shared_core/shared_core.dart';
 import 'worker_providers.dart';
 
@@ -17,17 +17,17 @@ class WorkerDashboardScreen extends ConsumerStatefulWidget {
 class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
   int _selectedTab = 0;
 
-  static final _tabRegularIcons = [
-    PhosphorIcons.house(),
-    PhosphorIcons.wrench(),
-    PhosphorIcons.package(),
-    PhosphorIcons.users(),
+  static const _tabRegularIcons = [
+    PhosphorIconsRegular.house,
+    PhosphorIconsRegular.wrench,
+    PhosphorIconsRegular.package,
+    PhosphorIconsRegular.users,
   ];
-  static final _tabFillIcons = [
-    PhosphorIcons.house(PhosphorIconsStyle.fill),
-    PhosphorIcons.wrench(PhosphorIconsStyle.fill),
-    PhosphorIcons.package(PhosphorIconsStyle.fill),
-    PhosphorIcons.users(PhosphorIconsStyle.fill),
+  static const _tabFillIcons = [
+    PhosphorIconsFill.house,
+    PhosphorIconsFill.wrench,
+    PhosphorIconsFill.package,
+    PhosphorIconsFill.users,
   ];
   static const _tabLabels = ['Home', 'Jobs', 'Inventory', 'Staff'];
 
@@ -183,7 +183,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                       child: Row(
                         children: [
                           PhosphorIcon(
-                            PhosphorIcons.magnifyingGlass(),
+                            PhosphorIconsRegular.magnifyingGlass,
                             size: 24,
                             color: Colors.black,
                           ),
@@ -218,7 +218,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           PhosphorIcon(
-                            PhosphorIcons.package(PhosphorIconsStyle.fill),
+                            PhosphorIconsFill.package,
                             size: 24,
                             color: Colors.white,
                           ),
@@ -243,7 +243,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
         const SizedBox(width: 8),
         IconButton(
           onPressed: _handleSignOut,
-          icon: PhosphorIcon(PhosphorIcons.signOut(), size: 28),
+          icon: const PhosphorIcon(PhosphorIconsRegular.signOut, size: 28),
           color: Colors.black87,
         ),
       ],
@@ -314,7 +314,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                     Row(
                       children: [
                         PhosphorIcon(
-                          PhosphorIcons.car(),
+                          PhosphorIconsRegular.car,
                           size: 16,
                           color: const Color(0xFF545454),
                         ),
@@ -337,7 +337,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                     Row(
                       children: [
                         PhosphorIcon(
-                          PhosphorIcons.clock(),
+                          PhosphorIconsRegular.clock,
                           size: 16,
                           color: const Color(0xFF545454),
                         ),
@@ -548,7 +548,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
             children: [
               Expanded(
                 child: _buildSecondaryButton(
-                  icon: PhosphorIcons.chatText(),
+                  icon: PhosphorIconsRegular.chatText,
                   label: 'Message',
                   verticalPad: actionVertPad,
                   onPressed: () => context.push('/worker/chat/${job.id}'),
@@ -557,7 +557,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: _buildSecondaryButton(
-                  icon: PhosphorIcons.phoneOutgoing(),
+                  icon: PhosphorIconsRegular.phoneOutgoing,
                   label: 'Call',
                   verticalPad: actionVertPad,
                   onPressed: () {
@@ -614,10 +614,10 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
             padding: timelinePadding,
             child: Row(
               children: [
-                PhosphorIcon(
-                  PhosphorIcons.chartBar(PhosphorIconsStyle.bold),
+                const PhosphorIcon(
+                  PhosphorIconsBold.chartBar,
                   size: 24,
-                  color: const Color(0xFF333333),
+                  color: Color(0xFF333333),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -632,8 +632,8 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                     ),
                   ),
                 ),
-                PhosphorIcon(
-                  PhosphorIcons.caretDown(),
+                const PhosphorIcon(
+                  PhosphorIconsRegular.caretDown,
                   size: 16,
                   color: Colors.black,
                 ),
@@ -662,8 +662,8 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                 mainAxisSize: MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  PhosphorIcon(
-                    PhosphorIcons.checkCircle(),
+                  const PhosphorIcon(
+                    PhosphorIconsRegular.checkCircle,
                     size: 24,
                     color: Colors.white,
                   ),
@@ -687,7 +687,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
   }
 
   Widget _buildSecondaryButton({
-    required PhosphorIconData icon,
+    required IconData icon,
     required String label,
     required double verticalPad,
     required VoidCallback onPressed,
@@ -723,12 +723,12 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
   Widget _buildServiceIcon(String serviceType) {
     final lower = serviceType.toLowerCase();
     final icon = lower.contains('battery')
-        ? PhosphorIcons.batteryCharging(PhosphorIconsStyle.fill)
+        ? PhosphorIconsFill.batteryCharging
         : lower.contains('wash')
-        ? PhosphorIcons.sparkle(PhosphorIconsStyle.fill)
+        ? PhosphorIconsFill.sparkle
         : lower.contains('lube') || lower.contains('oil')
-        ? PhosphorIcons.drop(PhosphorIconsStyle.fill)
-        : PhosphorIcons.wrench(PhosphorIconsStyle.fill);
+        ? PhosphorIconsFill.drop
+        : PhosphorIconsFill.wrench;
 
     return Container(
       width: 66,
