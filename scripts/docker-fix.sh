@@ -3,6 +3,10 @@
 # Quick Fix for Docker Build Issues
 # Specifically handles Maven download failures
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
 echo "🔧 Servio Docker Build - Quick Fix"
 echo "=================================="
 echo ""

@@ -47,21 +47,18 @@ if ! command -v node &> /dev/null; then
 fi
 echo "✅ Node.js found: $(node -v)"
 
-# 4. Check Docker Container for DB
-if docker ps | grep -q "servio-postgres"; then
-   echo "✅ Database container 'servio-postgres' is running on port 5433."
+# 4. Check Environment Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if [ -f "$REPO_ROOT/backend/.env" ] || [ -f "$REPO_ROOT/.env" ]; then
+   echo "✅ Environment configuration (.env) detected."
 else
-   echo "⚠️ Database container 'servio-postgres' is NOT running."
-   echo "Attempting to start it..."
-   docker-compose up -d postgres
-   if [ $? -eq 0 ]; then
-       echo "✅ Database started successfully."
-   else
-       echo "❌ Failed to start database. Please run 'docker-compose up -d postgres' manually."
-   fi
+   echo "⚠️  No .env file found. Copy .env.example to .env and configure your database and API keys."
 fi
 
 echo ""
 echo "🎉 Setup check complete! You can now run the backend and frontend."
-echo "   - Run Backend: ./run-backend.sh"
-echo "   - Run Frontend: ./run-frontend.sh"
+echo "   - Run Backend:  ./scripts/run-backend.sh"
+echo "   - Run Frontend: ./scripts/run-frontend.sh"
+echo "   - Or Docker:    docker-compose up --build"

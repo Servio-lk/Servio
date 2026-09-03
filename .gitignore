@@ -138,9 +138,20 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-#AWS
+# AWS & Credentials
 servio-key.pem
 servio-key-new.pem
 *.pem
 
+# Agent internal scratch & workspace
 .agents/
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+boot.log
