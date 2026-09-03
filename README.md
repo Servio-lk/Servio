@@ -44,7 +44,7 @@ The system is built as an **authoritative modular monolith** backend with unifie
                                       ▼
                       ┌──────────────────────────────┐
                       │    PostgreSQL (Supabase)     │
-                      │    Flyway Migrations V1..V19 │
+                      │    Flyway Migrations V1..V20 │
                       └──────────────────────────────┘
 ```
 
@@ -61,7 +61,7 @@ Servio/
 ├── backend/                       # Spring Boot 3.3.4 REST API & WebSocket Backend
 │   ├── src/
 │   │   ├── main/java/com/servio/  # Modular monolith domain packages
-│   │   ├── main/resources/        # application.properties & Flyway migrations (V1..V19)
+│   │   ├── main/resources/        # application.properties & Flyway migrations (V1..V20)
 │   │   └── test/                  # 117 JUnit 5 + Mockito + Testcontainers tests
 │   ├── pom.xml
 │   └── Dockerfile
@@ -91,7 +91,7 @@ Servio/
 ├── e2e_tests/                     # Master 4-Tier requirement-driven test harness
 │   └── run_e2e.sh
 ├── scripts/                       # Developer convenience shell scripts
-│   ├── run-backend.sh             # Launch backend locally with Java 17
+│   ├── run-backend.sh             # Launch backend locally with Java 17 & env loader
 │   ├── run-frontend.sh            # Launch Vite frontend locally
 │   ├── docker-build.sh            # Build Docker containers with error retries
 │   ├── docker-fix.sh              # Reset and rebuild Docker cache
@@ -110,11 +110,14 @@ Servio/
 
 | Tool | Version | Purpose |
 |---|---|---|
-| **Java** | 17 LTS (or 21 LTS) | Backend development |
+| **Java** | 17 LTS (or 21 LTS) | Backend development (`[17, 22)` enforced by Maven) |
 | **Maven** | 3.9+ | Backend build management |
 | **Node.js & npm** | 20+ / npm 10+ | Frontend web development |
 | **Flutter SDK** | 3.24+ | Mobile application development |
 | **Docker & Compose** | Latest | Containerized execution |
+
+> [!IMPORTANT]
+> **Java Version Requirement**: The backend requires **JDK 17** or **JDK 21**. If your system default Java is newer (e.g. Java 22 or 25), use `./scripts/run-backend.sh` (which automatically discovers and configures Java 17) or explicitly set `JAVA_HOME` before running `mvn`.
 
 ### 1. Environment Configuration
 
@@ -155,9 +158,15 @@ docker-compose down
 ### 3. Running Locally (Development Mode)
 
 #### Backend (Spring Boot)
+Recommended method (automatically detects JDK 17 and loads `.env`):
 ```bash
 ./scripts/run-backend.sh
-# Or directly:
+```
+
+Or manually running with Maven (ensure JDK 17/21 and `.env` variables are active):
+```bash
+# macOS: point to JDK 17
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 cd backend && mvn spring-boot:run
 ```
 
@@ -224,9 +233,30 @@ Executes feature coverage, boundary & concurrency, cross-feature flows, and real
 
 ---
 
+## 🛠️ Troubleshooting & FAQs
+
+### 1. `Unsupported Java version. Use JDK 17 or JDK 21 for backend builds.`
+- **Cause**: The active Java version in your current shell session is outside `[17, 22)` (e.g., Java 25 or Java 11).
+- **Fix**: Run the launch script directly (`./scripts/run-backend.sh`), which automatically searches and configures an installed JDK 17. Alternatively, set `JAVA_HOME` explicitly:
+  ```bash
+  # macOS
+  export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+  ```
+
+### 2. `FlywayValidateException: Migration checksum mismatch for migration version X`
+- **Cause**: An already-applied Flyway migration file in `src/main/resources/db/migration/` was modified locally, altering its CRC32 checksum.
+- **Fix**: Avoid modifying migration scripts once they have run against a persistent database. New database changes should always be placed into a new sequential migration script (e.g. `V21__...`).
+
+### 3. Database Connection Issues
+- **Cause**: Missing or incorrect database credentials in `.env`.
+- **Fix**: Verify `backend/.env` or the root `.env` contains valid Supabase database credentials (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSLMODE=require`).
+
+---
+
 ## 📖 Key Documentation
 
 - [Software Requirements Specification (SRS)](docs/servio_srs.md)
 - [AWS Production Hosting Guide](docs/AWS_HOSTING_GUIDE.md)
 - [Service Catalog Reference](docs/services_reference.md)
 - [Architecture Implementation Plan](docs/implementation_plan.md)
+
