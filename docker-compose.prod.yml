@@ -1,7 +1,7 @@
 # =============================================================
 # Servio — Production Docker Compose (EC2 Backend Only)
 # =============================================================
-# Used on AWS EC2 t2.micro to run only the backend.
+# Used on AWS EC2 t3.micro to run only the backend.
 # Frontend is deployed separately to S3 + CloudFront.
 #
 # Usage:
@@ -12,7 +12,7 @@ services:
   backend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/servio-backend:latest
     container_name: servio-backend
-    restart: always
+    restart: unless-stopped
     env_file:
       - .env
     environment:
@@ -32,10 +32,15 @@ services:
       - PAYHERE_MERCHANT_ID=${PAYHERE_MERCHANT_ID}
       - PAYHERE_MERCHANT_SECRET=${PAYHERE_MERCHANT_SECRET}
       - PAYHERE_SANDBOX=${PAYHERE_SANDBOX:-false}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
     ports:
       - "3001:3001"
     mem_limit: 700m
     memswap_limit: 1g
+    security_opt:
+      - no-new-privileges:true
     logging:
       driver: json-file
       options:

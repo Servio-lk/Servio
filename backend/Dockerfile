@@ -6,51 +6,54 @@ WORKDIR /app
 
 COPY pom.xml .
 
-# Download dependencies with retry logic
+# Download dependencies with cache mount and retry logic in batch mode
 RUN --mount=type=cache,target=/root/.m2 \
     for i in 1 2 3; do \
-        mvn dependency:go-offline && break || \
-        (echo "Attempt $i failed, retrying..." && sleep 5); \
+        mvn dependency:go-offline -B && break || \
+        (echo "Dependency download attempt $i failed, retrying..." && sleep 5); \
     done
 
 COPY src ./src
 
-# Build with retry logic — fail explicitly if all attempts fail
+# Build with cache mount and retry logic
 RUN --mount=type=cache,target=/root/.m2 \
     success=false; \
     for i in 1 2 3; do \
-        if mvn clean package -DskipTests; then success=true; break; fi; \
+        if mvn clean package -DskipTests -B; then success=true; break; fi; \
         echo "Build attempt $i failed, retrying..." && sleep 5; \
     done; \
     $success || (echo "BUILD FAILED after 3 attempts" && exit 1)
 
-# Production stage — uses $TARGETPLATFORM (set via: docker build --platform linux/amd64)
-FROM eclipse-temurin:17-jre-jammy
+# Production runtime stage
+FROM eclipse-temurin:17-jre-jammy AS runner
 
 WORKDIR /app
 
-# dumb-init for proper signal handling
-RUN apt-get update && apt-get install -y --no-install-recommends dumb-init curl \
-    && rm -rf /var/lib/apt/lists/*
+# dumb-init for proper signal handling and curl for healthcheck
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends dumb-init curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY --from=builder /app/target/*.jar app.jar
-
-# Create non-root user
+# Create non-root system user
 RUN groupadd -r -g 1001 appuser \
-    && useradd -r -u 1001 -g appuser -d /nonexistent -s /usr/sbin/nologin appuser
+    && useradd -r -u 1001 -g appuser -d /app -s /usr/sbin/nologin appuser
+
+# Copy application artifact with correct ownership
+COPY --from=builder --chown=appuser:appuser /app/target/*.jar app.jar
+
 USER appuser
 
 EXPOSE 3001
 
-# Health check — matches server.port=3001
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+# Health check using Spring Boot Actuator endpoint (port 3001)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:3001/actuator/health || exit 1
 
-# JVM tuned for AWS t3.micro (1 GB RAM total, ~512 MB for JVM)
+# JVM tuned for containerized environments (AWS t3.micro compatible)
 ENTRYPOINT ["dumb-init", "--", "java", \
   "-Djava.net.preferIPv4Stack=true", \
-  "-Xms128m", "-Xmx384m", \
   "-XX:+UseContainerSupport", \
-  "-XX:MaxRAMPercentage=50.0", \
+  "-XX:MaxRAMPercentage=65.0", \
+  "-XX:+ExitOnOutOfMemoryError", \
   "-jar", "app.jar"]
-

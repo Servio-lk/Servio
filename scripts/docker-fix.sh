@@ -1,7 +1,9 @@
 #!/bin/bash
 
 # Quick Fix for Docker Build Issues
-# Specifically handles Maven download failures
+# Cleans corrupted build cache and rebuilds services with Compose v2
+
+set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -11,53 +13,42 @@ echo "🔧 Servio Docker Build - Quick Fix"
 echo "=================================="
 echo ""
 
+export DOCKER_BUILDKIT=1
+export COMPOSE_DOCKER_CLI_BUILD=1
+
 # Stop everything
 echo "🛑 Stopping all containers..."
-docker-compose down -v
+docker compose down -v 2>/dev/null || true
 
-# Clean Docker system
-echo "🧹 Cleaning Docker system..."
-docker system prune -f
+# Clean Docker build cache
+echo "🧹 Pruning dangling builder caches..."
+docker builder prune -f
 
-# Remove corrupted images
-echo "🗑️  Removing old backend image..."
-docker rmi servio-backend 2>/dev/null || true
-
-# Try building backend only first (most likely to fail)
+# Build backend first
 echo ""
-echo "🔨 Building backend (this may take a few minutes)..."
-docker-compose build --no-cache --progress=plain backend
-
-if [ $? -eq 0 ]; then
+echo "🔨 Building backend with plain progress..."
+if docker compose build --no-cache --progress=plain backend; then
     echo "✅ Backend built successfully!"
-
-    # Build frontend
-    echo ""
-    echo "🔨 Building frontend..."
-    docker-compose build --no-cache frontend
-
-    if [ $? -eq 0 ]; then
-        echo "✅ Frontend built successfully!"
-
-        # Start all services
-        echo ""
-        echo "🚀 Starting all services..."
-        docker-compose up -d
-
-        echo ""
-        echo "✅ All done! Check status:"
-        docker-compose ps
-    else
-        echo "❌ Frontend build failed"
-        exit 1
-    fi
 else
-    echo "❌ Backend build failed"
-    echo ""
-    echo "💡 This is likely a network issue. Try:"
-    echo "   1. Check your internet connection"
-    echo "   2. Wait a few minutes and try again"
-    echo "   3. Use a different network if possible"
-    echo "   4. Run this script again: ./docker-fix.sh"
+    echo "❌ Backend build failed."
     exit 1
 fi
+
+# Build frontend
+echo ""
+echo "🔨 Building frontend..."
+if docker compose build --no-cache frontend; then
+    echo "✅ Frontend built successfully!"
+else
+    echo "❌ Frontend build failed."
+    exit 1
+fi
+
+# Start all services
+echo ""
+echo "🚀 Starting all services..."
+docker compose up -d
+
+echo ""
+echo "✅ All done! Status:"
+docker compose ps
