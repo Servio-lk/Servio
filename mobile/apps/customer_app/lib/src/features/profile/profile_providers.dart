@@ -1,0 +1,14 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'vehicles_repository.dart';
+import 'package:shared_core/shared_core.dart';
+
+final vehiclesRepositoryProvider = Provider<VehiclesRepository>(
+  (_) => VehiclesRepository(),
+);
+final userVehiclesProvider = FutureProvider.family<List<VehicleModel>, String?>(
+  (ref, userId) async {
+    return ref
+        .read(vehiclesRepositoryProvider)
+        .getUserVehicles(profileId: userId);
+  },
+);

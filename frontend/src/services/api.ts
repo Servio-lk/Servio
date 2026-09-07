@@ -1,17 +1,34 @@
 // Dynamically determine API URL based on current host
 import { apiFetch } from './apiFetch';
-const getApiBaseUrl = () => {
-  // If environment variable is set, use it
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
+export const getApiBaseUrl = () => {
+  let envApi = import.meta.env.VITE_API_URL;
+
+  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalEnvApi && !isLocalHost) {
+    envApi = undefined;
+  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
   }
 
-  // For local development and mobile access, use the same host but different port
+  // If explicitly configured and safe, always use it.
+  if (envApi) {
+    return envApi;
+  }
+
+  // In local dev, use same host on port 3001.
   const host = window.location.hostname;
-  return `http://${host}:3001/api`;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  // Non-local without explicit config: use same origin + /api path
+  return `${window.location.origin}/api`;
 };
 
-const API_BASE_URL = getApiBaseUrl();
+export const API_BASE_URL = getApiBaseUrl();
 
 interface ApiResponse<T = any> {
   success: boolean;
@@ -63,7 +80,10 @@ interface ServiceItem {
   priceRange: string;
   durationMinutes: number | null;
   imageUrl: string | null;
+  iconUrl?: string | null;
+  warrantyIncluded?: boolean | null;
   isFeatured: boolean;
+  includedItems?: string[];
   options?: ServiceOption[];
 }
 
@@ -73,6 +93,7 @@ interface ServiceOption {
   description: string;
   priceAdjustment: number;
   isDefault: boolean;
+  displayOrder?: number;
 }
 
 interface ServiceProvider {
@@ -197,6 +218,25 @@ interface AppointmentRequest {
   customerPhone?: string;
 }
 
+interface RepairConversationDto {
+  id: number;
+  conversationId: number;
+  repairId: number;
+  realtimeChannel: string;
+  isReadOnly: boolean;
+}
+
+interface RepairMessageDto {
+  id: number;
+  conversationId: number;
+  repairId: number;
+  senderId: string;
+  senderRole: string;
+  body: string;
+  createdAt: string;
+  readAt?: string | null;
+}
+
 class ApiService {
   private getHeaders(includeAuth = false): HeadersInit {
     const headers: HeadersInit = {
@@ -265,6 +305,15 @@ class ApiService {
     });
 
     return this.handleResponse<User>(response);
+  }
+
+  async deleteProfile(): Promise<ApiResponse<string>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'DELETE',
+      headers: this.getHeaders(true),
+    });
+
+    return this.handleResponse<string>(response);
   }
 
   logout(): void {
@@ -424,6 +473,31 @@ class ApiService {
     return this.handleResponse<AppointmentDto>(response);
   }
 
+  async getAppointmentConversation(appointmentId: number): Promise<ApiResponse<RepairConversationDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/appointments/${appointmentId}/conversation`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<RepairConversationDto>(response);
+  }
+
+  async getRepairMessages(repairId: number): Promise<ApiResponse<RepairMessageDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
+      method: 'GET',
+      headers: this.getHeaders(true),
+    });
+    return this.handleResponse<RepairMessageDto[]>(response);
+  }
+
+  async sendRepairMessage(repairId: number, body: string): Promise<ApiResponse<RepairMessageDto>> {
+    const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ body }),
+    });
+    return this.handleResponse<RepairMessageDto>(response);
+  }
+
   /**
    * Requests the backend to generate PayHere checkout form data (including
    * the secure hash).  The merchant_secret never leaves the server.
@@ -508,7 +582,25 @@ class ApiService {
     });
     return this.handleResponse<void>(response);
   }
+
+  // AI Agent endpoints
+  async sendAgentMessage(message: string, conversationId?: string): Promise<ApiResponse<AgentChatResponse>> {
+    const response = await apiFetch(`${API_BASE_URL}/agent/chat`, {
+      method: 'POST',
+      headers: this.getHeaders(true),
+      body: JSON.stringify({ message, conversationId }),
+    });
+    return this.handleResponse<AgentChatResponse>(response);
+  }
 }
+
+export interface AgentChatResponse {
+  conversationId: string;
+  message: string;
+  toolCallsExecuted: string[];
+  actionData?: any;
+}
+
 
 export interface NotificationDto {
   id: number;
@@ -537,6 +629,8 @@ export type {
   ServiceRecordRequest,
   AppointmentDto,
   AppointmentRequest,
+  RepairConversationDto,
+  RepairMessageDto,
   VehicleDto,
   VehicleRequest,
   PayHereInitiateResponse,

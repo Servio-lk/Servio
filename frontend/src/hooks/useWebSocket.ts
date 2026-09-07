@@ -2,9 +2,33 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Client } from '@stomp/stompjs';
 import type { IMessage } from '@stomp/stompjs';
 
-// We now have a pure WebSocket endpoint on the backend at /ws
-const BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api')
-  .replace('/api', '')
+const apiBase = (() => {
+  let envApi = import.meta.env.VITE_API_URL;
+
+  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
+  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  
+  if (isLocalEnvApi && !isLocalHost) {
+    envApi = undefined;
+  } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
+    envApi = undefined;
+  }
+
+  if (envApi) {
+    return envApi;
+  }
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return `http://${host}:3001/api`;
+  }
+
+  return `${window.location.origin}/api`;
+})();
+
+const BASE_URL = apiBase
+  .replace(/^https/, 'wss')
   .replace(/^http/, 'ws');
 const WS_URL = `${BASE_URL}/ws`;
 

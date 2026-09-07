@@ -22,7 +22,7 @@ export default function AuthCallback() {
                      session.user.email?.split('@')[0] || 'User',
             email: session.user.email || '',
             phone: session.user.user_metadata?.phone || null,
-            role: session.user.user_metadata?.role || 'USER',
+            role: 'USER',
           };
 
           login(userData, session);
@@ -33,6 +33,8 @@ export default function AuthCallback() {
           }
 
           toast.success('Welcome to Servio!');
+
+          // Redirect to home (ignore admin role for customer frontend)
           navigate('/home');
         } else {
           toast.error('Authentication failed');

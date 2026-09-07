@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Clipboard, Search, MoreVertical, Trash2, Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api';
 
 export function AdminJobCards() {
   const [jobCards, setJobCards] = useState<any[]>([]);
@@ -9,16 +10,17 @@ export function AdminJobCards() {
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedJobCard, setSelectedJobCard] = useState<any>(null);
 
-  useEffect(() => {
-    loadJobCards();
-  }, [statusFilter]);
-
-  const loadJobCards = async () => {
+  const loadJobCards = useCallback(async () => {
     try {
       setLoading(true);
       const url = statusFilter
+<<<<<<< HEAD
         ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/status/${statusFilter}`
         : `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards`;
+=======
+        ? `${API_BASE_URL}/admin/job-cards/status/${statusFilter}`
+        : `${API_BASE_URL}/admin/job-cards`;
+>>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       
       const response = await fetch(url, {
         headers: {
@@ -33,11 +35,15 @@ export function AdminJobCards() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    loadJobCards();
+  }, [loadJobCards]);
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/${id}/status/${newStatus}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/job-cards/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -53,7 +59,7 @@ export function AdminJobCards() {
       } else {
         toast.error('Failed to update status');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error updating status');
     }
   };
@@ -61,7 +67,7 @@ export function AdminJobCards() {
   const handleDeleteJobCard = async (id: number) => {
     if (confirm('Are you sure you want to delete this job card?')) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/job-cards/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -75,7 +81,7 @@ export function AdminJobCards() {
         } else {
           toast.error('Failed to delete job card');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Error deleting job card');
       }
     }
@@ -309,3 +315,6 @@ export function AdminJobCards() {
     </div>
   );
 }
+
+export default AdminJobCards;
+

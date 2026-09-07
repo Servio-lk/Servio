@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
@@ -7,18 +7,19 @@ import { ServiceCard } from '@/components/ServiceCard';
 import { OfferCard } from '@/components/OfferCard';
 import type { ServiceItem, Offer, ServiceProvider, AppointmentDto } from '@/services/api';
 import { apiService } from '@/services/api';
-import { useWebSocket } from '@/hooks/useWebSocket';
 
 interface RecentService {
   id: number;
   name: string;
   date: string;
   vehicle: string;
+  iconUrl?: string;
 }
 
 export default function HomePage() {
   const { user, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
+  const homeDataLoaded = useRef(false);
 
   const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -27,60 +28,56 @@ export default function HomePage() {
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
 
+  // Icon mapping - maps service names to icon filenames
+  const serviceIcons: Record<string, string> = {
+    'Washing Packages': '/service icons/Washing Packages.png',
+    'Lube Services': '/service icons/Lube Services.png',
+    'Exterior & Interior Detailing': '/service icons/Exterior & Interior Detailing.png',
+    'Engine Tune ups': '/service icons/Engine Tune ups.png',
+    'Inspection Reports': '/service icons/Inspection Reports.png',
+    'Tyre Services': '/service icons/Tyre Services.png',
+    'Waxing': '/service icons/Waxing.png',
+    'Undercarriage Degreasing': '/service icons/Undercarriage Degreasing.png',
+    'Windscreen Treatments': '/service icons/Windscreen Treatments.png',
+    'Battery Services': '/service icons/Battery Services.png',
+    'Packages': '/service icons/Nano Coating Packages.png',
+    'Treatments': '/service icons/Nano Coating Treatments.png',
+    'Insurance Claims': '/service icons/Insurance Claims.png',
+    'Wheel Alignment': '/service icons/Wheel Alignment.png',
+    'Full Paints': '/service icons/Full Paints.png',
+    'Part Replacements': '/service icons/Part Replacements.png',
+  };
+
+  const withTimeout = useCallback(async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timerId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error(`${label} request timed out after ${ms}ms`)), ms);
+    });
+
+    try {
+      return await Promise.race([promise, timeoutPromise]);
+    } finally {
+      if (timerId !== undefined) {
+        clearTimeout(timerId);
+      }
+    }
+  }, []);
+
   useEffect(() => {
     // Wait for auth (including backend token exchange) to fully complete before
-    // calling getUserAppointments(), so localStorage.getItem('user') is ready
-    if (!authLoading) {
+    // calling getUserAppointments(), so localStorage.getItem('user') is ready.
+    // Use a ref to prevent re-loading when user object updates due to token refresh.
+    if (!authLoading && !homeDataLoaded.current) {
+      homeDataLoaded.current = true;
       loadHomeData();
     }
-  }, [user, authLoading]);
-
-  // Refresh only the appointments list (lightweight — no full page reload)
-  const refreshAppointments = useCallback(async () => {
-    if (!user) return;
-    try {
-      setAppointmentsLoading(true);
-      const appointmentsResponse = await apiService.getUserAppointments();
-      if (appointmentsResponse.success && appointmentsResponse.data) {
-        const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
-          .sort((a, b) => {
-            const tA = a.createdAt ? new Date(a.createdAt).getTime() : new Date(a.appointmentDate).getTime();
-            const tB = b.createdAt ? new Date(b.createdAt).getTime() : new Date(b.appointmentDate).getTime();
-            return tB - tA;
-          })
-          .slice(0, 5)
-          .map(app => {
-            let vehicle = app.vehicleMake ? `${app.vehicleMake} ${app.vehicleModel}`.trim() : '';
-            if (!vehicle && app.notes) {
-              const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
-              if (match) vehicle = match[1].trim();
-            }
-            return {
-              id: app.id,
-              name: app.serviceType,
-              date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              vehicle: vehicle || '',
-            };
-          });
-        setRecentServices(mappedServices);
-      }
-    } catch (err) {
-      console.error('[HomePage] WS refresh failed:', err);
-    } finally {
-      setAppointmentsLoading(false);
-    }
-  }, [user]);
-
-  // Subscribe to real-time appointment updates
-  useWebSocket(
-    ['/topic/appointments'],
-    useCallback(() => { refreshAppointments(); }, [refreshAppointments]),
-  );
+  }, [authLoading]);
 
   const loadHomeData = async () => {
     try {
       setLoading(true);
 
+<<<<<<< HEAD
       // Load featured services (for popular services section)
       const servicesResponse = await apiService.getFeaturedServices();
       if (servicesResponse.success && servicesResponse.data && servicesResponse.data.length > 0) {
@@ -91,25 +88,53 @@ export default function HomePage() {
         if (allServicesResponse.success && allServicesResponse.data) {
           setFeaturedServices(allServicesResponse.data.slice(0, 4));
         }
+=======
+      const [allServicesResult, servicesResult, offersResult, providersResult] = await Promise.allSettled([
+        withTimeout(apiService.getAllServices(), 10000, 'All services'),
+        withTimeout(apiService.getFeaturedServices(), 10000, 'Featured services'),
+        withTimeout(apiService.getActiveOffers(), 10000, 'Offers'),
+        withTimeout(apiService.getServiceProviders(), 10000, 'Service providers'),
+      ]);
+
+      const allServicesData = allServicesResult.status === 'fulfilled' && allServicesResult.value.success ? allServicesResult.value.data : null;
+
+      if (servicesResult.status === 'fulfilled') {
+        const servicesResponse = servicesResult.value;
+        if (servicesResponse.success && servicesResponse.data) {
+          setFeaturedServices(servicesResponse.data.slice(0, 4));
+        }
+      } else {
+        console.error('[HomePage] Failed to load featured services:', servicesResult.reason);
+>>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       }
 
-      // Load active offers
-      const offersResponse = await apiService.getActiveOffers();
-      if (offersResponse.success && offersResponse.data) {
-        setOffers(offersResponse.data);
+      if (offersResult.status === 'fulfilled') {
+        const offersResponse = offersResult.value;
+        if (offersResponse.success && offersResponse.data) {
+          setOffers(offersResponse.data);
+        }
+      } else {
+        console.error('[HomePage] Failed to load offers:', offersResult.reason);
       }
 
-      // Load service providers (use first one as last service location)
-      const providersResponse = await apiService.getServiceProviders();
-      if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
-        setLastServiceProvider(providersResponse.data[0]);
+      if (providersResult.status === 'fulfilled') {
+        const providersResponse = providersResult.value;
+        if (providersResponse.success && providersResponse.data && providersResponse.data.length > 0) {
+          setLastServiceProvider(providersResponse.data[0]);
+        }
+      } else {
+        console.error('[HomePage] Failed to load service providers:', providersResult.reason);
       }
 
       // Load user's recent appointments
       if (user) {
         try {
           setAppointmentsLoading(true);
-          const appointmentsResponse = await apiService.getUserAppointments();
+          const appointmentsResponse = await withTimeout(
+            apiService.getUserAppointments(),
+            10000,
+            'Appointments',
+          );
           if (appointmentsResponse.success && appointmentsResponse.data) {
             const mappedServices: RecentService[] = (appointmentsResponse.data as AppointmentDto[])
               .sort((a, b) => {
@@ -126,11 +151,14 @@ export default function HomePage() {
                   const match = app.notes.match(/Vehicle:\s*([^|]+)/i);
                   if (match) vehicle = match[1].trim();
                 }
+                const matchedService = allServicesData?.find(s => s.name === app.serviceType);
+
                 return {
                   id: app.id,
                   name: app.serviceType,
                   date: new Date(app.appointmentDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                   vehicle: vehicle || '',
+                  iconUrl: matchedService?.iconUrl || serviceIcons[app.serviceType] || undefined,
                 };
               });
             setRecentServices(mappedServices);
@@ -233,7 +261,7 @@ export default function HomePage() {
                     key={service.id}
                     id={service.id}
                     name={service.name}
-                    imageUrl={service.imageUrl}
+                    iconUrl={service.iconUrl || serviceIcons[service.name]}
                   />
                 ))}
               </div>
@@ -267,8 +295,12 @@ export default function HomePage() {
                         idx !== recentServices.length - 1 ? 'border-b border-black/10' : ''
                       }`}
                     >
-                      <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-[#ff5d2e]" />
+                      <div className="w-10 h-10 bg-[#ffe7df] rounded-lg flex items-center justify-center overflow-hidden p-2">
+                        {service.iconUrl ? (
+                          <img src={service.iconUrl} alt={service.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <Clock className="w-5 h-5 text-[#ff5d2e]" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <p className="font-medium text-black">{service.name}</p>

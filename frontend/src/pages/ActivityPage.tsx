@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { RotateCw, Clock, ChevronRight, Calendar } from 'lucide-react';
+import { ChatCircleDots } from '@phosphor-icons/react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 import type { AppointmentDto } from '@/services/api';
@@ -118,9 +119,7 @@ export default function ActivityPage() {
 
   // Calculate stats
   const totalServices = appointments.filter(apt => apt.status === 'COMPLETED').length;
-  const totalSpent = appointments
-    .filter(apt => apt.status === 'COMPLETED')
-    .reduce((sum, apt) => sum + (apt.actualCost || apt.estimatedCost || 0), 0);
+  const canMessageNextUpcoming = nextUpcoming && ['CONFIRMED', 'IN_PROGRESS'].includes(nextUpcoming.status);
 
   // Loading state
   if (isLoading) {
@@ -211,16 +210,26 @@ export default function ActivityPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 mt-2">
+                    <div className="flex flex-col sm:flex-row gap-3 mt-2">
                       <Link
                         to={`/confirmed/${nextUpcoming.id}`}
                         className="flex-1 bg-[#ff5d2e] text-white py-3 rounded-lg font-medium text-center hover:bg-[#e54d1e] transition-colors shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
                       >
                         View Details
                       </Link>
-                      <button className="px-4 py-3 border border-[#ffe7df] rounded-lg font-medium text-black hover:bg-[#fff7f5] transition-colors">
-                        Reschedule
-                      </button>
+                      {canMessageNextUpcoming ? (
+                        <Link
+                          to={`/messages/${nextUpcoming.id}`}
+                          className="flex flex-1 items-center justify-center gap-2 border border-[#ff5d2e] text-[#ff5d2e] py-3 rounded-lg font-medium hover:bg-[#fff7f5] transition-colors"
+                        >
+                          <ChatCircleDots className="w-5 h-5" weight="duotone" />
+                          Message your service team
+                        </Link>
+                      ) : (
+                        <button className="px-4 py-3 border border-[#ffe7df] rounded-lg font-medium text-black hover:bg-[#fff7f5] transition-colors">
+                          Reschedule
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -302,12 +311,6 @@ export default function ActivityPage() {
                 <div className="text-center p-3 bg-[#fff7f5] rounded-lg">
                   <p className="text-2xl font-bold text-[#ff5d2e]">{totalServices}</p>
                   <p className="text-sm text-black/50">Total Services</p>
-                </div>
-                <div className="text-center p-3 bg-[#fff7f5] rounded-lg">
-                  <p className="text-2xl font-bold text-[#ff5d2e]">
-                    {totalSpent > 0 ? `LKR ${Math.round(totalSpent / 1000)}K` : 'LKR 0'}
-                  </p>
-                  <p className="text-sm text-black/50">Total Spent</p>
                 </div>
               </div>
             </div>

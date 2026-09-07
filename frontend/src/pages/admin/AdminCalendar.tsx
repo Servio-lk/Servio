@@ -59,7 +59,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 // ── Main page ──────────────────────────────────────────────────────────────
-export default function AdminCalendar() {
+export function AdminCalendar() {
     const today = new Date();
 
     const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -346,3 +346,6 @@ export default function AdminCalendar() {
         </div>
     );
 }
+
+export default AdminCalendar;
+

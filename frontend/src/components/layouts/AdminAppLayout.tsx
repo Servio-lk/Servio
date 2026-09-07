@@ -1,7 +1,8 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User } from 'lucide-react';
+import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User, Package, ReceiptText, Wrench, ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import LogoImage from '/ServioLogo.png';
 
 // Admin Tab bar items for both mobile and desktop
 const adminNavItems = [
@@ -10,6 +11,9 @@ const adminNavItems = [
     { icon: Tag, label: 'Offers', path: '/admin/offers' },
     { icon: Calendar, label: 'Appointments', path: '/admin/appointments' },
     { icon: Users, label: 'Customers', path: '/admin/customers' },
+    { icon: Wrench, label: 'Staff', path: '/admin/staff' },
+    { icon: Package, label: 'Inventory', path: '/admin/inventory' },
+    { icon: ReceiptText, label: 'Billing', path: '/admin/billing' },
     { icon: CalendarDays, label: 'Calendar', path: '/admin/calendar' },
 ];
 
@@ -20,15 +24,14 @@ function AdminDesktopSidebar() {
     return (
         <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
             {/* Logo */}
-            <div className="h-[64px] p-4 border-b border-black/10">
-                <h1 className="text-2xl font-bold text-[#ff5d2e]">Servio Admin</h1>
+            <div className="h-[64px] p-4 border-b border-black/10 inline-flex justify-center items-center">
+                <img src={LogoImage} alt="Servio" className="h-10 w-auto" />
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 p-4">
+            <nav className="flex-1 p-4 overflow-y-auto">
                 <ul className="flex flex-col gap-2">
                     {adminNavItems.map((item) => {
-                        // Updated comparison logic: "Dashboard" is exactly /admin, others start with path
                         const isActive = item.path === '/admin'
                             ? location.pathname === '/admin'
                             : location.pathname.startsWith(item.path);
@@ -51,8 +54,15 @@ function AdminDesktopSidebar() {
                 </ul>
             </nav>
 
-            {/* Logout */}
-            <div className="p-4 border-t border-black/10">
+            {/* Actions & Logout */}
+            <div className="p-4 border-t border-black/10 flex flex-col gap-2">
+                <Link
+                    to="/home"
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
+                >
+                    <ExternalLink className="w-5 h-5" />
+                    <span className="font-medium">Customer Portal</span>
+                </Link>
                 <button
                     onClick={logout}
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
@@ -71,9 +81,7 @@ function AdminDesktopHeader() {
     return (
         <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
             {/* Title/Breadcrumb placeholder */}
-            <div className="flex-1">
-                <h2 className="text-lg font-semibold text-black">Admin Panel</h2>
-            </div>
+            <div className="flex-1"> </div>
 
             {/* Actions */}
             <div className="flex items-center gap-4">
@@ -100,6 +108,7 @@ function AdminMobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
             <button
                 onClick={onMenuOpen}
                 className="p-2 -ml-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
+                aria-label="Open navigation menu"
             >
                 <Menu className="w-6 h-6" />
             </button>
@@ -133,6 +142,7 @@ function AdminMobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                     <button
                         onClick={onClose}
                         className="p-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
+                        aria-label="Close navigation menu"
                     >
                         <X className="w-6 h-6" />
                     </button>
@@ -178,8 +188,16 @@ function AdminMobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                     </ul>
                 </nav>
 
-                {/* Logout */}
-                <div className="p-4 border-t border-black/10">
+                {/* Actions & Logout */}
+                <div className="p-4 border-t border-black/10 flex flex-col gap-2">
+                    <Link
+                        to="/home"
+                        onClick={onClose}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
+                    >
+                        <ExternalLink className="w-5 h-5" />
+                        <span className="font-medium">Customer Portal</span>
+                    </Link>
                     <button
                         onClick={() => {
                             logout();
@@ -223,3 +241,5 @@ export function AdminAppLayout() {
         </div>
     );
 }
+
+export default AdminAppLayout;

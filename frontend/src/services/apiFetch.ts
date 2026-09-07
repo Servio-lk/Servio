@@ -15,6 +15,7 @@ type LogoutCallback = () => Promise<void>;
 
 let _onRefreshToken: RefreshCallback | null = null;
 let _onForceLogout: LogoutCallback | null = null;
+let _refreshTokenPromise: Promise<boolean> | null = null;
 
 /** Called once by AuthContext on mount to register the refresh + logout handlers. */
 export function registerAuthHandlers(
@@ -55,7 +56,13 @@ export async function apiFetch(
 
     let refreshed = false;
     try {
-        refreshed = await _onRefreshToken();
+        // Only trigger refresh once. If already refreshing, wait for it.
+        if (!_refreshTokenPromise) {
+            _refreshTokenPromise = _onRefreshToken().finally(() => {
+                _refreshTokenPromise = null;
+            });
+        }
+        refreshed = await _refreshTokenPromise;
     } catch {
         refreshed = false;
     }

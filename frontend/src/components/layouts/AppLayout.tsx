@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, List, FileText, User, LogOut, Menu, X, Car, Settings } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
+import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -12,16 +12,17 @@ interface AppLayoutProps {
 
 // Tab bar items for both mobile and desktop
 const navItems = [
-  { icon: Home, label: 'Home', path: '/home' },
+  { icon: House, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
-  { icon: FileText, label: 'Activity', path: '/activity' },
-  { icon: User, label: 'Account', path: '/account' }
+  { icon: ClipboardText, label: 'Activity', path: '/activity' },
+  { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
+  { icon: Robot, label: 'AI Assistant', path: '/assistant' },
 ];
 
 // Desktop sidebar component
 function DesktopSidebar() {
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, isAdmin } = useAuth();
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
@@ -46,7 +47,7 @@ function DesktopSidebar() {
                       : 'text-black/70 hover:bg-[#fff7f5]'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" />
+                  <item.icon className="w-5 h-5" weight={isActive ? 'fill' : 'regular'} />
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
@@ -58,18 +59,27 @@ function DesktopSidebar() {
       {/* Quick actions */}
       <div className="p-4 border-t border-black/10">
         <div className="flex flex-col gap-2">
+          {isAdmin && (
+            <Link
+              to="/admin"
+              className="flex items-center gap-3 px-4 py-3 rounded-lg text-[#ff5d2e] bg-[#fff7f5] hover:bg-[#ffe7df] transition-colors"
+            >
+              <ShieldCheck className="w-5 h-5" weight="fill" />
+              <span className="font-medium">Admin Portal</span>
+            </Link>
+          )}
           <Link
-            to="/settings"
+            to="/account"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
           >
-            <Settings className="w-5 h-5" />
+            <GearSix className="w-5 h-5" />
             <span className="font-medium">Settings</span>
           </Link>
           <button
             onClick={logout}
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
           >
-            <LogOut className="w-5 h-5" />
+            <SignOut className="w-5 h-5" />
             <span className="font-medium">Logout</span>
           </button>
         </div>
@@ -80,7 +90,7 @@ function DesktopSidebar() {
 
 // Desktop header component
 function DesktopHeader() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   return (
     <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
@@ -89,15 +99,29 @@ function DesktopHeader() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#ffe7df] text-[#ff5d2e] text-xs font-semibold rounded-lg hover:bg-[#ffd9cc] transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4" weight="fill" />
+            <span>Admin Portal</span>
+          </Link>
+        )}
         <NotificationBell />
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg">
-          <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-[#ff5d2e]" />
+        <div className="flex items-center gap-1 px-3 py-2 rounded-lg">
+          <Link
+            to="/account"
+            className="flex items-center gap-1 px-3 py-2 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
+          >
+          <div className="w-6 h-6 rounded-full flex items-center justify-center">
+            <UserCircle className="w-6 h-6" weight="regular" />
           </div>
           <span className="text-sm font-medium text-black">
             {user?.fullName?.split(' ')[0] || 'User'}
           </span>
+          </Link>
         </div>
       </div>
     </header>
@@ -105,21 +129,28 @@ function DesktopHeader() {
 }
 
 // Mobile header component
-function MobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
+function MobileHeader() {
+  const { isAdmin } = useAuth();
+
   return (
     <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-black/10 sticky top-0 z-20">
-      <button
-        onClick={onMenuOpen}
-        className="p-2 -ml-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
       <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        {isAdmin && (
+          <Link
+            to="/admin"
+            className="px-2.5 py-1 bg-[#ffe7df] text-[#ff5d2e] text-xs font-semibold rounded-md flex items-center gap-1"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" weight="fill" />
+            <span>Admin</span>
+          </Link>
+        )}
         <NotificationBell />
-        <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-          <User className="w-4 h-4 text-[#ff5d2e]" />
-        </div>
+        <Link to="/account">
+          <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
+            <UserCircle className="w-4 h-4 text-[#ff5d2e]" weight="fill" />
+          </div>
+        </Link>
       </div>
     </header>
   );
@@ -143,6 +174,7 @@ function MobileTabBar() {
             >
               <item.icon
                 className={`w-6 h-6 ${isActive ? 'text-black' : 'text-black/50'}`}
+                weight={isActive ? 'fill' : 'regular'}
               />
               <span
                 className={`text-xs ${
@@ -160,119 +192,9 @@ function MobileTabBar() {
   );
 }
 
-// Mobile slide-out menu
-function MobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const location = useLocation();
-  const { user, logout } = useAuth();
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="lg:hidden fixed inset-0 z-50">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-      />
-      
-      {/* Menu panel */}
-      <div className="absolute left-0 top-0 bottom-0 w-72 bg-white shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-black/10">
-          <img src={LogoImage} alt="Servio" className="h-8 w-auto" />
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-[#fff7f5] rounded-lg transition-colors"
-          >
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        {/* User info */}
-        <div className="p-4 border-b border-black/10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-[#ffe7df] rounded-full flex items-center justify-center">
-              <User className="w-6 h-6 text-[#ff5d2e]" />
-            </div>
-            <div>
-              <p className="font-semibold text-black">{user?.fullName || 'Guest'}</p>
-              <p className="text-sm text-black/50">{user?.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <ul className="flex flex-col gap-2">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
-              return (
-                <li key={item.path}>
-                  <Link
-                    to={item.path}
-                    onClick={onClose}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-[#ffe7df] text-[#ff5d2e]'
-                        : 'text-black/70 hover:bg-[#fff7f5]'
-                    }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          <div className="mt-6 pt-6 border-t border-black/10">
-            <ul className="flex flex-col gap-2">
-              <li>
-                <Link
-                  to="/vehicles"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
-                >
-                  <Car className="w-5 h-5" />
-                  <span className="font-medium">My Vehicles</span>
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/settings"
-                  onClick={onClose}
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
-                >
-                  <Settings className="w-5 h-5" />
-                  <span className="font-medium">Settings</span>
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </nav>
-
-        {/* Logout */}
-        <div className="p-4 border-t border-black/10">
-          <button
-            onClick={() => {
-              logout();
-              onClose();
-            }}
-            className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // Main AppLayout component
 export function AppLayout({ children, showNav = true }: AppLayoutProps) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   if (!showNav) {
     return (
       <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-[#fff7f5]">
@@ -297,10 +219,7 @@ export function AppLayout({ children, showNav = true }: AppLayoutProps) {
       <DesktopHeader />
       
       {/* Mobile header */}
-      <MobileHeader onMenuOpen={() => setMobileMenuOpen(true)} />
-      
-      {/* Mobile menu */}
-      <MobileMenu isOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
+      <MobileHeader />
 
       {/* Main content */}
       <main className="lg:ml-64 lg:pt-16 pb-20 lg:pb-6">

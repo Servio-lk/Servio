@@ -98,9 +98,15 @@ function LoginButton({ onClick, disabled }: { onClick: () => void; disabled?: bo
 }
 
 function ForgotPassword() {
+  const navigate = useNavigate();
+
   return (
     <div className="flex justify-center w-full">
-      <button className="text-xs md:text-sm text-gray-600 hover:text-gray-900 underline">
+      <button
+        type="button"
+        onClick={() => navigate("/forgot-password")}
+        className="text-xs md:text-sm text-gray-600 hover:text-gray-900 underline"
+      >
         Forgot Password?
       </button>
     </div>
@@ -246,10 +252,9 @@ function LoginForm() {
           fullName: user.user_metadata?.full_name || email.split('@')[0],
           email: user.email || email,
           phone: user.user_metadata?.phone || null,
-          role: user.user_metadata?.role?.toUpperCase() || (email === 'admin@servio.lk' ? 'ADMIN' : 'USER'),
+          role: 'USER',
         };
 
-        const isAdminRole = user.user_metadata?.role?.toUpperCase() === 'ADMIN' || email === 'admin@servio.lk';
         login(userData, session);
 
         const backendTokenReady = await refreshBackendToken();
@@ -258,7 +263,7 @@ function LoginForm() {
         }
 
         toast.success("Welcome back!");
-        navigate(isAdminRole ? '/admin' : '/home');
+        navigate('/home');
       }
     } catch (err: any) {
       console.error("Login error:", err);

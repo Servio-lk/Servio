@@ -1,0 +1,59 @@
+id,service_id,name,description,price_adjustment,is_default,display_order,created_at,updated_at
+1,1,Bike Wash,"Exterior wash for motorcycles and scooters with light degreasing and wipe-down.",600.00,false,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+2,1,Car Wash & Vacuum,"Exterior wash, interior vacuuming, glass wipe-down and tyre dressing for hatchbacks and sedans.",1200.00,true,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+3,1,SUV / Van Wash & Vacuum,"Larger vehicle wash with underbody rinse, interior vacuuming and exterior finishing.",1800.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+4,1,Premium Wash with Wax,"Wash and vacuum plus quick spray wax finish for added gloss and rain protection.",3000.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+5,2,Standard Mineral Oil,"Conventional oil package for everyday driving and regular service intervals.",4000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+6,2,Semi Synthetic Oil,"Balanced protection for Japanese petrol cars and moderate city/highway use.",6500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+7,2,Fully Synthetic Oil,"Higher protection for newer engines, turbo vehicles and longer drain intervals.",9500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+8,2,Diesel Engine Oil Package,"Diesel oil package for vans, pickups and SUVs; filter quoted by model if special type is required.",12000.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+9,3,Interior Detail,"Seat, carpet, dashboard, door trim and cabin deep clean for daily-use vehicles.",8500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+10,3,Exterior Detail,"Exterior wash, clay treatment, machine polish prep and trim finishing.",12000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+11,3,Full Interior & Exterior Detail,"Complete interior and exterior detail for hatchbacks, sedans and compact SUVs.",18500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+12,3,SUV / Van Full Detail,"Extended full detail for larger cabins, vans, SUVs and family vehicles.",24000.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+13,4,Petrol Tune-up,"Spark plug inspection, air filter check, throttle body clean and diagnostic scan.",6500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+14,4,Petrol Tune-up with Plug Replacement,"Tune-up plus standard spark plug replacement; iridium plugs quoted by model.",14500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+15,4,Diesel Performance Check,"Diesel scan, filter inspection, injector leak check and smoke/performance assessment.",9500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+16,5,Non-Hybrid Car Inspection,"200+ point inspection and diagnostic report for hatchbacks and sedans.",7500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+17,5,Hybrid Car Inspection,"Inspection with hybrid battery health check, diagnostic scan and report.",8500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+18,5,SUV / Van Inspection,"Inspection package for SUVs, vans, pickups and larger vehicles.",9500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+19,5,Mobile Inspection Add-on,"On-site inspection visit within serviceable Colombo suburbs; added to selected inspection package.",2500.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+20,6,Puncture Repair,"Tubeless puncture repair where safe and repairable.",500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+21,6,Tyre Rotation,"Four-wheel tyre rotation with pressure check.",1000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+22,6,Wheel Balancing - Pair,"Computerized balancing for two wheels.",1500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+23,6,Wheel Balancing - Full Set,"Computerized balancing for all four wheels.",2500.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+24,7,Quick Wax,"Quick protective wax finish after exterior wash.",4500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+25,7,Premium Paste Wax,"Longer-lasting paste wax application with hand finishing.",8500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+26,7,Machine Polish & Wax,"Light machine polish followed by wax for improved gloss.",15000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+27,8,Car Undercarriage Wash,"Undercarriage wash and degreasing for hatchbacks and sedans.",3500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+28,8,SUV / Van Undercarriage Wash,"Extended undercarriage wash for SUVs, vans and pickups.",5000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+29,8,Degreasing with Anti-Rust Spray,"Undercarriage degreasing plus light anti-rust spray finish.",7500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+30,9,Front Windscreen Treatment,"Front glass clean and rain-repellent coating.",3000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+31,9,All Glass Treatment,"Rain-repellent treatment for front, rear and side glass.",5500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+32,9,Wiper Blade Replacement Add-on,"Standard wiper blade replacement add-on; special sizes quoted separately.",3500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+33,10,Battery Health Check,"Battery load test, terminal clean and charging voltage check.",1000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+34,10,Battery Replacement Labour,"Battery replacement labour and safe fitment; battery price quoted separately.",1500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+35,10,Hybrid Auxiliary Battery Check,"12V auxiliary battery and charging system check for hybrid vehicles.",2000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+36,11,A/C Performance Check,"Cooling performance test, visual inspection and fault guidance.",4500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+37,11,A/C Gas Refill - Small Car,"Gas refill package for compact cars where no major leak is found.",8500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+38,11,A/C Gas Refill - SUV / Van,"Gas refill package for larger systems where no major leak is found.",12000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+39,11,Cabin Filter Replacement Add-on,"Cabin filter replacement add-on; filter type may vary by model.",3500.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+40,12,Basic Hybrid Health Check,"Hybrid warning scan, auxiliary battery test and visual inspection.",8500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+41,12,Hybrid Battery Live Data Report,"Hybrid battery block voltage and live data analysis report.",12500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+42,12,Hybrid Pre-Purchase Inspection,"Hybrid system check bundled with multi-point pre-purchase inspection.",16000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+43,13,One-Year Nano Coating,"Entry coating package for hatchbacks and sedans with paint prep.",35000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+44,13,Two-Year Nano Coating,"Higher durability coating package with additional paint preparation.",55000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+45,13,SUV / Van Nano Coating,"Nano coating package priced for larger vehicles and vans.",70000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+46,14,Windscreen Nano Treatment,"Hydrophobic nano treatment for front windscreen.",12000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+47,14,Headlamp Restoration & Coating,"Headlamp restoration with protective coating.",15000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+48,14,Single Panel Nano Treatment,"Nano treatment for one selected panel or high-contact exterior area.",18000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+49,16,Front Wheel Alignment,"Front-end computerized alignment for most passenger cars.",4500.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+50,16,Four Wheel Alignment,"Four-wheel computerized alignment for vehicles with adjustable rear geometry.",6500.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+51,16,SUV / Van Alignment,"Alignment package for SUVs, vans and pickups.",7500.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+52,17,Bumper Paint,"Paint service for one bumper with preparation and clear coat.",35000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+53,17,Single Panel Paint,"Paint service for one selected body panel.",45000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+54,17,Full Exterior Paint - Small Car,"Complete exterior repaint for hatchbacks and small sedans.",95000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00
+55,17,Full Exterior Paint - SUV / Van,"Complete exterior repaint for SUVs, vans and larger vehicles.",145000.00,false,3,2026-05-03 10:05:00,2026-05-03 10:05:00
+56,19,Minor Repair Assessment,"Inspection and estimate for minor mechanical, trim or accessory work.",5000.00,true,0,2026-05-03 10:05:00,2026-05-03 10:05:00
+57,19,Accessory Installation,"Labour package for basic accessory or body fitting installation.",8000.00,false,1,2026-05-03 10:05:00,2026-05-03 10:05:00
+58,19,Modification Consultation,"Inspection and feasibility consultation for custom repair or modification work.",12000.00,false,2,2026-05-03 10:05:00,2026-05-03 10:05:00

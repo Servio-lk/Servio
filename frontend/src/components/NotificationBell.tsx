@@ -67,8 +67,10 @@ export function NotificationBell() {
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Close on outside click
+  // Close on outside click only when panel is open
   useEffect(() => {
+    if (!open) return;
+
     function handleClick(e: MouseEvent) {
       if (
         panelRef.current && !panelRef.current.contains(e.target as Node) &&
@@ -79,7 +81,7 @@ export function NotificationBell() {
     }
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
+  }, [open]);
 
   return (
     <div className="relative">

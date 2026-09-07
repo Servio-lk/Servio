@@ -4,18 +4,18 @@ import { Warehouse, ChevronRight } from 'lucide-react';
 interface ServiceCardProps {
   id: number;
   name: string;
-  imageUrl?: string | null;
+  iconUrl?: string | null;
 }
 
-export function ServiceCard({ id, name, imageUrl }: ServiceCardProps) {
+export function ServiceCard({ id, name, iconUrl }: ServiceCardProps) {
   return (
     <Link
       to={`/services/${id}`}
       className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-3 hover:shadow-md transition-shadow"
     >
       <div className="w-12 h-12 rounded bg-[#ffe7df] flex items-center justify-center overflow-hidden">
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+        {iconUrl ? (
+          <img src={iconUrl} alt={name} className="w-8 h-8 object-contain" />
         ) : (
           <Warehouse className="w-6 h-6 text-[#ff5d2e]" />
         )}

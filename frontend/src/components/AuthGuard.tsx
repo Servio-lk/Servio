@@ -6,10 +6,10 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isBackendTokenReady } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (isLoading || (isAuthenticated && !isBackendTokenReady)) {
     // Show loading spinner while checking auth
     return (
       <div className="flex items-center justify-center h-screen w-full bg-gradient-to-b from-[#fff7f5] to-[#fbfbfb]">
@@ -45,7 +45,6 @@ export function GuestGuard({ children }: AuthGuardProps) {
   }
 
   if (isAuthenticated) {
-    // Redirect to home if already logged in
     const from = location.state?.from?.pathname || '/home';
     return <Navigate to={from} replace />;
   }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Warehouse, Search, Plus, MoreVertical, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { API_BASE_URL } from '@/services/api';
 
 export function AdminServiceBays() {
   const [bays, setBays] = useState<any[]>([]);
@@ -21,7 +22,11 @@ export function AdminServiceBays() {
   const loadBays = async () => {
     try {
       setLoading(true);
+<<<<<<< HEAD
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays`, {
+=======
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays`, {
+>>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
@@ -43,7 +48,11 @@ export function AdminServiceBays() {
     }
 
     try {
+<<<<<<< HEAD
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays`, {
+=======
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays`, {
+>>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -68,7 +77,7 @@ export function AdminServiceBays() {
       } else {
         toast.error('Failed to add service bay');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error adding service bay');
     }
   };
@@ -76,7 +85,7 @@ export function AdminServiceBays() {
   const handleDeleteBay = async (id: number) => {
     if (confirm('Are you sure you want to delete this service bay?')) {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays/${id}`, {
+        const response = await fetch(`${API_BASE_URL}/admin/service-bays/${id}`, {
           method: 'DELETE',
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -89,7 +98,7 @@ export function AdminServiceBays() {
         } else {
           toast.error('Failed to delete service bay');
         }
-      } catch (error) {
+      } catch (_error) {
         toast.error('Error deleting service bay');
       }
     }
@@ -97,7 +106,7 @@ export function AdminServiceBays() {
 
   const handleUpdateStatus = async (id: number, newStatus: string) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/service-bays/${id}/status/${newStatus}`, {
+      const response = await fetch(`${API_BASE_URL}/admin/service-bays/${id}/status/${newStatus}`, {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -110,7 +119,7 @@ export function AdminServiceBays() {
       } else {
         toast.error('Failed to update status');
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error('Error updating status');
     }
   };
@@ -296,3 +305,6 @@ export function AdminServiceBays() {
     </div>
   );
 }
+
+export default AdminServiceBays;
+

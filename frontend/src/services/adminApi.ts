@@ -1,6 +1,5 @@
 import { apiFetch } from './apiFetch';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {
@@ -33,6 +32,84 @@ class AdminApiService {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify({ isActive }),
+    });
+    return response.json();
+  }
+
+  async createService(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateService(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async publishService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}/publish`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async hideService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}/hide`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async deleteService(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async uploadServicePhoto(file: File) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/photos/upload`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return response.json();
+  }
+
+  async uploadServiceIcon(file: File) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/services/icons/upload`, {
+      method: 'POST',
+      headers,
+      body,
     });
     return response.json();
   }
@@ -82,6 +159,15 @@ class AdminApiService {
     return response.json();
   }
 
+  async recordPayment(appointmentId: number, amount: number, paymentMethod: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/payments`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ amount, paymentMethod }),
+    });
+    return response.json();
+  }
+
   async updateAppointmentStatus(id: number, status: string) {
     const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/status?status=${status}`, {
       method: 'PATCH',
@@ -90,6 +176,7 @@ class AdminApiService {
     return response.json();
   }
 
+<<<<<<< HEAD
   async recordPayment(id: number, amount: number, paymentMethod: string) {
     const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${id}/payments`, {
       method: 'POST',
@@ -98,7 +185,111 @@ class AdminApiService {
     });
     return response.json();
   }
+=======
+  async getStaff() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async generateStaffEmployeeCode() {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/next-employee-code`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async createStaff(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async updateStaff(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async uploadStaffFile(file: File, documentType: string, staffId?: number) {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const body = new FormData();
+    body.append('file', file);
+
+    const params = new URLSearchParams({ documentType });
+    if (staffId) params.set('staffId', String(staffId));
+
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/uploads?${params.toString()}`, {
+      method: 'POST',
+      headers,
+      body,
+    });
+    return response.json();
+  }
+
+  async getStaffSchedule(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async updateStaffSchedule(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/schedule`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async assignMechanic(repairId: number, mechanicId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/assign-mechanic`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ mechanicId }),
+    });
+    return response.json();
+  }
+
+  async assignMechanicToAppointment(appointmentId: number, mechanicId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/assign-mechanic`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ mechanicId }),
+    });
+    return response.json();
+  }
+
+  async getRepairMessages(repairId: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async sendRepairMessage(repairId: number, body: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/repairs/${repairId}/messages`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ body }),
+    });
+    return response.json();
+  }
+
+>>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
 }
 
 export const adminApi = new AdminApiService();
-
