@@ -1,7 +1,7 @@
 class ApiConfig {
   static const String apiBaseUrl = String.fromEnvironment(
     'SERVIO_API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:3001/api',
+    defaultValue: 'https://api.servio.com/api',
   );
 
   static const List<String> fallbackApiBaseUrls = [

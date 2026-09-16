@@ -1,6 +1,6 @@
 # Build stage — $BUILDPLATFORM ensures Maven runs natively (no QEMU emulation)
 # Java bytecode is platform-independent, so we can build on ARM64 and run on x86_64
-FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17 AS builder
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17@sha256:a6dd456df5cc36df5c68962b7f0e61ec233bc0f4f9f2146fbb1ef0ef65e4baee AS builder
 
 WORKDIR /app
 
@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/root/.m2 \
     $success || (echo "BUILD FAILED after 3 attempts" && exit 1)
 
 # Production runtime stage
-FROM eclipse-temurin:17-jre-jammy AS runner
+FROM eclipse-temurin:17-jre-jammy@sha256:f7ea8ad6215cf9fde74c93a027978000490b6ef6a1278ffba6cb85955a8fb3a5 AS runner
 
 WORKDIR /app
 

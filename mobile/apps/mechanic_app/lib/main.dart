@@ -15,6 +15,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,
     anonKey: SupabaseConfig.supabaseAnonKey,
+    localStorage: const SecureLocalStorage(),
   );
 
   runApp(const ProviderScope(child: ServioApp()));
