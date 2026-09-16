@@ -238,17 +238,13 @@ interface RepairMessageDto {
 }
 
 class ApiService {
-  private getHeaders(includeAuth = false): HeadersInit {
+  private getHeaders(): HeadersInit {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
 
-    if (includeAuth) {
-      const token = localStorage.getItem('token');
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
+    // Note: includeAuth is kept for API compatibility, but tokens are 
+    // now handled automatically by the browser via HttpOnly cookies.
 
     return headers;
   }
@@ -268,14 +264,16 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: 'POST',
       headers: this.getHeaders(),
+      credentials: 'include',
       body: JSON.stringify(userData),
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
 
-    if (data.success && data.data?.token) {
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
+    if (data.success) {
+      if (data.data?.user) {
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+      }
     }
 
     return data;
@@ -285,14 +283,16 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
+      credentials: 'include',
       body: JSON.stringify(credentials),
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
 
-    if (data.success && data.data?.token) {
-      localStorage.setItem('token', data.data.token);
-      localStorage.setItem('user', JSON.stringify(data.data.user));
+    if (data.success) {
+      if (data.data?.user) {
+        localStorage.setItem('user', JSON.stringify(data.data.user));
+      }
     }
 
     return data;
@@ -301,7 +301,7 @@ class ApiService {
   async getProfile(): Promise<ApiResponse<User>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
 
     return this.handleResponse<User>(response);
@@ -310,19 +310,20 @@ class ApiService {
   async deleteProfile(): Promise<ApiResponse<string>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
       method: 'DELETE',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
 
     return this.handleResponse<string>(response);
   }
 
   logout(): void {
-    localStorage.removeItem('token');
+    // API call to clear backend cookie is handled in AuthContext
     localStorage.removeItem('user');
   }
 
   isAuthenticated(): boolean {
-    return !!localStorage.getItem('token');
+    // In a cookie-based setup, we rely on the backend response or the presence of the user object
+    return !!localStorage.getItem('user');
   }
 
   getCurrentUser(): User | null {
@@ -335,6 +336,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/categories`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceCategory[]>(response);
   }
@@ -343,6 +345,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceItem[]>(response);
   }
@@ -351,6 +354,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/featured`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceItem[]>(response);
   }
@@ -359,6 +363,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/${id}`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceItem>(response);
   }
@@ -367,6 +372,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/search?q=${encodeURIComponent(query)}`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceItem[]>(response);
   }
@@ -375,6 +381,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/providers`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<ServiceProvider[]>(response);
   }
@@ -383,6 +390,7 @@ class ApiService {
     const response = await fetch(`${API_BASE_URL}/services/offers`, {
       method: 'GET',
       headers: this.getHeaders(),
+      credentials: 'include',
     });
     return this.handleResponse<Offer[]>(response);
   }
@@ -391,7 +399,7 @@ class ApiService {
   async createServiceRecord(recordData: ServiceRecordRequest): Promise<ApiResponse<ServiceRecord>> {
     const response = await apiFetch(`${API_BASE_URL}/servicerecords`, {
       method: 'POST',
-      headers: this.getHeaders(true), // Requires Auth
+      headers: this.getHeaders(), // Requires Auth
       body: JSON.stringify(recordData),
     });
     return this.handleResponse<ServiceRecord>(response);
@@ -400,7 +408,7 @@ class ApiService {
   async getServiceRecordsByVehicle(vehicleId: number): Promise<ApiResponse<ServiceRecord[]>> {
     const response = await apiFetch(`${API_BASE_URL}/vehicles/${vehicleId}/servicerecords`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<ServiceRecord[]>(response);
   }
@@ -408,7 +416,7 @@ class ApiService {
   async updateServiceRecord(id: number, recordData: Partial<ServiceRecordRequest>): Promise<ApiResponse<ServiceRecord>> {
     const response = await apiFetch(`${API_BASE_URL}/servicerecords/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(recordData),
     });
     return this.handleResponse<ServiceRecord>(response);
@@ -417,7 +425,7 @@ class ApiService {
   async deleteServiceRecord(id: number): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/servicerecords/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<void>(response);
   }
@@ -432,7 +440,7 @@ class ApiService {
 
     const response = await apiFetch(`${API_BASE_URL}/appointments`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(requestData),
     });
     return this.handleResponse<AppointmentDto>(response);
@@ -442,7 +450,7 @@ class ApiService {
     // /appointments/my reads the user from the JWT on the backend — no stored ID needed
     const response = await apiFetch(`${API_BASE_URL}/appointments/my`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<AppointmentDto[]>(response);
   }
@@ -450,7 +458,7 @@ class ApiService {
   async getAppointmentById(id: number): Promise<ApiResponse<AppointmentDto>> {
     const response = await apiFetch(`${API_BASE_URL}/appointments/${id}`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<AppointmentDto>(response);
   }
@@ -458,7 +466,7 @@ class ApiService {
   async updateAppointmentStatus(id: number, status: string): Promise<ApiResponse<AppointmentDto>> {
     const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/status`, {
       method: 'PATCH',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify({ status }),
     });
     return this.handleResponse<AppointmentDto>(response);
@@ -468,7 +476,7 @@ class ApiService {
     // Uses the ownership-verified /cancel endpoint — users can only cancel their own appointments
     const response = await apiFetch(`${API_BASE_URL}/appointments/${id}/cancel`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<AppointmentDto>(response);
   }
@@ -476,7 +484,7 @@ class ApiService {
   async getAppointmentConversation(appointmentId: number): Promise<ApiResponse<RepairConversationDto>> {
     const response = await apiFetch(`${API_BASE_URL}/appointments/${appointmentId}/conversation`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<RepairConversationDto>(response);
   }
@@ -484,7 +492,7 @@ class ApiService {
   async getRepairMessages(repairId: number): Promise<ApiResponse<RepairMessageDto[]>> {
     const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<RepairMessageDto[]>(response);
   }
@@ -492,7 +500,7 @@ class ApiService {
   async sendRepairMessage(repairId: number, body: string): Promise<ApiResponse<RepairMessageDto>> {
     const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify({ body }),
     });
     return this.handleResponse<RepairMessageDto>(response);
@@ -509,7 +517,7 @@ class ApiService {
   ): Promise<ApiResponse<PayHereInitiateResponse>> {
     const response = await apiFetch(`${API_BASE_URL}/payments/payhere/initiate`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify({ appointmentId, currency, serviceId }),
     });
     return this.handleResponse<PayHereInitiateResponse>(response);
@@ -519,7 +527,7 @@ class ApiService {
   async getMyVehicles(): Promise<ApiResponse<VehicleDto[]>> {
     const response = await apiFetch(`${API_BASE_URL}/vehicles/my`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<VehicleDto[]>(response);
   }
@@ -527,7 +535,7 @@ class ApiService {
   async createVehicle(data: VehicleRequest): Promise<ApiResponse<VehicleDto>> {
     const response = await apiFetch(`${API_BASE_URL}/vehicles/my`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
     return this.handleResponse<VehicleDto>(response);
@@ -536,7 +544,7 @@ class ApiService {
   async updateVehicle(id: number, data: VehicleRequest): Promise<ApiResponse<VehicleDto>> {
     const response = await apiFetch(`${API_BASE_URL}/vehicles/${id}`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
     return this.handleResponse<VehicleDto>(response);
@@ -545,7 +553,7 @@ class ApiService {
   async deleteVehicle(id: number): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/vehicles/${id}`, {
       method: 'DELETE',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<void>(response);
   }
@@ -554,7 +562,7 @@ class ApiService {
   async getMyNotifications(userId: number): Promise<ApiResponse<NotificationDto[]>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<NotificationDto[]>(response);
   }
@@ -562,7 +570,7 @@ class ApiService {
   async getUnreadCount(userId: number): Promise<ApiResponse<number>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/unread/count`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<number>(response);
   }
@@ -570,7 +578,7 @@ class ApiService {
   async markNotificationRead(id: number): Promise<ApiResponse<NotificationDto>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/${id}/read`, {
       method: 'PATCH',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<NotificationDto>(response);
   }
@@ -578,7 +586,7 @@ class ApiService {
   async markAllNotificationsRead(userId: number): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/read-all`, {
       method: 'PATCH',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<void>(response);
   }
@@ -587,7 +595,7 @@ class ApiService {
   async sendAgentMessage(message: string, conversationId?: string): Promise<ApiResponse<AgentChatResponse>> {
     const response = await apiFetch(`${API_BASE_URL}/agent/chat`, {
       method: 'POST',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify({ message, conversationId }),
     });
     return this.handleResponse<AgentChatResponse>(response);

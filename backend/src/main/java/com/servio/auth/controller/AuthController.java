@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,12 +37,25 @@ public class AuthController {
     private final MechanicService mechanicService;
     private final com.servio.auth.service.SupabaseAdminService supabaseAdminService;
 
+    private ResponseCookie generateJwtCookie(String token) {
+        return ResponseCookie.from("jwt", token)
+                .httpOnly(true)
+                .secure(false) // Set to false for localhost dev; in production, use true
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60) // 7 days
+                .sameSite("Lax")
+                .build();
+    }
+
     @PostMapping("/signup")
     @Operation(summary = "Register a new user")
     public ResponseEntity<AuthResponse> signup(@Valid @RequestBody SignupRequest request) {
         try {
             AuthResponse response = authService.signup(request);
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+            ResponseCookie cookie = generateJwtCookie(response.getData().getToken());
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(AuthResponse.builder()
@@ -55,7 +70,10 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             AuthResponse response = authService.login(request);
-            return ResponseEntity.ok(response);
+            ResponseCookie cookie = generateJwtCookie(response.getData().getToken());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(AuthResponse.builder()
@@ -70,7 +88,10 @@ public class AuthController {
     public ResponseEntity<AuthResponse> supabaseLogin(@Valid @RequestBody SupabaseLoginRequest request) {
         try {
             AuthResponse response = authService.loginWithSupabase(request);
-            return ResponseEntity.ok(response);
+            ResponseCookie cookie = generateJwtCookie(response.getData().getToken());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(AuthResponse.builder()
@@ -148,7 +169,17 @@ public class AuthController {
                 supabaseAdminService.deleteUser(supabaseUserId);
             }
             
-            return ResponseEntity.ok(ApiResponse.success("Account deleted successfully", null));
+            ResponseCookie cookie = ResponseCookie.from("jwt", "")
+                    .httpOnly(true)
+                    .secure(false)
+                    .path("/")
+                    .maxAge(0)
+                    .sameSite("Lax")
+                    .build();
+            
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                    .body(ApiResponse.success("Account deleted successfully", null));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error("Invalid user ID format", null));
@@ -159,6 +190,21 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Failed to delete account: " + e.getMessage(), null));
         }
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout the current user")
+    public ResponseEntity<ApiResponse<String>> logout() {
+        ResponseCookie cookie = ResponseCookie.from("jwt", "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(0)
+                .sameSite("Lax")
+                .build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.success("Logged out successfully", null));
     }
 
     @GetMapping("/health")
