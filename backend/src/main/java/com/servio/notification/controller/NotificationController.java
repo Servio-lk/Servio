@@ -9,6 +9,7 @@ import com.servio.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +18,12 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/notifications")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class NotificationController {
     
     private final NotificationService notificationService;
     
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<NotificationDto>> createNotification(
         @RequestBody NotificationRequest request
     ) {
@@ -36,6 +37,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUserNotifications(
         @PathVariable UUID userId
     ) {
@@ -48,6 +50,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}/unread")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(
         @PathVariable UUID userId
     ) {
@@ -60,6 +63,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}/unread/count")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable UUID userId) {
         Long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.<Long>builder()
@@ -70,6 +74,7 @@ public class NotificationController {
     }
     
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isNotificationOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<NotificationDto>> getNotificationById(@PathVariable Long id) {
         NotificationDto notification = notificationService.getNotificationById(id);
         return ResponseEntity.ok(ApiResponse.<NotificationDto>builder()
@@ -80,6 +85,7 @@ public class NotificationController {
     }
     
     @PatchMapping("/{id}/read")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isNotificationOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<NotificationDto>> markAsRead(@PathVariable Long id) {
         NotificationDto notification = notificationService.markAsRead(id);
         return ResponseEntity.ok(ApiResponse.<NotificationDto>builder()
@@ -90,6 +96,7 @@ public class NotificationController {
     }
     
     @PatchMapping("/user/{userId}/read-all")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead(@PathVariable UUID userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -100,6 +107,7 @@ public class NotificationController {
     }
     
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isNotificationOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable Long id) {
         notificationService.deleteNotification(id);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
@@ -110,6 +118,7 @@ public class NotificationController {
     }
     
     @DeleteMapping("/user/{userId}/old")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<Void>> deleteOldNotifications(
         @PathVariable UUID userId,
         @RequestParam(defaultValue = "30") int daysOld

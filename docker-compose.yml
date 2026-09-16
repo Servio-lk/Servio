@@ -35,6 +35,9 @@ services:
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-}
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
     mem_limit: 512m
     security_opt:
       - no-new-privileges:true
@@ -79,6 +82,31 @@ services:
     networks:
       - servio-network
 
+  # PostgreSQL Database Container (Local Run)
+  postgres:
+    image: postgres:16-alpine
+    container_name: servio-postgres
+    restart: always
+    environment:
+      - POSTGRES_DB=servio_db
+      - POSTGRES_USER=servio_user
+      - POSTGRES_PASSWORD=servio_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - servio_postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U servio_user -d servio_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - servio-network
+
 networks:
   servio-network:
     driver: bridge
+
+volumes:
+  servio_postgres_data:

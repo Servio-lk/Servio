@@ -39,6 +39,7 @@ public class AppointmentController {
         }
 
         @GetMapping
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
         public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments() {
                 List<AppointmentDto> appointments = appointmentService.getAllAppointments();
                 return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
@@ -49,6 +50,7 @@ public class AppointmentController {
         }
 
         @GetMapping("/recent")
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
         public ResponseEntity<ApiResponse<List<AppointmentDto>>> getRecentAppointments() {
                 List<AppointmentDto> appointments = appointmentService.getRecentAppointments();
                 return ResponseEntity.ok(ApiResponse.<List<AppointmentDto>>builder()
@@ -76,6 +78,7 @@ public class AppointmentController {
         }
 
         @GetMapping("/status/{status}")
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
         public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAppointmentsByStatus(
                         @PathVariable String status) {
                 List<AppointmentDto> appointments = appointmentService.getAppointmentsByStatus(status);
@@ -103,6 +106,7 @@ public class AppointmentController {
         }
 
         @GetMapping("/user/{userId}")
+        @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
         public ResponseEntity<ApiResponse<List<AppointmentDto>>> getUserAppointments(
                         @PathVariable String userId) {
                 List<AppointmentDto> appointments = appointmentService.getUserAppointments(userId);
@@ -114,6 +118,7 @@ public class AppointmentController {
         }
 
         @GetMapping("/{id}")
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isAppointmentOwner(authentication, #id)")
         public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(
                         @PathVariable Long id) {
                 AppointmentDto appointment = appointmentService.getAppointmentById(id);
@@ -125,7 +130,7 @@ public class AppointmentController {
         }
 
         @PatchMapping("/{id}/status")
-
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
         public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointmentStatus(
                         @PathVariable Long id,
                         @RequestParam String status) {
@@ -138,6 +143,7 @@ public class AppointmentController {
         }
 
         @DeleteMapping("/{id}")
+        @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Void>> deleteAppointment(@PathVariable Long id) {
                 appointmentService.deleteAppointment(id);
                 return ResponseEntity.ok(ApiResponse.<Void>builder()
