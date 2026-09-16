@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -27,7 +28,7 @@ public class AppointmentController {
         @PostMapping
         @PreAuthorize("isAuthenticated()")
         public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(
-                        @RequestBody AppointmentRequest request,
+                        @Valid @RequestBody AppointmentRequest request,
                         Authentication authentication) {
                 AppointmentDto appointment = appointmentService.createAppointment(request, authentication);
                 return ResponseEntity.status(HttpStatus.CREATED)
