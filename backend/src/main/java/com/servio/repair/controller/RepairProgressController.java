@@ -8,6 +8,7 @@ import com.servio.repair.service.RepairProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class RepairProgressController {
     private final RepairProgressService repairProgressService;
     
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<RepairProgressUpdateDto>> createProgressUpdate(
             @RequestParam Long repairJobId,
             @RequestParam String status,
@@ -41,6 +43,7 @@ public class RepairProgressController {
     }
     
     @GetMapping("/job/{repairJobId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isRepairJobOwner(authentication, #repairJobId)")
     public ResponseEntity<ApiResponse<List<RepairProgressUpdateDto>>> getProgressUpdates(
             @PathVariable Long repairJobId
     ) {
@@ -57,6 +60,7 @@ public class RepairProgressController {
     }
     
     @GetMapping("/job/{repairJobId}/latest")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isRepairJobOwner(authentication, #repairJobId)")
     public ResponseEntity<ApiResponse<RepairProgressUpdateDto>> getLatestProgressUpdate(
             @PathVariable Long repairJobId
     ) {

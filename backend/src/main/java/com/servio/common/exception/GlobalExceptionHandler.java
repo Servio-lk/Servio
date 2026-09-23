@@ -57,12 +57,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+        logger.warn("IllegalArgumentException: {}", ex.getMessage());
+        return buildErrorResponse(new RuntimeException("Invalid request parameters."), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex, HttpServletRequest request) {
-        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request);
+        logger.warn("IllegalStateException: {}", ex.getMessage());
+        return buildErrorResponse(new RuntimeException("Invalid state for this operation."), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(SecurityException.class)

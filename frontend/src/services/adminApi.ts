@@ -3,14 +3,9 @@ import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {
+    return {
       'Content-Type': 'application/json',
     };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
   }
 
   async getDashboardStats() {
@@ -79,11 +74,7 @@ class AdminApiService {
   }
 
   async uploadServicePhoto(file: File) {
-    const token = localStorage.getItem('token');
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const body = new FormData();
     body.append('file', file);
@@ -97,11 +88,7 @@ class AdminApiService {
   }
 
   async uploadServiceIcon(file: File) {
-    const token = localStorage.getItem('token');
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const body = new FormData();
     body.append('file', file);
@@ -209,11 +196,7 @@ class AdminApiService {
   }
 
   async uploadStaffFile(file: File, documentType: string, staffId?: number) {
-    const token = localStorage.getItem('token');
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
     const body = new FormData();
     body.append('file', file);
