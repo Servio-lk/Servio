@@ -5,6 +5,8 @@ import com.servio.auth.entity.User;
 import com.servio.booking.dto.AppointmentDto;
 import com.servio.booking.entity.Appointment;
 import com.servio.common.config.WebSocketConfig;
+import com.servio.common.security.OwnershipSecurityService;
+import com.servio.common.util.JwtTokenProvider;
 import com.servio.notification.dto.AppointmentWebSocketEvent;
 import com.servio.notification.dto.NotificationDto;
 import com.servio.notification.dto.NotificationRequest;
@@ -121,10 +123,10 @@ public class WebSocketStompAdversarialTest {
     }
 
     @Mock
-    private com.servio.common.util.JwtTokenProvider jwtTokenProvider;
+    private JwtTokenProvider jwtTokenProvider;
     
     @Mock
-    private com.servio.common.security.OwnershipSecurityService ownershipSecurityService;
+    private OwnershipSecurityService ownershipSecurityService;
 
     @Test
     @DisplayName("Adversarial: WebSocketConfig registers /topic simple broker and /app destination prefix")
