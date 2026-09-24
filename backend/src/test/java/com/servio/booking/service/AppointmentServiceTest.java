@@ -88,7 +88,7 @@ class AppointmentServiceTest {
                 .build();
 
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
                 .thenReturn(List.of(Appointment.builder().id(1L).appointmentDate(testDate).status("CONFIRMED").build()));
 
         assertThrows(ConflictException.class, () -> appointmentService.createAppointment(request, null));
@@ -115,7 +115,7 @@ class AppointmentServiceTest {
                 .build();
 
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenReturn(savedAppointment);
 
@@ -140,7 +140,7 @@ class AppointmentServiceTest {
                 .build();
 
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(testDate), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class)))
                 .thenThrow(new org.springframework.dao.DataIntegrityViolationException("Unique index violation on uq_appointment_active_slot"));
