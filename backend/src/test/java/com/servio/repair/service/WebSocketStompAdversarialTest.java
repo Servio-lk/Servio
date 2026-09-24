@@ -120,10 +120,16 @@ public class WebSocketStompAdversarialTest {
                 .build();
     }
 
+    @Mock
+    private com.servio.common.util.JwtTokenProvider jwtTokenProvider;
+    
+    @Mock
+    private com.servio.common.security.OwnershipSecurityService ownershipSecurityService;
+
     @Test
     @DisplayName("Adversarial: WebSocketConfig registers /topic simple broker and /app destination prefix")
     void testWebSocketConfigBrokerRegistry() {
-        WebSocketConfig config = new WebSocketConfig();
+        WebSocketConfig config = new WebSocketConfig(jwtTokenProvider, ownershipSecurityService);
         MessageBrokerRegistry registry = mock(MessageBrokerRegistry.class);
 
         config.configureMessageBroker(registry);
@@ -135,7 +141,7 @@ public class WebSocketStompAdversarialTest {
     @Test
     @DisplayName("Adversarial: WebSocketConfig registers /api/ws and /api/ws-sockjs endpoints with allowed origin patterns")
     void testWebSocketConfigEndpoints() {
-        WebSocketConfig config = new WebSocketConfig();
+        WebSocketConfig config = new WebSocketConfig(jwtTokenProvider, ownershipSecurityService);
         StompEndpointRegistry registry = mock(StompEndpointRegistry.class);
         StompWebSocketEndpointRegistration registrationWs = mock(StompWebSocketEndpointRegistration.class);
         StompWebSocketEndpointRegistration registrationSockJs = mock(StompWebSocketEndpointRegistration.class);

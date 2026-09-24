@@ -94,7 +94,7 @@ public class AppointmentConcurrencyAdversarialTest {
 
         when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
 
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenAnswer(inv -> {
                     if (slotClaimed.get()) {
                         return List.of(Appointment.builder().id(999L).appointmentDate(targetSlot).status("CONFIRMED").build());
@@ -175,7 +175,7 @@ public class AppointmentConcurrencyAdversarialTest {
 
         when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
 
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(any(LocalDateTime.class), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(any(LocalDateTime.class), anyList()))
                 .thenAnswer(inv -> {
                     LocalDateTime slot = inv.getArgument(0);
                     AtomicBoolean claim = slotClaims.get(slot);
@@ -243,7 +243,7 @@ public class AppointmentConcurrencyAdversarialTest {
 
         // Repository returns empty list because CANCELLED status is excluded
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class)))
                 .thenAnswer(inv -> {
@@ -276,7 +276,7 @@ public class AppointmentConcurrencyAdversarialTest {
                 .build();
 
         when(userRepository.findById(testUserId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
                 .thenReturn(List.of(existingActive));
 
         ConflictException ex = assertThrows(ConflictException.class, () ->
