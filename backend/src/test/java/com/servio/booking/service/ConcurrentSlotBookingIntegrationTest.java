@@ -83,7 +83,7 @@ class ConcurrentSlotBookingIntegrationTest {
 
         when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
 
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenAnswer(invocation -> {
                     if (slotOccupied.get()) {
                         return List.of(Appointment.builder()
@@ -159,7 +159,7 @@ class ConcurrentSlotBookingIntegrationTest {
                 .build();
 
         when(userRepository.findById(testUser.getId())).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenReturn(appt1);
 
@@ -174,7 +174,7 @@ class ConcurrentSlotBookingIntegrationTest {
                 .serviceType("Oil Change")
                 .build();
 
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenReturn(List.of(appt1));
 
         ConflictException conflictEx = assertThrows(ConflictException.class, () ->
@@ -185,7 +185,7 @@ class ConcurrentSlotBookingIntegrationTest {
         appt1.setStatus("CANCELLED");
 
         // Step 4: After cancellation, findForUpdate returns empty list (because CANCELLED is excluded), so new booking succeeds
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenReturn(Collections.emptyList());
 
         Appointment appt2 = Appointment.builder()
