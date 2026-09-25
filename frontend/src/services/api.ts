@@ -238,13 +238,17 @@ interface RepairMessageDto {
 }
 
 class ApiService {
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+  private getHeaders(_includeAuth: boolean = true): HeadersInit {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
 
-    // Note: includeAuth is kept for API compatibility, but tokens are 
-    // now handled automatically by the browser via HttpOnly cookies.
+    // Attach Bearer token if present for cross-origin / mobile API compatibility,
+    // while HttpOnly cookies are also automatically sent via credentials: 'include'.
+    const token = localStorage.getItem('token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
 
     return headers;
   }

@@ -153,6 +153,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (data?.success) {
+        if (data.data?.token) {
+          localStorage.setItem('token', data.data.token);
+        }
         if (data.data?.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
         }
@@ -264,6 +267,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (data?.success) {
+          if (data.data?.token) {
+            localStorage.setItem('token', data.data.token);
+          }
           if (data.data?.user) {
             localStorage.setItem('user', JSON.stringify(data.data.user));
             // Update the user role from backend response (authoritative source —
@@ -312,6 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setSupabaseUser(null);
+    localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsBackendTokenReady(false);
     attemptedTokenExchange.current.clear();

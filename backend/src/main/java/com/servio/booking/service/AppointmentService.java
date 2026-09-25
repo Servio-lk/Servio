@@ -77,12 +77,9 @@ public class AppointmentService {
             throw new IllegalArgumentException("User authentication required to create appointment");
         }
 
-        // Check if the time slot is already booked with advisory locking
-        String dateString = request.getAppointmentDate().toString();
-        jdbcTemplate.execute("SELECT pg_advisory_xact_lock(hashtext('" + dateString + "'))");
-
+        // Check if the time slot is already booked with pessimistic locking
         List<Appointment> existingAppointments = appointmentRepository
-                .findByAppointmentDateAndStatusNotIn(
+                .findForUpdateByAppointmentDateAndStatusNotIn(
                         request.getAppointmentDate(),
                         List.of("CANCELLED"));
 

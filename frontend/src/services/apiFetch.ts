@@ -28,20 +28,29 @@ export function registerAuthHandlers(
 
 
 
+function buildAuthHeader(): Record<string, string> {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 /**
  * Wraps fetch() with automatic 401-retry logic.
  * Pass the same arguments you would pass to fetch().
- * For requests that need auth, include the Authorization header in your init.headers —
- * apiFetch will automatically replace it with the refreshed token on retry.
+ * Supports both HttpOnly cookies (via credentials: 'include') and Bearer tokens.
  */
 export async function apiFetch(
     input: RequestInfo | URL,
     init?: RequestInit
 ): Promise<Response> {
-    // First attempt
+    const authHeaders = buildAuthHeader();
+    // First attempt with both cookies and Bearer headers for full cross-origin compatibility
     const initialInit: RequestInit = {
         ...init,
         credentials: init?.credentials || 'include',
+        headers: {
+            ...authHeaders,
+            ...(init?.headers as Record<string, string> | undefined),
+        },
     };
     const response = await fetch(input, initialInit);
 
@@ -75,12 +84,14 @@ export async function apiFetch(
         return response;
     }
 
-    // Rebuild init with credentials (auth headers no longer needed for cookies)
+    // Rebuild init with refreshed token and credentials
+    const newAuthHeaders = buildAuthHeader();
     const retryInit: RequestInit = {
         ...init,
         credentials: init?.credentials || 'include',
         headers: {
             ...(init?.headers as Record<string, string> | undefined),
+            ...newAuthHeaders,
         },
     };
 

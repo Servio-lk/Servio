@@ -35,6 +35,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.MessagingException;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import com.servio.common.util.JwtTokenProvider;
+import com.servio.common.security.OwnershipSecurityService;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -123,7 +125,7 @@ public class WebSocketStompAdversarialTest {
     @Test
     @DisplayName("Adversarial: WebSocketConfig registers /topic simple broker and /app destination prefix")
     void testWebSocketConfigBrokerRegistry() {
-        WebSocketConfig config = new WebSocketConfig();
+        WebSocketConfig config = new WebSocketConfig(mock(JwtTokenProvider.class), mock(OwnershipSecurityService.class));
         MessageBrokerRegistry registry = mock(MessageBrokerRegistry.class);
 
         config.configureMessageBroker(registry);
@@ -135,7 +137,7 @@ public class WebSocketStompAdversarialTest {
     @Test
     @DisplayName("Adversarial: WebSocketConfig registers /api/ws and /api/ws-sockjs endpoints with allowed origin patterns")
     void testWebSocketConfigEndpoints() {
-        WebSocketConfig config = new WebSocketConfig();
+        WebSocketConfig config = new WebSocketConfig(mock(JwtTokenProvider.class), mock(OwnershipSecurityService.class));
         StompEndpointRegistry registry = mock(StompEndpointRegistry.class);
         StompWebSocketEndpointRegistration registrationWs = mock(StompWebSocketEndpointRegistration.class);
         StompWebSocketEndpointRegistration registrationSockJs = mock(StompWebSocketEndpointRegistration.class);

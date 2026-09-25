@@ -3,9 +3,14 @@ import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {
-    return {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   async getDashboardStats() {
