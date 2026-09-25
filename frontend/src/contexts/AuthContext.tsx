@@ -43,6 +43,7 @@ async function exchangeSupabaseToken(payload: {
     const response = await fetch(`${apiBase}/auth/supabase-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload),
       signal: controller.signal,
     });
@@ -151,9 +152,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         role: freshSession.user.user_metadata?.role || 'USER',
       });
 
-      if (data?.success && data.data?.token) {
-        localStorage.setItem('token', data.data.token);
-        if (data.data.user) {
+      if (data?.success) {
+        if (data.data?.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
         }
         console.log('[Auth] Backend token refreshed successfully');
@@ -171,7 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshBackendToken,
       async () => {
         await supabaseAuth.signOut();
-        localStorage.removeItem('token');
+        try {
+          await fetch(`${getApiBaseUrl()}/auth/logout`, { method: 'POST', credentials: 'include' });
+        } catch (e) {
+          console.error('[Auth] Backend logout failed', e);
+        }
         localStorage.removeItem('user');
         setUser(null);
         setSession(null);
@@ -207,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setSession(null);
         setSupabaseUser(null);
-        localStorage.removeItem('token');
+        fetch(`${getApiBaseUrl()}/auth/logout`, { method: 'POST', credentials: 'include' }).catch(e => console.error('[Auth] Backend logout failed', e));
         localStorage.removeItem('user');
         setIsBackendTokenReady(false);
         attemptedTokenExchange.current.clear();
@@ -223,7 +227,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // that as a silent session confirmation for the same user, otherwise the
       // app clears the backend token and the route guards flash a full loader.
       if (authEvent === 'SIGNED_IN' && !sameUser) {
-        localStorage.removeItem('token');
         setIsBackendTokenReady(false);
         attemptedTokenExchange.current.clear();
       } else if ((authEvent === 'TOKEN_REFRESHED' || authEvent === 'SIGNED_IN') && backendTokenReadyRef.current) {
@@ -260,9 +263,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: user.role || 'USER',
         });
 
-        if (data?.success && data.data?.token) {
-          localStorage.setItem('token', data.data.token);
-          if (data.data.user) {
+        if (data?.success) {
+          if (data.data?.user) {
             localStorage.setItem('user', JSON.stringify(data.data.user));
             // Update the user role from backend response (authoritative source —
             // the backend checks profiles.is_admin / profiles.role in the DB)
@@ -300,12 +302,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabaseAuth.signOut();
+    try {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.error('[Auth] Backend logout failed', e);
+    }
     userRef.current = null;
     sessionRef.current = null;
     setUser(null);
     setSession(null);
     setSupabaseUser(null);
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsBackendTokenReady(false);
     attemptedTokenExchange.current.clear();

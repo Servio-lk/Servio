@@ -26,10 +26,7 @@ export function registerAuthHandlers(
     _onForceLogout = onForceLogout;
 }
 
-function buildAuthHeader(): Record<string, string> {
-    const token = localStorage.getItem('token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-}
+
 
 /**
  * Wraps fetch() with automatic 401-retry logic.
@@ -42,7 +39,11 @@ export async function apiFetch(
     init?: RequestInit
 ): Promise<Response> {
     // First attempt
-    const response = await fetch(input, init);
+    const initialInit: RequestInit = {
+        ...init,
+        credentials: init?.credentials || 'include',
+    };
+    const response = await fetch(input, initialInit);
 
     if (response.status !== 401) return response;
 
@@ -74,13 +75,12 @@ export async function apiFetch(
         return response;
     }
 
-    // Rebuild the Authorization header with the new token and retry
-    const newAuthHeaders = buildAuthHeader();
+    // Rebuild init with credentials (auth headers no longer needed for cookies)
     const retryInit: RequestInit = {
         ...init,
+        credentials: init?.credentials || 'include',
         headers: {
             ...(init?.headers as Record<string, string> | undefined),
-            ...newAuthHeaders,
         },
     };
 

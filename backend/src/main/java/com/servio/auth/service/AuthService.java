@@ -151,7 +151,7 @@ public class AuthService {
         }
 
         // Determine role by checking the profiles table first (is_admin / role columns),
-        // then falling back to the request role.
+        // then checking the existing database user, and falling back to the request role.
         Role resolvedRole = Role.USER;
         String displayName = request.getFullName();
         try {
@@ -170,6 +170,14 @@ public class AuthService {
             }
         } catch (IllegalArgumentException ignored) {
             // supabaseUserId was not a valid UUID
+        }
+
+        // If profile didn't indicate admin, check if the user already exists in the database with a role
+        if (resolvedRole != Role.ADMIN) {
+            Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
+            if (existingUser.isPresent()) {
+                resolvedRole = existingUser.get().getRole();
+            }
         }
 
 

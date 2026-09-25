@@ -16,6 +16,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     
     List<Payment> findByUserId(UUID userId);
     
+    boolean existsByTransactionId(String transactionId);
+    
     List<Payment> findByPaymentStatus(String paymentStatus);
     
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.paymentStatus = 'COMPLETED'")

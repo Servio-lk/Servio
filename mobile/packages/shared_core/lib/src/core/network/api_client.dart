@@ -53,6 +53,15 @@ class ApiClient {
     final fullUrl = '$_baseUrl$cleanPath';
 
     final uri = Uri.parse(fullUrl);
+    
+    // Explicitly reject HTTP traffic for non-local endpoints
+    if (uri.scheme == 'http' &&
+        !uri.host.contains('localhost') &&
+        uri.host != '10.0.2.2' &&
+        uri.host != '127.0.0.1') {
+      throw const NetworkException('Cleartext HTTP traffic is not allowed for non-local endpoints.');
+    }
+
     if (queryParameters == null || queryParameters.isEmpty) {
       return uri;
     }
@@ -313,6 +322,8 @@ class ApiClient {
           traceId,
         );
       case 403:
+        // Force sign out when a 403 is encountered (Role/Authorization violation)
+        SupabaseService().signOut();
         throw ForbiddenException(
           message,
           403,
