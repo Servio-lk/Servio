@@ -155,8 +155,8 @@ public class AuthService {
             throw new IllegalArgumentException("Unauthorized: Supabase token validation failed - " + e.getMessage());
         }
 
-        // Local profiles (H2 in dev) often do not contain the Supabase row.
-        // Read is_admin from Supabase when the local row is missing or not an admin.
+        // Local profiles often miss the Supabase row. Check that row, then Supabase
+        // auth metadata and the remote profiles table, then the existing backend user.
         Role resolvedRole = Role.USER;
         String displayName = request.getFullName();
         try {
@@ -187,6 +187,13 @@ public class AuthService {
                 if (remoteProfile.admin) {
                     resolvedRole = Role.ADMIN;
                 }
+            }
+        }
+
+        if (resolvedRole != Role.ADMIN) {
+            Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
+            if (existingUser.isPresent()) {
+                resolvedRole = existingUser.get().getRole();
             }
         }
 

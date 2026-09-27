@@ -75,8 +75,8 @@ class AppointmentConcurrencyControlTest {
     }
 
     @Test
-    @DisplayName("Pessimistic lock query findForUpdateByAppointmentDateAndStatusNotIn is invoked during booking")
-    void testPessimisticLockQueryInvoked() {
+    @DisplayName("Advisory lock is acquired and findByAppointmentDateAndStatusNotIn is invoked during booking")
+    void testAdvisoryLockInvoked() {
         AppointmentRequest request = AppointmentRequest.builder()
                 .userId(userId)
                 .appointmentDate(targetSlot)
@@ -84,7 +84,7 @@ class AppointmentConcurrencyControlTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class)))
                 .thenAnswer(invocation -> {
@@ -98,7 +98,8 @@ class AppointmentConcurrencyControlTest {
         assertNotNull(dto);
         assertEquals(1L, dto.getId());
         verify(appointmentRepository, times(1))
-                .findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED")));
+                .findByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED")));
+        verify(jdbcTemplate, times(1)).execute(anyString());
         verify(appointmentRepository, times(1)).saveAndFlush(any(Appointment.class));
     }
 
@@ -118,7 +119,7 @@ class AppointmentConcurrencyControlTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), eq(List.of("CANCELLED"))))
                 .thenReturn(List.of(existingAppointment));
 
         ConflictException ex = assertThrows(ConflictException.class, () -> appointmentService.createAppointment(request, null));
@@ -136,7 +137,7 @@ class AppointmentConcurrencyControlTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class)))
                 .thenThrow(new DataIntegrityViolationException("ERROR: duplicate key value violates unique constraint \"uq_appointment_active_slot\""));
@@ -158,7 +159,7 @@ class AppointmentConcurrencyControlTest {
         AtomicBoolean slotAcquired = new AtomicBoolean(false);
 
         when(userRepository.findById(any(UUID.class))).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetSlot), anyList()))
                 .thenAnswer(inv -> {
                     // If slot has been acquired by another thread, return existing appointment
                     if (slotAcquired.get()) {

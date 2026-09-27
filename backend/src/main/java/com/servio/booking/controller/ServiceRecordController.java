@@ -9,16 +9,17 @@ import com.servio.booking.service.ServiceRecordService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/servicerecords")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ServiceRecordController {
     private final ServiceRecordService serviceRecordService;
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<ServiceRecordDto>> createServiceRecord(
             @RequestBody ServiceRecordRequest request) {
         ServiceRecordDto record = serviceRecordService.createServiceRecord(request);
@@ -27,6 +28,7 @@ public class ServiceRecordController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<ServiceRecordDto>> updateServiceRecord(
             @PathVariable Long id,
             @RequestBody ServiceRecordRequest request) {
@@ -35,6 +37,7 @@ public class ServiceRecordController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<Void>> deleteServiceRecord(@PathVariable Long id) {
         serviceRecordService.deleteServiceRecord(id);
         return ResponseEntity.ok(ApiResponse.success("Service record deleted successfully", null));

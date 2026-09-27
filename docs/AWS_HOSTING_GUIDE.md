@@ -135,36 +135,8 @@ aws s3 website s3://servio-frontend \
 
 > The error document is set to `index.html` to support React Router's client-side routing.
 
-### 4.3 Set Bucket Policy for Public Read Access
-Create a file called `bucket-policy.json`:
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "PublicReadGetObject",
-      "Effect": "Allow",
-      "Principal": "*",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::servio-frontend/*"
-    }
-  ]
-}
-```
-
-Apply the policy:
-```bash
-# First, disable Block Public Access
-aws s3api put-public-access-block \
-  --bucket servio-frontend \
-  --public-access-block-configuration \
-  "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false"
-
-# Then apply the bucket policy
-aws s3api put-bucket-policy \
-  --bucket servio-frontend \
-  --policy file://bucket-policy.json
-```
+### 4.3 Configure Bucket Settings
+Ensure that "Block Public Access" remains **enabled**. We will grant access specifically to CloudFront in the next step, rather than making the bucket public to the internet.
 
 ### 4.4 Test: Upload Frontend Build Manually
 ```bash
@@ -301,14 +273,14 @@ aws ec2 create-security-group \
   --group-name servio-sg \
   --description "Servio Backend Security Group"
 
-# Allow SSH (port 22)
+# Allow SSH (port 22) - Replace with your IP
 aws ec2 authorize-security-group-ingress \
   --group-name servio-sg \
   --protocol tcp \
   --port 22 \
-  --cidr 0.0.0.0/0
+  --cidr <YOUR_IP_ADDRESS>/32
 
-# Allow Backend API (port 3001)
+# Allow Backend API (port 3001) - For production, consider restricting this to CloudFront IPs or an ALB
 aws ec2 authorize-security-group-ingress \
   --group-name servio-sg \
   --protocol tcp \

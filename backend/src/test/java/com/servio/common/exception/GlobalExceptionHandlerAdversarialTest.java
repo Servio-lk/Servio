@@ -42,7 +42,7 @@ class GlobalExceptionHandlerAdversarialTest {
         assertNotNull(body);
         assertEquals(400, body.getStatus());
         assertEquals("Bad Request", body.getError());
-        assertTrue(body.getMessage().contains("invalid-uuid-format"));
+        assertEquals("Invalid request parameters.", body.getMessage());
         assertEquals("/api/admin/customers/invalid-uuid-format", body.getPath());
         assertNotNull(body.getTraceId());
         assertDoesNotThrow(() -> UUID.fromString(body.getTraceId()));

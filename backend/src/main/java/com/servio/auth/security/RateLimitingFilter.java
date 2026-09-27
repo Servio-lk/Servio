@@ -42,7 +42,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // Apply rate limit specifically to all /api/auth/** endpoints (e.g. login, signup, supabase-login, etc.)
-        if (path.startsWith("/api/auth/")) {
+        if (path.startsWith("/api/auth/") || path.startsWith("/api/agent/") || path.startsWith("/api/payments/payhere/initiate")) {
             String clientIp = extractClientIp(request);
             Bucket bucket = buckets.computeIfAbsent(clientIp, k -> createNewBucket());
 

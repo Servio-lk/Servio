@@ -159,6 +159,28 @@ public class PayHereService {
 
         // 3. Act on payment status
         if ("2".equals(statusCode)) {
+            // PAY-02: Idempotency check
+            if (paymentRepository.existsByTransactionId(paymentId)) {
+                log.info("Duplicate payment webhook received for paymentId {}", paymentId);
+                return;
+            }
+            if ("CONFIRMED".equals(appointment.getStatus())) {
+                log.info("Appointment {} is already confirmed", appointmentId);
+                return;
+            }
+
+            // PAY-01: Amount & Currency Validation
+            BigDecimal expectedAmount = appointment.getEstimatedCost() != null ? appointment.getEstimatedCost() : BigDecimal.ZERO;
+            BigDecimal actualAmount = new BigDecimal(payhereAmount);
+            if (expectedAmount.compareTo(actualAmount) != 0) {
+                log.error("Amount mismatch for orderId {}: expected {}, received {}", orderId, expectedAmount, actualAmount);
+                throw new SecurityException("Payment amount mismatch");
+            }
+            if (!"LKR".equals(payhereCurrency)) {
+                log.error("Currency mismatch for orderId {}: expected LKR, received {}", orderId, payhereCurrency);
+                throw new SecurityException("Payment currency mismatch");
+            }
+
             // Successful payment — confirm the appointment and record payment
             appointment.setStatus("CONFIRMED");
             appointmentRepository.save(appointment);
@@ -201,7 +223,10 @@ public class PayHereService {
         String hashedSecret = md5(merchantSecret).toUpperCase();
         String localSig = md5(merchantIdParam + orderId + payhereAmount
                 + payhereCurrency + statusCode + hashedSecret).toUpperCase();
-        return localSig.equals(md5sig);
+        return MessageDigest.isEqual(
+                localSig.getBytes(StandardCharsets.UTF_8),
+                md5sig.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     /**

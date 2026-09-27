@@ -11,6 +11,7 @@ import com.servio.repair.service.RepairJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class RepairJobController {
     private final RepairJobService repairJobService;
     
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<RepairJobDto>> createRepairJob(@RequestBody RepairJobRequest request) {
         RepairJob repairJob = repairJobService.createRepairJob(
                 request.getAppointmentId(),
@@ -44,6 +46,7 @@ public class RepairJobController {
     }
     
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isRepairJobOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<RepairJobDto>> getRepairJob(@PathVariable Long id) {
         RepairJob repairJob = repairJobService.getRepairJobById(id);
         RepairJobDto dto = convertToDto(repairJob);
@@ -55,6 +58,7 @@ public class RepairJobController {
     }
     
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<List<RepairJobDto>>> getUserRepairJobs(@PathVariable UUID userId) {
         List<RepairJob> repairJobs = repairJobService.getUserRepairJobs(userId);
         List<RepairJobDto> dtos = repairJobs.stream()
@@ -69,6 +73,7 @@ public class RepairJobController {
     }
     
     @GetMapping("/vehicle/{vehicleId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isVehicleOwner(authentication, #vehicleId)")
     public ResponseEntity<ApiResponse<List<RepairJobDto>>> getVehicleRepairJobs(@PathVariable Long vehicleId) {
         List<RepairJob> repairJobs = repairJobService.getVehicleRepairJobs(vehicleId);
         List<RepairJobDto> dtos = repairJobs.stream()
@@ -83,6 +88,7 @@ public class RepairJobController {
     }
     
     @GetMapping("/status/{status}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<List<RepairJobDto>>> getRepairJobsByStatus(@PathVariable String status) {
         List<RepairJob> repairJobs = repairJobService.getRepairJobsByStatus(status);
         List<RepairJobDto> dtos = repairJobs.stream()
@@ -97,6 +103,7 @@ public class RepairJobController {
     }
     
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<RepairJobDto>> updateRepairJobStatus(
             @PathVariable Long id,
             @RequestParam String status
@@ -111,6 +118,7 @@ public class RepairJobController {
     }
     
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<Void>> deleteRepairJob(@PathVariable Long id) {
         repairJobService.deleteRepairJob(id);
         return ResponseEntity.ok(ApiResponse.<Void>builder()

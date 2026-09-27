@@ -23,7 +23,6 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/vehicles")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class VehicleController {
 
     private final VehicleService vehicleService;
@@ -56,6 +55,7 @@ public class VehicleController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<VehicleDto>> createVehicle(@RequestBody VehicleRequest request) {
         VehicleDto vehicle = vehicleService.createVehicle(request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -67,6 +67,7 @@ public class VehicleController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<List<VehicleDto>>> getAllVehicles() {
         List<VehicleDto> vehicles = vehicleService.getAllVehicles();
         return ResponseEntity.ok(ApiResponse.<List<VehicleDto>>builder()
@@ -77,6 +78,7 @@ public class VehicleController {
     }
 
     @GetMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<List<VehicleDto>>> getVehiclesByUserId(@PathVariable UUID userId) {
         List<VehicleDto> vehicles = vehicleService.getVehiclesByUserId(userId);
         return ResponseEntity.ok(ApiResponse.<List<VehicleDto>>builder()
@@ -87,6 +89,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isVehicleOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<VehicleDto>> getVehicleById(@PathVariable Long id) {
         VehicleDto vehicle = vehicleService.getVehicleById(id);
         return ResponseEntity.ok(ApiResponse.<VehicleDto>builder()
@@ -97,6 +100,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}/stats")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isVehicleOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<VehicleStatsDto>> getVehicleStats(@PathVariable Long id) {
         VehicleStatsDto stats = vehicleService.getVehicleStats(id);
         return ResponseEntity.ok(ApiResponse.<VehicleStatsDto>builder()
@@ -107,6 +111,7 @@ public class VehicleController {
     }
 
     @GetMapping("/{id}/servicerecords")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isVehicleOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<List<ServiceRecordDto>>> getServiceRecordsByVehicle(@PathVariable Long id) {
         List<ServiceRecordDto> records = vehicleService.getServiceRecordsByVehicle(id);
         return ResponseEntity.ok(ApiResponse.<List<ServiceRecordDto>>builder()
@@ -117,6 +122,7 @@ public class VehicleController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isVehicleOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<VehicleDto>> updateVehicle(
             @PathVariable Long id,
             @RequestBody VehicleRequest request) {
@@ -129,6 +135,7 @@ public class VehicleController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN') or @ownershipSecurity.isVehicleOwner(authentication, #id)")
     public ResponseEntity<ApiResponse<Void>> deleteVehicle(@PathVariable Long id) {
         vehicleService.deleteVehicle(id);
         return ResponseEntity.ok(ApiResponse.<Void>builder()

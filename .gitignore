@@ -155,3 +155,6 @@ servio-key-new.pem
 ehthumbs.db
 Thumbs.db
 boot.log
+
+# Android Gradle build cache
+mobile/android/.gradle/

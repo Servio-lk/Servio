@@ -198,7 +198,7 @@ public class TransactionalEventIsolationAdversarialTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetDate), anyList()))
+        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetDate), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenAnswer(inv -> {
             Appointment a = inv.getArgument(0);
@@ -265,6 +265,7 @@ public class TransactionalEventIsolationAdversarialTest {
                 .id(999L)
                 .user(testUser)
                 .status("PENDING_PAYMENT")
+                .estimatedCost(new BigDecimal("5000.00"))
                 .build();
 
         String orderId = "ORD-999";

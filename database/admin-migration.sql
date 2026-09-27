@@ -8,7 +8,7 @@ ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'CUSTOMER';
 -- Add check constraint to ensure valid role values
 ALTER TABLE users
 ADD CONSTRAINT users_role_check
-CHECK (role IN ('CUSTOMER', 'ADMIN', 'STAFF'));
+CHECK (role IN ('CUSTOMER', 'ADMIN', 'STAFF', 'USER'));
 
 -- Create an admin user for testing (password: admin123)
 -- Note: This is for development only, remove or change in production

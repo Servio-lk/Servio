@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine@sha256:7c7c34d31489e2dd60ee25fbc72d1af205d836ea7baf5f396fc4c32b90623a81 AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ COPY . .
 RUN npm run build
 
 # Production runtime stage with unprivileged Nginx (non-root)
-FROM nginxinc/nginx-unprivileged:alpine AS runner
+FROM nginxinc/nginx-unprivileged:alpine@sha256:4d7ba91730a3b2b4d1b714b62db4cc42ec88a804ec607c30d93daff0f81d5b12 AS runner
 
 # Copy custom nginx configuration
 COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
