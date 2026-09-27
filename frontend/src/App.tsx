@@ -4,7 +4,6 @@ import { Toaster } from '@/components/ui/sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AuthGuard, GuestGuard } from '@/components/AuthGuard'
 import { AdminGuard } from '@/components/AdminGuard'
-import { useAuth } from '@/contexts/AuthContext'
 
 // Auth pages
 import Login from './pages/Login'
@@ -24,6 +23,7 @@ import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 import AccountPage from './pages/AccountPage'
+import AccountSettingsPage from './pages/AccountSettingsPage'
 import AssistantPage from './pages/AssistantPage'
 
 // Lazy-loaded Admin Layout & Pages
@@ -42,36 +42,8 @@ const AdminServiceBays = lazy(() => import('@/pages/admin/ServiceBays'))
 const AdminWalkInCustomers = lazy(() => import('@/pages/admin/WalkInCustomers'))
 
 import './App.css'
+import OffersPage from './pages/OffersPage'
 
-<<<<<<< HEAD
-// Smart redirect component: routes authenticated users to their appropriate dashboard
-function RootRedirect() {
-  const { isAuthenticated, isAdmin, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen w-full bg-[#fff7f5]">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-[#ff5d2e] border-t-transparent rounded-full animate-spin" />
-          <p className="text-base font-medium text-black/70">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If not authenticated, go to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // If authenticated and admin, go to admin dashboard
-  if (isAdmin) {
-    return <Navigate to="/admin" replace />;
-  }
-
-  // If authenticated and regular user, go to home
-  return <Navigate to="/home" replace />;
-=======
 function AdminLoadingFallback() {
   return (
     <div className="flex items-center justify-center min-h-[50vh] w-full">
@@ -81,7 +53,6 @@ function AdminLoadingFallback() {
       </div>
     </div>
   )
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
 }
 
 function App() {
@@ -202,6 +173,23 @@ function App() {
             }
           />
 
+          <Route 
+            path="/offers" 
+            element={
+              <AuthGuard>
+                <OffersPage />
+              </AuthGuard>} 
+          />
+
+          <Route
+            path="/account/settings"
+            element={
+              <AuthGuard>
+                <AccountSettingsPage />
+              </AuthGuard>
+            }
+          />
+
           {/* Protected lazy-loaded Admin routes */}
           <Route
             path="/admin"
@@ -239,11 +227,9 @@ function App() {
           <Route path="/mobile/confirmed" element={<Navigate to="/home" replace />} />
           <Route path="/mobile/welcome" element={<Navigate to="/login" replace />} />
 
-          {/* Smart root redirect: routes authenticated users to their appropriate dashboard */}
-          <Route path="/" element={<RootRedirect />} />
-          
-          {/* Default: redirect unknown routes based on auth status (via root redirect) */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Default: redirect root and unknown routes to login */}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

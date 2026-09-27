@@ -121,6 +121,23 @@ class AdminApiService {
     return response.json();
   }
 
+  async createOffer(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/offers`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async deleteOffer(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/offers/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
   async getAllAppointments(status?: string) {
     const url = status
       ? `${API_BASE_URL}/admin/appointments?status=${status}`
@@ -176,16 +193,6 @@ class AdminApiService {
     return response.json();
   }
 
-<<<<<<< HEAD
-  async recordPayment(id: number, amount: number, paymentMethod: string) {
-    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${id}/payments`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ amount, paymentMethod }),
-    });
-    return response.json();
-  }
-=======
   async getStaff() {
     const response = await apiFetch(`${API_BASE_URL}/admin/staff`, {
       headers: this.getHeaders(),
@@ -288,8 +295,6 @@ class AdminApiService {
     });
     return response.json();
   }
-
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
 }
 
 export const adminApi = new AdminApiService();

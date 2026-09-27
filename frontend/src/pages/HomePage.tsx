@@ -77,18 +77,6 @@ export default function HomePage() {
     try {
       setLoading(true);
 
-<<<<<<< HEAD
-      // Load featured services (for popular services section)
-      const servicesResponse = await apiService.getFeaturedServices();
-      if (servicesResponse.success && servicesResponse.data && servicesResponse.data.length > 0) {
-        setFeaturedServices(servicesResponse.data.slice(0, 4)); // Show top 4
-      } else {
-        // Fallback: if no services are marked featured in DB, show first services.
-        const allServicesResponse = await apiService.getAllServices();
-        if (allServicesResponse.success && allServicesResponse.data) {
-          setFeaturedServices(allServicesResponse.data.slice(0, 4));
-        }
-=======
       const [allServicesResult, servicesResult, offersResult, providersResult] = await Promise.allSettled([
         withTimeout(apiService.getAllServices(), 10000, 'All services'),
         withTimeout(apiService.getFeaturedServices(), 10000, 'Featured services'),
@@ -100,12 +88,13 @@ export default function HomePage() {
 
       if (servicesResult.status === 'fulfilled') {
         const servicesResponse = servicesResult.value;
-        if (servicesResponse.success && servicesResponse.data) {
+        if (servicesResponse.success && servicesResponse.data && servicesResponse.data.length > 0) {
           setFeaturedServices(servicesResponse.data.slice(0, 4));
+        } else if (allServicesData) {
+          setFeaturedServices(allServicesData.slice(0, 4));
         }
       } else {
         console.error('[HomePage] Failed to load featured services:', servicesResult.reason);
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       }
 
       if (offersResult.status === 'fulfilled') {
@@ -359,9 +348,13 @@ export default function HomePage() {
                       id={offer.id}
                       title={offer.title}
                       subtitle={offer.subtitle}
+                      description={offer.description}
                       discountType={offer.discountType}
                       discountValue={offer.discountValue}
                       imageUrl={offer.imageUrl}
+                      promoCode={offer.promoCode}
+                      validUntil={offer.validUntil}
+                      expired={offer.expired}
                     />
                   ))}
                 </div>

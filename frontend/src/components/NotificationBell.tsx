@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, CheckCheck, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { NotificationDto } from '@/services/api';
 
@@ -18,6 +19,10 @@ function typeColor(type: string): string {
     case 'REMINDER':    return 'bg-blue-50 text-blue-600';
     case 'APPOINTMENT': return 'bg-green-50 text-green-600';
     case 'PAYMENT':     return 'bg-purple-50 text-purple-600';
+    case 'PROMO':
+    case 'PROMOTIONAL': return 'bg-[#fff7f5] text-[#ff5d2e]';
+    case 'ACCOUNT':     return 'bg-amber-50 text-amber-700';
+    case 'SYSTEM':      return 'bg-gray-100 text-gray-600';
     default:            return 'bg-[#fff7f5] text-[#ff5d2e]';
   }
 }
@@ -29,7 +34,7 @@ function NotificationItem({
   notification: NotificationDto;
   onRead: (id: number) => void;
 }) {
-  return (
+  const body = (
     <div
       className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
         notification.isRead ? 'bg-white' : 'bg-[#fff7f5]'
@@ -50,7 +55,11 @@ function NotificationItem({
       {/* Mark read button */}
       {!notification.isRead && (
         <button
-          onClick={() => onRead(notification.id)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onRead(notification.id);
+          }}
           className="shrink-0 p-1 rounded hover:bg-black/5 transition-colors mt-0.5"
           title="Mark as read"
         >
@@ -59,11 +68,27 @@ function NotificationItem({
       )}
     </div>
   );
+
+  if (!notification.actionUrl) {
+    return body;
+  }
+
+  return (
+    <Link
+      to={notification.actionUrl}
+      onClick={() => {
+        if (!notification.isRead) onRead(notification.id);
+      }}
+      className="block"
+    >
+      {body}
+    </Link>
+  );
 }
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead } = useNotifications();
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, clearAll } = useNotifications();
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -128,6 +153,16 @@ export function NotificationBell() {
                 >
                   <CheckCheck className="w-3.5 h-3.5" />
                   All read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={clearAll}
+                  className="flex items-center gap-1 text-xs text-black/50 font-medium px-2 py-1 rounded hover:bg-black/5 transition-colors"
+                  title="Clear all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Clear
                 </button>
               )}
               <button

@@ -78,8 +78,12 @@ public class ServiceService {
     }
 
     public List<OfferResponse> getActiveOffers() {
-        List<Offer> offers = offerRepository.findActiveOffers(LocalDateTime.now());
-        return offers.stream()
+        return getActiveOffers(null);
+    }
+
+    public List<OfferResponse> getActiveOffers(String category) {
+        String normalized = (category == null || category.isBlank()) ? null : category;
+        return offerRepository.findActiveOffers(LocalDateTime.now(), normalized).stream()
                 .map(this::mapToOfferResponse)
                 .collect(Collectors.toList());
     }
@@ -170,6 +174,10 @@ public class ServiceService {
         response.setDiscountValue(offer.getDiscountValue());
         response.setImageUrl(offer.getImageUrl());
         response.setValidUntil(offer.getValidUntil());
+        response.setPromoCode(offer.getPromoCode());
+        response.setCategory(offer.getCategory());
+        response.setValidFrom(offer.getValidFrom());
+        response.setExpired(offer.getValidUntil() != null && offer.getValidUntil().isBefore(LocalDateTime.now()));
         return response;
     }
 }

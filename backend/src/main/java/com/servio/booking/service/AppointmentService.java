@@ -172,28 +172,6 @@ public class AppointmentService {
             return appointmentRepository.findUserAppointmentsOrderByCreatedAt(userUuid).stream()
                     .map(this::convertToDto)
                     .collect(Collectors.toList());
-<<<<<<< HEAD:backend/src/main/java/com/servio/service/AppointmentService.java
-        } catch (NumberFormatException e) {
-            try {
-                UUID profileId = UUID.fromString(userId);
-                return appointmentRepository.findProfileAppointmentsOrderByDate(profileId).stream()
-                        .map(this::convertToDto)
-                        .collect(Collectors.toList());
-            } catch (IllegalArgumentException ex) {
-                return List.of();
-            }
-        }
-    }
-
-    /**
-     * Returns appointments for the currently authenticated user by reading
-     * the user ID directly from the JWT — no need for the frontend to pass it.
-     */
-    @Transactional(readOnly = true)
-    public List<AppointmentDto> getMyAppointments(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("User not authenticated");
-=======
         } catch (IllegalArgumentException ex) {
             return List.of();
         }
@@ -203,7 +181,6 @@ public class AppointmentService {
     public List<AppointmentDto> getMyAppointments(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new SecurityException("User not authenticated");
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5:backend/src/main/java/com/servio/booking/service/AppointmentService.java
         }
 
         String userId = authentication.getPrincipal().toString();

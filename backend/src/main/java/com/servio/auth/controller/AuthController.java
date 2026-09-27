@@ -32,6 +32,7 @@ import java.util.Map;
 @Tag(name = "Auth", description = "Authentication and User Registration APIs")
 public class AuthController {
     private final AuthService authService;
+    private final com.servio.auth.service.UserAccountService userAccountService;
     private final MechanicService mechanicService;
     private final com.servio.auth.service.SupabaseAdminService supabaseAdminService;
 
@@ -132,6 +133,70 @@ public class AuthController {
                             .success(false)
                             .message(e.getMessage())
                             .build());
+        }
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
+            Authentication authentication,
+            @Valid @RequestBody com.servio.auth.dto.UpdateProfileRequest request) {
+        try {
+            java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
+            UserResponse updated = userAccountService.updateProfile(userId, request);
+            return ResponseEntity.ok(ApiResponse.success("Profile updated", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/profile/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody com.servio.auth.dto.ChangePasswordRequest request) {
+        try {
+            java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
+            userAccountService.changePassword(userId, request);
+            return ResponseEntity.ok(ApiResponse.success("Password updated", null));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/profile/email")
+    public ResponseEntity<ApiResponse<UserResponse>> changeEmail(
+            Authentication authentication,
+            @Valid @RequestBody com.servio.auth.dto.ChangeEmailRequest request) {
+        try {
+            java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
+            UserResponse updated = userAccountService.changeEmail(userId, request);
+            return ResponseEntity.ok(ApiResponse.success("Email updated", updated));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @GetMapping("/preferences")
+    public ResponseEntity<ApiResponse<com.servio.auth.dto.NotificationPreferenceResponse>> getPreferences(
+            Authentication authentication) {
+        try {
+            java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Preferences retrieved", userAccountService.getPreferences(userId)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage(), null));
+        }
+    }
+
+    @PutMapping("/preferences")
+    public ResponseEntity<ApiResponse<com.servio.auth.dto.NotificationPreferenceResponse>> updatePreferences(
+            Authentication authentication,
+            @RequestBody com.servio.auth.dto.UpdatePreferencesRequest request) {
+        try {
+            java.util.UUID userId = java.util.UUID.fromString(authentication.getPrincipal().toString());
+            return ResponseEntity.ok(ApiResponse.success(
+                    "Preferences updated", userAccountService.updatePreferences(userId, request)));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), null));
         }
     }
 

@@ -10,6 +10,7 @@ import com.servio.notification.dto.NotificationDto;
 import com.servio.notification.dto.NotificationRequest;
 import com.servio.notification.entity.Notification;
 import com.servio.notification.repository.NotificationRepository;
+import com.servio.auth.repository.UserNotificationPreferenceRepository;
 import com.servio.auth.repository.UserRepository;
 import com.servio.notification.service.AppointmentEventPublisher;
 import com.servio.notification.service.NotificationService;
@@ -248,7 +249,8 @@ public class WebSocketStompAdversarialTest {
     @DisplayName("Adversarial: NotificationService createNotification persists entity and pushes to /topic/notifications/user/{id} even if WebSocket fails")
     void testNotificationCreationWithWebSocketResilience() {
         AppointmentEventPublisher publisher = mock(AppointmentEventPublisher.class);
-        NotificationService service = new NotificationService(notificationRepository, userRepository, publisher);
+        NotificationService service = new NotificationService(
+                notificationRepository, userRepository, publisher, mock(UserNotificationPreferenceRepository.class));
 
         NotificationRequest request = NotificationRequest.builder()
                 .userId(testUserId)

@@ -18,4 +18,8 @@ public class OfferResponse {
     private BigDecimal discountValue;
     private String imageUrl;
     private LocalDateTime validUntil;
+    private String promoCode;
+    private String category;
+    private LocalDateTime validFrom;
+    private Boolean expired;
 }

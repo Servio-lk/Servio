@@ -4,7 +4,9 @@ package com.servio.catalog.service;
 import com.servio.catalog.entity.Offer;
 import com.servio.catalog.repository.OfferRepository;
 import com.servio.admin.dto.OfferRequest;
+import com.servio.common.event.OfferPublishedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,7 @@ import java.util.List;
 public class AdminOfferService {
 
     private final OfferRepository offerRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     public List<Offer> getAllOffers() {
         return offerRepository.findAll();
@@ -34,11 +37,18 @@ public class AdminOfferService {
         offer.setDiscountType(request.getDiscountType());
         offer.setDiscountValue(request.getDiscountValue());
         offer.setImageUrl(request.getImageUrl());
+        offer.setPromoCode(blankToNull(request.getPromoCode()));
+        offer.setCategory(blankToNull(request.getCategory()));
         offer.setValidFrom(request.getValidFrom());
         offer.setValidUntil(request.getValidUntil());
-        offer.setIsActive(request.getIsActive());
+        offer.setIsActive(request.getIsActive() == null || request.getIsActive());
 
-        return offerRepository.save(offer);
+        Offer saved = offerRepository.save(offer);
+        if (Boolean.TRUE.equals(saved.getIsActive())) {
+            eventPublisher.publishEvent(new OfferPublishedEvent(
+                    this, saved.getId(), saved.getTitle(), saved.getPromoCode()));
+        }
+        return saved;
     }
 
     @Transactional
@@ -63,6 +73,12 @@ public class AdminOfferService {
         if (request.getImageUrl() != null) {
             offer.setImageUrl(request.getImageUrl());
         }
+        if (request.getPromoCode() != null) {
+            offer.setPromoCode(blankToNull(request.getPromoCode()));
+        }
+        if (request.getCategory() != null) {
+            offer.setCategory(blankToNull(request.getCategory()));
+        }
         if (request.getValidFrom() != null) {
             offer.setValidFrom(request.getValidFrom());
         }
@@ -82,5 +98,12 @@ public class AdminOfferService {
             throw new RuntimeException("Offer not found with id: " + id);
         }
         offerRepository.deleteById(id);
+    }
+
+    private String blankToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

@@ -76,12 +76,8 @@ export function AdminAppointments() {
   const [assigningId, setAssigningId] = useState<number | null>(null);
   const [assignedMechanics, setAssignedMechanics] = useState<Record<number, number>>({});
 
-<<<<<<< HEAD
-=======
   useEffect(() => { loadAppointments(); }, [statusFilter]);
   useEffect(() => { loadMechanics(); }, []);
-
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
   // Close dropdowns on outside click
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -176,10 +172,7 @@ export function AdminAppointments() {
       toast.error('Failed to update appointment status');
     } finally {
       setUpdatingId(null);
-<<<<<<< HEAD
       setOpenDropdownId(null);
-=======
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
     }
   };
 
@@ -514,26 +507,16 @@ export function AdminAppointments() {
                         </div>
                       </td>
 
-<<<<<<< HEAD
-                      {/* Cost */}
-                      <td className="px-4 py-4 text-sm font-medium text-black">
-                        {appt.actualCost
-                          ? `Rs. ${Number(appt.actualCost).toLocaleString()}`
-                          : appt.estimatedCost
-                            ? `~Rs. ${Number(appt.estimatedCost).toLocaleString()}`
-                            : 'TBD'}
-=======
                       {/* Cost column */}
                       <td className="px-5 py-5 align-middle text-right text-sm font-semibold text-black">
                         <div className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                           <Banknote className="w-3 h-3 text-gray-400" />
                           {appt.actualCost
-                            ? `Rs. ${appt.actualCost.toLocaleString()}`
+                            ? `Rs. ${Number(appt.actualCost).toLocaleString()}`
                             : appt.estimatedCost
-                              ? `~Rs. ${appt.estimatedCost.toLocaleString()}`
+                              ? `~Rs. ${Number(appt.estimatedCost).toLocaleString()}`
                               : 'TBD'}
                         </div>
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
                       </td>
                     </tr>
                   );

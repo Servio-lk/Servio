@@ -181,18 +181,8 @@ export function AdminMechanics() {
   const loadStaff = async () => {
     try {
       setLoading(true);
-<<<<<<< HEAD
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/mechanics`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      const data = await response.json();
-      setMechanics(data.data || []);
-=======
       const response = await adminApi.getStaff();
       setStaff(response.data || []);
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
     } catch (error) {
       console.error('Failed to load staff:', error);
       toast.error('Failed to load staff');
@@ -275,33 +265,6 @@ export function AdminMechanics() {
   const saveStaff = async () => {
     if (!validateForm()) return;
     try {
-<<<<<<< HEAD
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/mechanics`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (response.ok) {
-        toast.success('Mechanic added successfully');
-        setShowModal(false);
-        setFormData({
-          fullName: '',
-          email: '',
-          phone: '',
-          specialization: '',
-          experienceYears: '',
-        });
-        loadMechanics();
-      } else {
-        toast.error('Failed to add mechanic');
-      }
-    } catch (error) {
-      toast.error('Error adding mechanic');
-=======
       const response = editing
         ? await adminApi.updateStaff(editing.id, buildPayload())
         : await adminApi.createStaff(buildPayload());
@@ -311,7 +274,6 @@ export function AdminMechanics() {
       loadStaff();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save staff member');
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
     }
   };
 

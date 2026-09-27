@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   User, Car, Plus, Pencil, Trash2, Clock,
   Phone, MapPin, Mail, ChevronDown, ChevronUp, X, Save,
@@ -238,6 +239,9 @@ export default function AccountPage() {
                   <p className="text-sm text-black/50">
                     {user?.role || 'Customer'}
                   </p>
+                  <Link to="/account/settings" className="text-sm font-medium text-[#ff5d2e] hover:underline">
+                    Edit account settings
+                  </Link>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -518,9 +522,13 @@ export default function AccountPage() {
                       id={offer.id}
                       title={offer.title}
                       subtitle={offer.subtitle}
+                      description={offer.description}
                       discountType={offer.discountType}
                       discountValue={offer.discountValue}
                       imageUrl={offer.imageUrl}
+                      promoCode={offer.promoCode}
+                      validUntil={offer.validUntil}
+                      expired={offer.expired}
                     />
                   ))}
                 </div>

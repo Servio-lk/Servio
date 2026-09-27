@@ -14,13 +14,8 @@ export function AdminJobCards() {
     try {
       setLoading(true);
       const url = statusFilter
-<<<<<<< HEAD
-        ? `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards/status/${statusFilter}`
-        : `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/admin/job-cards`;
-=======
         ? `${API_BASE_URL}/admin/job-cards/status/${statusFilter}`
         : `${API_BASE_URL}/admin/job-cards`;
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       
       const response = await fetch(url, {
         headers: {

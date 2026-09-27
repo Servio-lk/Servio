@@ -127,6 +127,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySessionState = useCallback((nextSession: Session, forceUserUpdate = false) => {
     const nextUser = mapSupabaseUser(nextSession.user);
+    const current = userRef.current;
+    if (current?.id === nextUser.id && current.role && current.role.toUpperCase() === 'ADMIN') {
+      nextUser.role = current.role;
+    }
 
     sessionRef.current = nextSession;
     setSession(prev => (prev?.access_token === nextSession.access_token ? prev : nextSession));
@@ -161,10 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return true;
       }
 
-<<<<<<< HEAD
       setIsBackendTokenReady(false);
-=======
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       return false;
     } catch {
       setIsBackendTokenReady(false);
@@ -193,14 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const currentSession = await supabaseAuth.getCurrentSession();
         if (currentSession) {
-<<<<<<< HEAD
-          setSession(currentSession);
-          setSupabaseUser(currentSession.user);
-          setUser(mapSupabaseUser(currentSession.user));
-          await refreshBackendToken();
-=======
           applySessionState(currentSession);
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
         }
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -247,18 +241,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-<<<<<<< HEAD
-  }, [refreshBackendToken]);
-=======
   }, [applySessionState]);
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
 
   useEffect(() => {
     const syncBackendToken = async () => {
       if (!session || !user || isBackendTokenReady) return;
 
-<<<<<<< HEAD
-=======
       const accessToken = session.access_token;
       if (attemptedTokenExchange.current.has(accessToken)) {
         setIsBackendTokenReady(true);
@@ -268,7 +256,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       attemptedTokenExchange.current.add(accessToken);
       setIsBackendTokenReady(true);
 
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
       try {
         console.log('[Auth] Exchanging Supabase token for backend token...');
 
@@ -295,22 +282,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 return nextUser;
               });
             }
-<<<<<<< HEAD
-            setIsBackendTokenReady(true);
-            console.log('[Auth] Backend token stored successfully');
-          } else {
-            setIsBackendTokenReady(false);
-            console.warn('[Auth] supabase-login did not return a token:', data);
-          }
-        } catch {
-          setIsBackendTokenReady(false);
-          console.warn('[Auth] Could not parse supabase-login response:', text);
-=======
           }
           console.log('[Auth] Backend token stored successfully');
         } else {
           console.warn('[Auth] supabase-login did not return a token');
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
         }
       } catch (error) {
         setIsBackendTokenReady(false);

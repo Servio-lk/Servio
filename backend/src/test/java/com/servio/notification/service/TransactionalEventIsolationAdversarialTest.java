@@ -4,6 +4,7 @@ import com.servio.admin.dto.PaymentCollectionRequest;
 import com.servio.admin.service.AdminAppointmentService;
 import com.servio.auth.entity.Role;
 import com.servio.auth.entity.User;
+import com.servio.auth.repository.UserNotificationPreferenceRepository;
 import com.servio.auth.repository.UserRepository;
 import com.servio.booking.dto.AppointmentDto;
 import com.servio.booking.dto.AppointmentRequest;
@@ -93,7 +94,8 @@ public class TransactionalEventIsolationAdversarialTest {
                 .build();
         targetDate = LocalDateTime.of(2026, 11, 10, 14, 0);
 
-        notificationService = new NotificationService(notificationRepository, userRepository, eventPublisher);
+        notificationService = new NotificationService(
+                notificationRepository, userRepository, eventPublisher, mock(UserNotificationPreferenceRepository.class));
 
         appointmentService = new AppointmentService(
                 appointmentRepository,

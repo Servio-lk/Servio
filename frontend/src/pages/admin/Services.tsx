@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { adminApi } from '../../services/adminApi';
-<<<<<<< HEAD
-import { apiService } from '../../services/api';
-import { Package, Plus, Search, Edit, Trash2, Filter, Clock } from 'lucide-react';
-=======
 import { apiService, type ServiceCategory } from '../../services/api';
 import {
   ArrowDown,
@@ -24,7 +20,6 @@ import {
   Upload,
   X,
 } from 'lucide-react';
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
 import { toast } from 'sonner';
 
 type ServiceStatus = 'DRAFT' | 'PUBLISHED' | 'HIDDEN';
@@ -114,32 +109,6 @@ export function AdminServices() {
     loadInitialData();
   }, []);
 
-<<<<<<< HEAD
-  const normalizeFallbackServices = (items: any[]) => {
-    return items.map((service) => ({
-      ...service,
-      // Public /api/services only returns active services, but has no isActive field.
-      isActive: service.isActive ?? true,
-      // Admin table expects category.name; fallback returns categoryName.
-      category: service.category ?? { name: service.categoryName || 'Uncategorized' },
-    }));
-  };
-
-  const loadServices = async () => {
-    try {
-      setLoading(true);
-      const response = await adminApi.getAllServices();
-      const adminServices = Array.isArray(response?.data) ? response.data : [];
-
-      if (adminServices.length > 0) {
-        setServices(adminServices);
-        return;
-      }
-
-      const fallbackResponse = await apiService.getAllServices();
-      const fallbackServices = Array.isArray(fallbackResponse?.data) ? fallbackResponse.data : [];
-      setServices(normalizeFallbackServices(fallbackServices));
-=======
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -150,7 +119,6 @@ export function AdminServices() {
       ]);
       setServices(servicesResponse.data || []);
       setCategories(categoriesResponse.data || []);
->>>>>>> 1ccc2b6040efed7e3791fe659e47d80b5c2a31b5
     } catch (error) {
       console.error('Failed to load services:', error);
       try {
