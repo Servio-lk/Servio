@@ -57,6 +57,7 @@ function SignupHeader({
 }
 
 function CustomInput({
+  value,
   onChange,
   placeholder,
   type = "text",

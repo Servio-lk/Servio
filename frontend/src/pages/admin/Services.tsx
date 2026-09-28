@@ -109,6 +109,14 @@ export function AdminServices() {
     loadInitialData();
   }, []);
 
+  const normalizeFallbackServices = (items: any[]) => {
+    return items.map((service) => ({
+      ...service,
+      isActive: service.isActive ?? true,
+      category: service.category ?? { name: service.categoryName || 'Uncategorized' },
+    }));
+  };
+
   const loadInitialData = async () => {
     try {
       setLoading(true);

@@ -327,7 +327,7 @@ class ApiService {
   }): Promise<ApiResponse<User>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     return this.handleResponse<User>(response);
@@ -340,7 +340,7 @@ class ApiService {
   }): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile/password`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     return this.handleResponse<void>(response);
@@ -349,7 +349,7 @@ class ApiService {
   async changeEmail(body: { email: string; currentPassword: string }): Promise<ApiResponse<User>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile/email`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     return this.handleResponse<User>(response);
@@ -358,7 +358,7 @@ class ApiService {
   async getNotificationPreferences(): Promise<ApiResponse<NotificationPreferences>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/preferences`, {
       method: 'GET',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<NotificationPreferences>(response);
   }
@@ -366,7 +366,7 @@ class ApiService {
   async updateNotificationPreferences(body: NotificationPreferences): Promise<ApiResponse<NotificationPreferences>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/preferences`, {
       method: 'PUT',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
       body: JSON.stringify(body),
     });
     return this.handleResponse<NotificationPreferences>(response);
@@ -668,7 +668,7 @@ class ApiService {
   async clearNotifications(userId: string): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}`, {
       method: 'DELETE',
-      headers: this.getHeaders(true),
+      headers: this.getHeaders(),
     });
     return this.handleResponse<void>(response);
   }
