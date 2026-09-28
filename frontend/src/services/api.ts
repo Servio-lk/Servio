@@ -54,8 +54,16 @@ interface User {
   fullName: string;
   email: string;
   phone: string | null;
+  bio?: string | null;
+  avatarUrl?: string | null;
   role: string;
   createdAt: string;
+}
+
+interface NotificationPreferences {
+  promotionalOffers: boolean;
+  pushNotifications: boolean;
+  securityAlerts: boolean;
 }
 
 interface AuthResponse {
@@ -114,6 +122,10 @@ interface Offer {
   discountValue: number;
   imageUrl: string | null;
   validUntil: string;
+  promoCode: string | null;
+  category: string | null;
+  validFrom: string | null;
+  expired: boolean;
 }
 
 // Vehicle Interfaces
@@ -307,6 +319,59 @@ class ApiService {
     return this.handleResponse<User>(response);
   }
 
+  async updateProfile(body: {
+    fullName: string;
+    phone?: string;
+    bio?: string;
+    avatarUrl?: string;
+  }): Promise<ApiResponse<User>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse<User>(response);
+  }
+
+  async changePassword(body: {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<ApiResponse<void>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile/password`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  async changeEmail(body: { email: string; currentPassword: string }): Promise<ApiResponse<User>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/profile/email`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse<User>(response);
+  }
+
+  async getNotificationPreferences(): Promise<ApiResponse<NotificationPreferences>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/preferences`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<NotificationPreferences>(response);
+  }
+
+  async updateNotificationPreferences(body: NotificationPreferences): Promise<ApiResponse<NotificationPreferences>> {
+    const response = await apiFetch(`${API_BASE_URL}/auth/preferences`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse<NotificationPreferences>(response);
+  }
+
   async deleteProfile(): Promise<ApiResponse<string>> {
     const response = await apiFetch(`${API_BASE_URL}/auth/profile`, {
       method: 'DELETE',
@@ -391,6 +456,15 @@ class ApiService {
       method: 'GET',
       headers: this.getHeaders(),
       credentials: 'include',
+    });
+    return this.handleResponse<Offer[]>(response);
+  }
+
+  async getOffers(category?: string): Promise<ApiResponse<Offer[]>> {
+    const query = category ? `?category=${encodeURIComponent(category)}` : '';
+    const response = await fetch(`${API_BASE_URL}/offers${query}`, {
+      method: 'GET',
+      headers: this.getHeaders(),
     });
     return this.handleResponse<Offer[]>(response);
   }
@@ -559,7 +633,7 @@ class ApiService {
   }
 
   // Notification endpoints
-  async getMyNotifications(userId: number): Promise<ApiResponse<NotificationDto[]>> {
+  async getMyNotifications(userId: string): Promise<ApiResponse<NotificationDto[]>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -567,7 +641,7 @@ class ApiService {
     return this.handleResponse<NotificationDto[]>(response);
   }
 
-  async getUnreadCount(userId: number): Promise<ApiResponse<number>> {
+  async getUnreadCount(userId: string): Promise<ApiResponse<number>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/unread/count`, {
       method: 'GET',
       headers: this.getHeaders(),
@@ -583,9 +657,17 @@ class ApiService {
     return this.handleResponse<NotificationDto>(response);
   }
 
-  async markAllNotificationsRead(userId: number): Promise<ApiResponse<void>> {
+  async markAllNotificationsRead(userId: string): Promise<ApiResponse<void>> {
     const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}/read-all`, {
       method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  async clearNotifications(userId: string): Promise<ApiResponse<void>> {
+    const response = await apiFetch(`${API_BASE_URL}/notifications/user/${userId}`, {
+      method: 'DELETE',
       headers: this.getHeaders(),
     });
     return this.handleResponse<void>(response);
@@ -612,13 +694,14 @@ export interface AgentChatResponse {
 
 export interface NotificationDto {
   id: number;
-  userId: number;
+  userId: string;
   userName: string;
   title: string;
   message: string;
   type: string;
   isRead: boolean;
   createdAt: string;
+  actionUrl?: string | null;
 }
 
 export const apiService = new ApiService();
@@ -642,4 +725,5 @@ export type {
   VehicleDto,
   VehicleRequest,
   PayHereInitiateResponse,
+  NotificationPreferences,
 };

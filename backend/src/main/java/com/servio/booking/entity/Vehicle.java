@@ -26,7 +26,7 @@ public class Vehicle {
     @Column(nullable = false)
     private String model;
 
-    @Column
+    @Column(name = "vehicle_year")
     private Integer year;
 
     @Column(name = "license_plate")

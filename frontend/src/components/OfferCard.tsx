@@ -1,41 +1,73 @@
+import { toast } from 'sonner';
+
 interface OfferCardProps {
-  id: number;
-  title: string;
-  subtitle: string;
-  discountType: string;
-  discountValue: number;
-  imageUrl?: string | null;
+    id: number;
+    title: string;
+    subtitle?: string | null;
+    description?: string | null;
+    discountType: string;
+    discountValue: number;
+    imageUrl?: string | null;
+    promoCode?: string | null;
+    validUntil?: string | null;
+    expired?: boolean;
+    onApply?: (code: string) => void;
 }
 
-export function OfferCard({ title, subtitle, discountType, discountValue, imageUrl }: OfferCardProps) {
-  const displayDiscount = discountType === 'percentage' 
-    ? `${discountValue}%` 
-    : discountType === 'fixed'
-    ? `LKR ${discountValue}`
-    : 'FREE';
+function badgeLabel(discountType: string, discountValue: number) {
+    const type = discountType?.toUpperCase();
+    if (type === 'PERCENTAGE' || type === 'PERCENT') return `${discountValue}% OFF`;
+    if (type === 'FIXED_AMOUNT' || type === 'FIXED') return `LKR ${discountValue} OFF`;
+    return 'OFFER';
+}
+
+export function OfferCard({
+    title, subtitle, description, discountType, discountValue,
+    imageUrl, promoCode, validUntil, expired, onApply,
+  }: OfferCardProps) {
+    const disabled = Boolean(expired);
+
+    const copyCode = async () => {
+      if (!promoCode || disabled) return;
+      await navigator.clipboard.writeText(promoCode);
+      toast.success(`Copied ${promoCode}`);
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-md p-4 min-w-[280px] lg:min-w-0 flex flex-col gap-3 relative overflow-hidden">
-      <div className="flex items-center gap-2">
-        <span className="bg-[#ff5d2e] text-white text-xs font-bold px-2 py-1 rounded">
-          {displayDiscount}
+    <article className={`bg-white rounded-2xl shadow-md overflow-hidden flex flex-col ${disabled ? 'opacity-50' : ''}`}>
+      <div className="relative h-32 bg-[#fff7f5]">
+        {imageUrl && <img src={imageUrl} alt="" className="w-full h-full object-cover" />}
+        <span className="absolute top-3 left-3 bg-[#ff5d2e] text-white text-xs font-bold px-2 py-1 rounded">
+          {badgeLabel(discountType, discountValue)}
         </span>
       </div>
-      <div className="text-base font-medium text-black">
-        <p>{title}</p>
-        <p className="font-semibold">{subtitle}</p>
+      <div className="p-4 flex flex-col gap-2 flex-1">
+        <h3 className="text-base font-semibold text-black">{title}</h3>
+        {subtitle && <p className="text-sm font-medium text-black/80">{subtitle}</p>}
+        {description && <p className="text-sm text-black/60 line-clamp-2">{description}</p>}
+        {validUntil && (
+          <p className="text-xs text-black/40">
+            {disabled ? 'Expired' : 'Valid until'} {new Date(validUntil).toLocaleDateString()}
+          </p>
+        )}
+        {promoCode && (
+          <div className="mt-auto flex items-center gap-2">
+            <code className="flex-1 text-sm font-semibold tracking-wide bg-[#fff7f5] rounded-lg px-3 py-2">
+              {promoCode}
+            </code>
+            <button type="button" disabled={disabled} onClick={copyCode}
+              className="text-sm font-semibold text-[#ff5d2e] disabled:text-black/30">
+              Copy
+            </button>
+            {onApply && (
+              <button type="button" disabled={disabled} onClick={() => onApply(promoCode)}
+                className="bg-[#ff5d2e] text-white text-sm font-semibold px-3 py-2 rounded-lg disabled:bg-black/20">
+                Apply
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      {imageUrl && (
-        <div className="w-full h-24 rounded-lg overflow-hidden">
-          <img src={imageUrl} alt={`${title} ${subtitle}`} className="w-full h-full object-cover" />
-        </div>
-      )}
-      <button className="bg-[#ff5d2e] text-white py-2 px-4 rounded-lg font-semibold text-sm shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] hover:bg-[#e54d1e] transition-colors self-start">
-        Book now
-      </button>
-      <div className="absolute right-[-20px] top-[-20px] w-32 h-32 opacity-10">
-        <div className="w-full h-full rounded-full bg-[#ff5d2e]" />
-      </div>
-    </div>
+    </article>
   );
 }

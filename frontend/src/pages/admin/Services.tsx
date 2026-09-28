@@ -109,6 +109,14 @@ export function AdminServices() {
     loadInitialData();
   }, []);
 
+  const normalizeFallbackServices = (items: any[]) => {
+    return items.map((service) => ({
+      ...service,
+      isActive: service.isActive ?? true,
+      category: service.category ?? { name: service.categoryName || 'Uncategorized' },
+    }));
+  };
+
   const loadInitialData = async () => {
     try {
       setLoading(true);
@@ -121,7 +129,14 @@ export function AdminServices() {
       setCategories(categoriesResponse.data || []);
     } catch (error) {
       console.error('Failed to load services:', error);
-      toast.error('Failed to load services');
+      try {
+        const fallbackResponse = await apiService.getAllServices();
+        const fallbackServices = Array.isArray(fallbackResponse?.data) ? fallbackResponse.data : [];
+        setServices(normalizeFallbackServices(fallbackServices));
+      } catch (fallbackError) {
+        console.error('Fallback services load failed:', fallbackError);
+        toast.error('Failed to load services');
+      }
     } finally {
       setCategoriesLoading(false);
       setLoading(false);

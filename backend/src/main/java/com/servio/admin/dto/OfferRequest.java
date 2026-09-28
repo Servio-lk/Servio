@@ -32,6 +32,12 @@ public class OfferRequest {
     @Size(max = 500, message = "Image URL must not exceed 500 characters")
     private String imageUrl;
 
+    @Pattern(regexp = "^$|^[A-Z0-9_-]{3,50}$", message = "Promo code must be 3-50 uppercase letters, digits, _ or -")
+    private String promoCode;
+
+    @Pattern(regexp = "^$|^NEW_USER$|^LIMITED_TIME$|^SEASONAL$", message = "Invalid offer category")
+    private String category;
+
     private LocalDateTime validFrom;
 
     private LocalDateTime validUntil;
@@ -55,6 +61,12 @@ public class OfferRequest {
 
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+
+    public String getPromoCode() { return promoCode; }
+    public void setPromoCode(String promoCode) { this.promoCode = promoCode; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
 
     public LocalDateTime getValidFrom() { return validFrom; }
     public void setValidFrom(LocalDateTime validFrom) { this.validFrom = validFrom; }

@@ -17,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
@@ -54,9 +55,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/services/**", "/api/offers/**").permitAll()
                         .requestMatchers("/api/dashboard/**").permitAll()
                         // Public availability endpoint — no auth needed to check free slots
-                        .requestMatchers("/api/appointments/booked-slots").permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/appointments/booked-slots")).permitAll()
                         // PayHere server-to-server payment notification (no JWT, verified by md5sig)
-                        .requestMatchers("/api/payments/payhere/notify").permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/payments/payhere/notify")).permitAll()
                         // WebSocket handshake and SockJS fallback endpoints
                         .requestMatchers("/api/ws", "/api/ws/**", "/api/ws-sockjs/**", "/ws", "/ws/**", "/ws-sockjs/**").permitAll()
                         // Updated Role-Based Access Control

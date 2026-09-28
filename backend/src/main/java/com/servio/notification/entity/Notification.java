@@ -36,6 +36,9 @@ public class Notification {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "action_url", length = 500)
+    private String actionUrl;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

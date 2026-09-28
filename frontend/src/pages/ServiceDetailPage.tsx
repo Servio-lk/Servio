@@ -8,6 +8,7 @@ import { apiService, type ServiceItem, type ServiceOption } from '@/services/api
 const serviceImages: Record<string, string> = {
   'Washing Packages': '/service images/Washing Packages.jpg',
   'Lube Services': '/service images/Lubricant Service.jpg',
+  'AC Services': '/service images/AC Repair and Service.jpg',
   'Exterior & Interior Detailing': '/service images/Exterior Detailing.jpg',
   'Engine Tune ups': '/service images/Mechanical Repair.jpg',
   'Inspection Reports': '/service images/Mulipoint Inspection Report.jpg',
@@ -18,10 +19,13 @@ const serviceImages: Record<string, string> = {
   'Battery Services': '/service images/Electrical & Electronic.jpg',
   'Packages': '/service images/Exterior Detailing.jpg',
   'Treatments': '/service images/Exterior Detailing.jpg',
+  'Nano Coating Packages': '/service images/Exterior Detailing.jpg',
+  'Nano Coating Treatments': '/service images/Exterior Detailing.jpg',
   'Insurance Claims': '/service images/General Collision Repair.jpg',
   'Wheel Alignment': '/service images/Mechanical Repair.jpg',
   'Full Paints': '/service images/Complete Paint.jpg',
   'Part Replacements': '/service images/Mechanical Repair.jpg',
+  'Repair & Modifications': '/service images/General Collision Repair.jpg',
 };
 
 const fallbackIncluded = ['Professional inspection', 'Quality workmanship', 'Service recommendations', 'Warranty support'];
@@ -217,6 +221,7 @@ export default function ServiceDetailPage() {
             <div className="hidden lg:block lg:col-span-2">
               <div className="sticky top-24 bg-white rounded-2xl shadow-lg p-6 flex flex-col gap-6">
                 <h3 className="text-lg font-semibold text-black">Booking Summary</h3>
+
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between text-sm"><span className="text-black/70">Service Fee</span><span className="font-medium text-black">{formatLkr(basePrice)}</span></div>
                   {selectedOption && <div className="flex items-center justify-between text-sm"><span className="text-black/70">{selectedOption.name}</span><span className="font-medium text-black">{formatLkr(optionPrice)}</span></div>}

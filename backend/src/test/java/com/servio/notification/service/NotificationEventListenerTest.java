@@ -2,6 +2,7 @@ package com.servio.notification.service;
 
 import com.servio.auth.entity.Role;
 import com.servio.auth.entity.User;
+import com.servio.auth.repository.UserNotificationPreferenceRepository;
 import com.servio.auth.repository.UserRepository;
 import com.servio.common.config.AsyncConfig;
 import com.servio.common.event.AppointmentCreatedEvent;
@@ -38,6 +39,8 @@ class NotificationEventListenerTest {
     private UserRepository userRepository;
     @Mock
     private AppointmentEventPublisher eventPublisher;
+    @Mock
+    private UserNotificationPreferenceRepository preferenceRepository;
 
     @InjectMocks
     private NotificationService notificationService;

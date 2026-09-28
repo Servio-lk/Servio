@@ -128,6 +128,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySessionState = useCallback((nextSession: Session, forceUserUpdate = false) => {
     const nextUser = mapSupabaseUser(nextSession.user);
+    const current = userRef.current;
+    if (current?.id === nextUser.id && current.role && current.role.toUpperCase() === 'ADMIN') {
+      nextUser.role = current.role;
+    }
 
     sessionRef.current = nextSession;
     setSession(prev => (prev?.access_token === nextSession.access_token ? prev : nextSession));
@@ -156,12 +160,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data.data?.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
         }
+        setIsBackendTokenReady(true);
         console.log('[Auth] Backend token refreshed successfully');
         return true;
       }
 
+      setIsBackendTokenReady(false);
       return false;
     } catch {
+      setIsBackendTokenReady(false);
       return false;
     }
   }, []);
@@ -283,6 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.warn('[Auth] supabase-login did not return a token');
         }
       } catch (error) {
+        setIsBackendTokenReady(false);
         console.error('[Auth] Backend token exchange network error:', error);
       }
     };

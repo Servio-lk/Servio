@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
+import { apiFetch } from '../../services/apiFetch';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import {
   Calendar, Filter, Clock, CreditCard, Banknote,
   CheckCircle, ChevronDown, X, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 // Valid status transitions per current status
 const STATUS_TRANSITIONS: Record<string, Array<{ value: string; label: string }>> = {
@@ -74,7 +78,6 @@ export function AdminAppointments() {
 
   useEffect(() => { loadAppointments(); }, [statusFilter]);
   useEffect(() => { loadMechanics(); }, []);
-
   // Close dropdowns on outside click
   useEffect(() => {
     const handle = (e: MouseEvent) => {
@@ -92,17 +95,56 @@ export function AdminAppointments() {
     return () => document.removeEventListener('keydown', handle);
   }, [cashModal.open]);
 
-  const loadAppointments = async () => {
+  const fetchAppointmentsFallback = async (status?: string) => {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const url = status
+      ? `${API_BASE_URL}/appointments/status/${status}`
+      : `${API_BASE_URL}/appointments`;
+
+    const response = await apiFetch(url, { headers });
+    const payload = await response.json();
+    return Array.isArray(payload?.data) ? payload.data : [];
+  };
+
+  const loadAppointments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await adminApi.getAllAppointments(statusFilter || undefined);
-      setAppointments(response.data || []);
+      const adminAppointments = Array.isArray(response?.data) ? response.data : [];
+
+      if (adminAppointments.length > 0) {
+        setAppointments(adminAppointments);
+        return;
+      }
+
+      const fallbackAppointments = await fetchAppointmentsFallback(statusFilter || undefined);
+      setAppointments(fallbackAppointments);
     } catch {
-      toast.error('Failed to load appointments');
+      try {
+        const fallbackAppointments = await fetchAppointmentsFallback(statusFilter || undefined);
+        setAppointments(fallbackAppointments);
+      } catch {
+        toast.error('Failed to load appointments');
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  useEffect(() => {
+    loadAppointments();
+  }, [loadAppointments]);
+
+  // Refresh the appointments tab immediately when a customer creates/updates an appointment.
+  useWebSocket(
+    ['/topic/appointments'],
+    useCallback(() => {
+      loadAppointments();
+    }, [loadAppointments]),
+  );
 
   const loadMechanics = async () => {
     try {
@@ -130,6 +172,7 @@ export function AdminAppointments() {
       toast.error('Failed to update appointment status');
     } finally {
       setUpdatingId(null);
+      setOpenDropdownId(null);
     }
   };
 
@@ -469,9 +512,9 @@ export function AdminAppointments() {
                         <div className="inline-flex items-center justify-end gap-1 whitespace-nowrap">
                           <Banknote className="w-3 h-3 text-gray-400" />
                           {appt.actualCost
-                            ? `Rs. ${appt.actualCost.toLocaleString()}`
+                            ? `Rs. ${Number(appt.actualCost).toLocaleString()}`
                             : appt.estimatedCost
-                              ? `~Rs. ${appt.estimatedCost.toLocaleString()}`
+                              ? `~Rs. ${Number(appt.estimatedCost).toLocaleString()}`
                               : 'TBD'}
                         </div>
                       </td>

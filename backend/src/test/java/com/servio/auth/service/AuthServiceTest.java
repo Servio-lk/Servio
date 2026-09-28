@@ -213,6 +213,91 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("loginWithSupabase grants ADMIN from the Supabase profile when the local profile is missing")
+    void testLoginWithSupabase_adminFromRemoteProfile() {
+        UUID supabaseId = UUID.randomUUID();
+        SupabaseLoginRequest request = new SupabaseLoginRequest();
+        request.setAccessToken("valid.supabase.token");
+        request.setEmail("admin@servio.lk");
+        request.setFullName("Admin");
+
+        when(restTemplate.exchange(
+                eq("https://mock.supabase.co/auth/v1/user"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(Map.of(
+                "id", supabaseId.toString(),
+                "email", "admin@servio.lk"
+        ), HttpStatus.OK));
+
+        when(profileRepository.findById(supabaseId)).thenReturn(Optional.empty());
+        when(restTemplate.exchange(
+                contains("/rest/v1/profiles"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(List.class)
+        )).thenReturn(new ResponseEntity<>(List.of(Map.of(
+                "full_name", "Admin",
+                "is_admin", true,
+                "role", "ADMIN"
+        )), HttpStatus.OK));
+
+        User localUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("admin@servio.lk")
+                .fullName("Admin")
+                .role(Role.USER)
+                .createdAt(LocalDateTime.now())
+                .build();
+        when(userRepository.findByEmail("admin@servio.lk")).thenReturn(Optional.of(localUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtTokenProvider.generateToken(localUser.getId(), Role.ADMIN)).thenReturn("backend.admin.jwt");
+
+        AuthResponse response = authService.loginWithSupabase(request);
+
+        assertEquals("ADMIN", response.getData().getUser().getRole());
+        assertEquals(Role.ADMIN, localUser.getRole());
+    }
+
+    @Test
+    @DisplayName("loginWithSupabase grants ADMIN from Supabase user metadata when the profile query fails")
+    void testLoginWithSupabase_adminFromUserMetadata() {
+        UUID supabaseId = UUID.randomUUID();
+        SupabaseLoginRequest request = new SupabaseLoginRequest();
+        request.setAccessToken("valid.supabase.token");
+        request.setEmail("admin@servio.lk");
+        request.setFullName("Admin");
+
+        when(restTemplate.exchange(
+                eq("https://mock.supabase.co/auth/v1/user"),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                eq(Map.class)
+        )).thenReturn(new ResponseEntity<>(Map.of(
+                "id", supabaseId.toString(),
+                "email", "admin@servio.lk",
+                "user_metadata", Map.of("role", "ADMIN")
+        ), HttpStatus.OK));
+        when(profileRepository.findById(supabaseId)).thenReturn(Optional.empty());
+
+        User localUser = User.builder()
+                .id(UUID.randomUUID())
+                .email("admin@servio.lk")
+                .fullName("Admin")
+                .role(Role.USER)
+                .createdAt(LocalDateTime.now())
+                .build();
+        when(userRepository.findByEmail("admin@servio.lk")).thenReturn(Optional.of(localUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(jwtTokenProvider.generateToken(localUser.getId(), Role.ADMIN)).thenReturn("backend.admin.jwt");
+
+        AuthResponse response = authService.loginWithSupabase(request);
+
+        assertEquals("ADMIN", response.getData().getUser().getRole());
+    }
+
+    @Test
     @DisplayName("loginWithSupabase throws IllegalArgumentException on token email mismatch")
     void testLoginWithSupabase_emailMismatch_throwsException() {
         SupabaseLoginRequest request = new SupabaseLoginRequest();

@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck, Tag } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
@@ -17,6 +17,7 @@ const navItems = [
   { icon: ClipboardText, label: 'Activity', path: '/activity' },
   { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
   { icon: Robot, label: 'AI Assistant', path: '/assistant' },
+  { icon: Tag, label: 'Offers', path: '/offers' }
 ];
 
 // Desktop sidebar component
@@ -69,7 +70,7 @@ function DesktopSidebar() {
             </Link>
           )}
           <Link
-            to="/account"
+            to="/account/settings"
             className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
           >
             <GearSix className="w-5 h-5" />

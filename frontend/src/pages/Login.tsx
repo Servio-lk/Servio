@@ -223,7 +223,7 @@ function LanguageSelector() {
 
 function LoginForm() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, refreshBackendToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -256,6 +256,12 @@ function LoginForm() {
         };
 
         login(userData, session);
+
+        const backendTokenReady = await refreshBackendToken();
+        if (!backendTokenReady) {
+          throw new Error('Sign in succeeded, but backend session initialization failed.');
+        }
+
         toast.success("Welcome back!");
         navigate('/home');
       }
