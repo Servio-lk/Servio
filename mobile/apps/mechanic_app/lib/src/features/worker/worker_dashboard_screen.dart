@@ -65,6 +65,8 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final appointmentsAsync = ref.watch(activeAppointmentsProvider);
+    final mechanicAsync = ref.watch(currentMechanicProvider);
+    final mechanic = mechanicAsync.asData?.value;
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7F5),
@@ -113,6 +115,7 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                           padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                           sliver: SliverList.list(
                             children: [
+                              _buildVerificationBanner(mechanic),
                               _buildSearchBar(),
                               const SizedBox(height: 16),
                               Padding(
@@ -158,6 +161,162 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ── Verification Banner ───────────────────────────────────────────────────
+  Widget _buildVerificationBanner(Map<String, dynamic>? mechanic) {
+    if (mechanic == null) return const SizedBox.shrink();
+    final status = (mechanic['verification_status'] as String?)?.toUpperCase() ?? 'VERIFIED';
+    if (status == 'VERIFIED') return const SizedBox.shrink();
+
+    final bool isIncomplete = status == 'INCOMPLETE';
+    final bool isPending = status == 'PENDING_VERIFICATION';
+    final String? rejectionReason = mechanic['rejection_reason'] as String?;
+
+    final Color bg;
+    final Color borderColor;
+    final Color titleColor;
+    final Color textColor;
+    final IconData icon;
+    final Color iconColor;
+    final String title;
+    final String description;
+    final String buttonText;
+    final Color buttonBg;
+
+    if (isIncomplete) {
+      bg = const Color(0xFFFFF2ED);
+      borderColor = const Color(0xFFFFD0C1);
+      titleColor = const Color(0xFFC03A12);
+      textColor = const Color(0xFF7C2D12);
+      icon = PhosphorIconsFill.identificationCard;
+      iconColor = const Color(0xFFFF5D2E);
+      title = 'Complete Your Profile';
+      description =
+          'Finish adding your qualifications, work details, and documents to start receiving job assignments.';
+      buttonText = 'Complete Profile';
+      buttonBg = const Color(0xFFFF5D2E);
+    } else if (isPending) {
+      bg = const Color(0xFFFFFBEB);
+      borderColor = const Color(0xFFFDE68A);
+      titleColor = const Color(0xFF92400E);
+      textColor = const Color(0xFF78350F);
+      icon = PhosphorIconsFill.hourglass;
+      iconColor = const Color(0xFFD97706);
+      title = 'Verification Pending';
+      description =
+          'Your details have been submitted to the admin team for review. You will be notified once approved.';
+      buttonText = 'View Submission';
+      buttonBg = const Color(0xFFD97706);
+    } else {
+      bg = const Color(0xFFFEF2F2);
+      borderColor = const Color(0xFFFECACA);
+      titleColor = const Color(0xFF991B1B);
+      textColor = const Color(0xFF7F1D1D);
+      icon = PhosphorIconsFill.warningOctagon;
+      iconColor = const Color(0xFFDC2626);
+      title = 'Verification Changes Requested';
+      description = (rejectionReason != null && rejectionReason.isNotEmpty)
+          ? 'Admin noted: "$rejectionReason". Tap below to update your details and resubmit.'
+          : 'Your verification was returned for changes. Please review and update your information.';
+      buttonText = 'Update Details';
+      buttonBg = const Color(0xFFDC2626);
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: borderColor, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: borderColor.withValues(alpha: 0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: PhosphorIcon(icon, size: 22, color: iconColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 13,
+                        height: 1.35,
+                        fontWeight: FontWeight.w500,
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 38,
+            child: ElevatedButton(
+              onPressed: () {
+                context.push('/profile/complete').then((_) {
+                  ref.invalidate(currentMechanicProvider);
+                });
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: buttonBg,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    buttonText,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  const PhosphorIcon(PhosphorIconsRegular.arrowRight, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

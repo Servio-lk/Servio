@@ -1,4 +1,4 @@
-package com.servio.servio_mobile
+package com.servio.mechanic
 
 import io.flutter.embedding.android.FlutterActivity
 

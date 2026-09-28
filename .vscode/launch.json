@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Customer App",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile/apps/customer_app",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define-from-file=${workspaceFolder}/.env"
+      ]
+    },
+    {
+      "name": "Mechanic App",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "mobile/apps/mechanic_app",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define-from-file=${workspaceFolder}/.env"
+      ]
+    }
+  ]
+}

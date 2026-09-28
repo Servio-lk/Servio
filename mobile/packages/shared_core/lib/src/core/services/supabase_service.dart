@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -9,6 +10,11 @@ class SupabaseService {
   SupabaseService._internal();
 
   final ApiClient _apiClient = ApiClient();
+  String? _backendToken;
+
+  /// Holds the Spring Boot backend JWT token obtained after syncing with /auth/supabase-login
+  String? get backendToken => _backendToken;
+  void setBackendToken(String? token) => _backendToken = token;
 
   /// Safe accessor to check if Supabase is initialized
   bool get isInitialized {
@@ -116,7 +122,7 @@ class SupabaseService {
     try {
       await client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'io.supabase.servio://login-callback/',
+        redirectTo: 'io.supabase.servio://login-callback',
       );
       return true;
     } catch (e) {
@@ -130,7 +136,7 @@ class SupabaseService {
     try {
       await client.auth.signInWithOAuth(
         OAuthProvider.facebook,
-        redirectTo: 'io.supabase.servio://login-callback/',
+        redirectTo: 'io.supabase.servio://login-callback',
       );
       return true;
     } catch (e) {
@@ -141,6 +147,7 @@ class SupabaseService {
 
   // Sign out
   Future<void> signOut() async {
+    _backendToken = null;
     try {
       await safeClient?.auth.signOut();
     } catch (e) {
@@ -163,7 +170,12 @@ class SupabaseService {
   }
 
   /// Syncs the authenticated Supabase session with Spring Boot backend via /api/auth/supabase-login
-  Future<Map<String, dynamic>?> syncWithBackend() async {
+  Future<Map<String, dynamic>?> syncWithBackend({
+    String? role,
+    String? fullName,
+    String? phone,
+    String? specialization,
+  }) async {
     final session = currentSession;
     final user = currentUser;
     if (session == null || user == null) return null;
@@ -171,18 +183,45 @@ class SupabaseService {
     try {
       final token = session.accessToken;
       final email = user.email ?? '';
-      final fullName = user.userMetadata?['full_name'] as String? ?? '';
-      final role = user.userMetadata?['role'] as String? ?? 'CUSTOMER';
+
+      final effectiveFullName = (fullName != null && fullName.trim().isNotEmpty)
+          ? fullName.trim()
+          : (user.userMetadata?['full_name'] as String? ?? '').trim();
+      final resolvedFullName = effectiveFullName.isNotEmpty
+          ? effectiveFullName
+          : (email.contains('@') ? email.split('@').first : 'User');
+
+      final effectiveRole = (role != null && role.trim().isNotEmpty)
+          ? role.trim()
+          : (user.userMetadata?['role'] as String? ?? 'CUSTOMER').trim();
+
+      final effectivePhone = phone ?? user.userMetadata?['phone'] as String?;
+      final effectiveSpecialization = specialization ?? user.userMetadata?['specialization'] as String?;
 
       final response = await _apiClient.post<Map<String, dynamic>>(
         '/auth/supabase-login',
         body: {
           'accessToken': token,
           'email': email,
-          'fullName': fullName,
-          'role': role,
+          'fullName': resolvedFullName,
+          'role': effectiveRole,
+          if (effectivePhone != null && effectivePhone.trim().isNotEmpty)
+            'phone': effectivePhone.trim(),
+          if (effectiveSpecialization != null && effectiveSpecialization.trim().isNotEmpty)
+            'specialization': effectiveSpecialization.trim(),
         },
       );
+
+      final data = response.data;
+      if (data != null) {
+        final nestedData = data['data'];
+        if (nestedData is Map<String, dynamic> && nestedData['token'] is String) {
+          _backendToken = nestedData['token'] as String;
+        } else if (data['token'] is String) {
+          _backendToken = data['token'] as String;
+        }
+      }
+
       return response.data;
     } catch (e) {
       debugPrint('Backend sync during login: $e');
@@ -213,10 +252,78 @@ class SupabaseService {
           'experience_years': data['experienceYears'] ?? data['experience_years'],
           'status': data['status'],
           'is_active': data['isActive'] ?? data['is_active'] ?? true,
+          'verification_status': data['verificationStatus'] ?? data['verification_status'] ?? 'VERIFIED',
+          'rejection_reason': data['rejectionReason'] ?? data['rejection_reason'],
         };
       }
     } catch (e) {
       debugPrint('Error fetching mechanic registration from backend: $e');
+    }
+    return null;
+  }
+
+  /// Retrieves authenticated mechanic's full profile including details & documents
+  Future<Map<String, dynamic>?> getMechanicFullProfile() async {
+    try {
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        '/mechanic/profile',
+        fromJson: (data) => data as Map<String, dynamic>,
+      );
+      if (response.success && response.data != null) {
+        return response.data;
+      }
+    } catch (e) {
+      debugPrint('Error fetching mechanic full profile: $e');
+    }
+    return null;
+  }
+
+  /// Updates authenticated mechanic profile draft
+  Future<bool> updateMechanicProfile(Map<String, dynamic> payload) async {
+    try {
+      final response = await _apiClient.put<Map<String, dynamic>>(
+        '/mechanic/profile',
+        body: payload,
+      );
+      return response.success;
+    } catch (e) {
+      debugPrint('Error updating mechanic profile: $e');
+      return false;
+    }
+  }
+
+  /// Submits authenticated mechanic profile for verification
+  Future<bool> submitMechanicVerification(Map<String, dynamic> payload) async {
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        '/mechanic/profile/submit',
+        body: payload,
+      );
+      return response.success;
+    } catch (e) {
+      debugPrint('Error submitting mechanic verification: $e');
+      return false;
+    }
+  }
+
+  /// Uploads a document to Cloudinary via backend for the authenticated mechanic
+  Future<Map<String, dynamic>?> uploadMechanicDocument({
+    required File file,
+    required String documentType,
+  }) async {
+    try {
+      final response = await _apiClient.uploadMultipart<Map<String, dynamic>>(
+        path: '/mechanic/documents/upload',
+        file: file,
+        fileParamName: 'file',
+        fields: {'documentType': documentType},
+        fromJson: (data) => data as Map<String, dynamic>,
+      );
+      if (response.success && response.data != null) {
+        return response.data;
+      }
+    } catch (e) {
+      debugPrint('Error uploading mechanic document: $e');
     }
     return null;
   }

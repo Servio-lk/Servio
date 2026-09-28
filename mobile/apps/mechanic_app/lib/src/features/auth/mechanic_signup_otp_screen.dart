@@ -15,7 +15,7 @@ class MechanicSignupOtpScreen extends StatefulWidget {
 }
 
 class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
-  final int _otpLength = 6;
+  static const int _otpLength = 6;
   late List<TextEditingController> _otpControllers;
   late List<FocusNode> _focusNodes;
   final _supabaseService = SupabaseService();
@@ -25,6 +25,11 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
   Timer? _timer;
 
   String get _email => widget.extras?['email']?.toString() ?? '';
+  String get _password => widget.extras?['password']?.toString() ?? '';
+  String get _name => widget.extras?['name']?.toString() ?? '';
+  String get _phone => widget.extras?['phone']?.toString() ?? '';
+  String get _specialization =>
+      widget.extras?['specialization']?.toString() ?? 'General Service';
   String get _otpCode => _otpControllers.map((c) => c.text).join();
 
   @override
@@ -81,7 +86,7 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
         otp: _otpCode,
       );
 
-      final user = response.user;
+      final user = response.user ?? _supabaseService.currentUser;
       if (user == null) {
         if (mounted) {
           _showSnackBar('Verification failed. Invalid or expired code.');
@@ -89,24 +94,41 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
         return;
       }
 
-      // Sync profile
-      try {
-        final registeredMechanic =
-            await _supabaseService.getActiveMechanicByEmail(_email);
-        if (registeredMechanic != null) {
-          await _supabaseService.syncMechanicProfile(
-            user: user,
-            mechanic: registeredMechanic,
-          );
+      // If a password was provided in quick signup, set it now
+      if (_password.isNotEmpty) {
+        try {
+          await _supabaseService.setPassword(_password);
+        } catch (e) {
+          debugPrint('setPassword failed after OTP verify: $e');
         }
+      }
+
+      // Sync user profile & metadata
+      try {
+        await _supabaseService.updateUserProfile(
+          data: {
+            'role': 'MECHANIC',
+            if (_name.isNotEmpty) 'full_name': _name,
+            if (_name.isNotEmpty) 'display_name': _name,
+            if (_phone.isNotEmpty) 'phone': _phone,
+            if (_specialization.isNotEmpty) 'specialization': _specialization,
+          },
+        );
+
+        // Sync with Spring Boot backend
+        await _supabaseService.syncWithBackend(
+          role: 'MECHANIC',
+          fullName: _name.isNotEmpty ? _name : null,
+          phone: _phone.isNotEmpty ? _phone : null,
+          specialization: _specialization.isNotEmpty ? _specialization : null,
+        );
       } catch (e) {
         debugPrint('Profile setup failed after OTP verify: $e');
       }
 
       if (!mounted) return;
 
-      _showSnackBar('Email verified! Redirecting to workspace...',
-          isError: false);
+      _showSnackBar('Mechanic account verified! Welcome.', isError: false);
       context.go('/worker');
     } catch (e) {
       if (mounted) {
@@ -154,46 +176,25 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
           )
         : 'your email';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFBFBFB),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => context.pop(),
+    return SignUpScaffold(
+      children: [
+        SignUpHeader(
+          step: 2,
+          totalSteps: 2,
+          title: 'Verify Email',
+          subtitle: 'Enter the 6-digit code sent to $maskedEmail',
+          onBack: () => context.pop(),
         ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Verify Email',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                "We sent a $_otpLength-digit code to $maskedEmail. Enter it below.",
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                  height: 22 / 16,
-                ),
-              ),
-              const SizedBox(height: 32),
-
-              // OTP Boxes
-              SizedBox(
-                height: 56,
-                child: Row(
+        const SizedBox(height: 24),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                // OTP input boxes
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: List.generate(_otpLength, (i) {
                     return SizedBox(
@@ -202,8 +203,9 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border:
-                              Border.all(color: Colors.black.withValues(alpha: 0.1)),
+                          border: Border.all(
+                            color: Colors.black.withValues(alpha: 0.1),
+                          ),
                         ),
                         child: TextField(
                           controller: _otpControllers[i],
@@ -215,23 +217,22 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
                             FilteringTextInputFormatter.digitsOnly,
                           ],
                           style: GoogleFonts.instrumentSans(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.w600,
                             color: Colors.black,
                           ),
                           decoration: const InputDecoration(
                             counterText: '',
                             border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 14),
                           ),
-                          onChanged: (value) {
-                            if (value.isNotEmpty && i < _otpLength - 1) {
+                          onChanged: (val) {
+                            if (val.isNotEmpty && i < _otpLength - 1) {
                               _focusNodes[i + 1].requestFocus();
-                            } else if (value.isEmpty && i > 0) {
+                            } else if (val.isEmpty && i > 0) {
                               _focusNodes[i - 1].requestFocus();
                             }
-                            if (value.isNotEmpty &&
-                                i == _otpLength - 1 &&
-                                _otpCode.length == _otpLength) {
+                            if (_otpCode.length == _otpLength) {
                               _handleVerify();
                             }
                           },
@@ -240,80 +241,37 @@ class _MechanicSignupOtpScreenState extends State<MechanicSignupOtpScreen> {
                     );
                   }),
                 ),
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              // Resend text
-              Center(
-                child: GestureDetector(
-                  onTap: _resendCountdown == 0 ? _handleResend : null,
-                  child: RichText(
-                    text: TextSpan(
+                SignUpPrimaryButton(
+                  label: 'Verify & Enter Workspace',
+                  isLoading: _isLoading,
+                  onTap: _handleVerify,
+                ),
+                const SizedBox(height: 16),
+
+                Center(
+                  child: TextButton(
+                    onPressed: _resendCountdown == 0 ? _handleResend : null,
+                    child: Text(
+                      _resendCountdown > 0
+                          ? 'Resend code in ${_resendCountdown}s'
+                          : 'Resend Code',
                       style: GoogleFonts.instrumentSans(
                         fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black,
-                        height: 16 / 12,
+                        fontWeight: FontWeight.w600,
+                        color: _resendCountdown > 0
+                            ? Colors.black45
+                            : const Color(0xFFFF5D2E),
                       ),
-                      children: [
-                        const TextSpan(text: "Didn't get the code? "),
-                        TextSpan(
-                          text: _resendCountdown > 0
-                              ? 'Resend it (${_resendCountdown.toString().padLeft(2, '0')}s)'
-                              : 'Resend it',
-                          style: GoogleFonts.instrumentSans(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: _resendCountdown > 0
-                                ? const Color(0xFF8A8A8A)
-                                : const Color(0xFFFF5D2E),
-                            decoration: TextDecoration.underline,
-                            height: 16 / 12,
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 32),
-
-              SizedBox(
-                width: double.infinity,
-                height: 59,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _handleVerify,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF5D2E),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    elevation: _isLoading ? 0 : 8,
-                    shadowColor: const Color(0xFFFF5D2E).withValues(alpha: 0.5),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          'Verify & Continue',
-                          style: GoogleFonts.instrumentSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 }

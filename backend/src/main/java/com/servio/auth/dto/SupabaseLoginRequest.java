@@ -18,6 +18,8 @@ public class SupabaseLoginRequest {
 
     private String phone;
 
+    private String specialization;
+
     @NotBlank(message = "Role is required")
     private String role;
 }

@@ -27,6 +27,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 import java.util.Optional;
+import com.servio.admin.entity.Mechanic;
+import com.servio.admin.entity.MechanicStatus;
+import com.servio.admin.entity.MechanicVerificationStatus;
+import com.servio.admin.repository.MechanicRepository;
 import java.util.UUID;
 
 @Service
@@ -39,6 +43,7 @@ public class AuthService {
     private final RestTemplate restTemplate;
     private final AppointmentRepository appointmentRepository;
     private final SupabaseAdminService supabaseAdminService;
+    private final MechanicRepository mechanicRepository;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -172,15 +177,22 @@ public class AuthService {
             // supabaseUserId was not a valid UUID
         }
 
-        // If profile didn't indicate admin, check if the user already exists in the database with a role
+        // If profile didn't indicate admin, check if the user already exists in the database with a role,
+        // or fall back to the role specified in the request (e.g. MECHANIC during mechanic signup)
         if (resolvedRole != Role.ADMIN) {
             Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
             if (existingUser.isPresent()) {
                 resolvedRole = existingUser.get().getRole();
+                if (resolvedRole == Role.USER && "MECHANIC".equalsIgnoreCase(request.getRole())) {
+                    resolvedRole = Role.MECHANIC;
+                }
+            } else if (request.getRole() != null && !request.getRole().isBlank()) {
+                try {
+                    resolvedRole = Role.valueOf(request.getRole().toUpperCase());
+                } catch (IllegalArgumentException ignored) {
+                }
             }
         }
-
-
 
         final String finalDisplayName = displayName;
         final Role finalRole = resolvedRole;
@@ -189,20 +201,65 @@ public class AuthService {
         final String finalTokenEmail = tokenEmail;
         User backendUser = userRepository.findByEmail(finalTokenEmail)
                 .map(existing -> {
-                    // Sync the role if it changed in the profile
+                    boolean changed = false;
                     if (existing.getRole() != finalRole) {
                         existing.setRole(finalRole);
-                        return userRepository.save(existing);
+                        changed = true;
                     }
-                    return existing;
+                    if (request.getPhone() != null && !request.getPhone().isBlank()
+                            && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                        existing.setPhone(request.getPhone().trim());
+                        changed = true;
+                    }
+                    if (finalDisplayName != null && !finalDisplayName.isBlank()
+                            && (existing.getFullName() == null || existing.getFullName().isBlank())) {
+                        existing.setFullName(finalDisplayName.trim());
+                        changed = true;
+                    }
+                    return changed ? userRepository.save(existing) : existing;
                 })
                 .orElseGet(() -> userRepository.save(User.builder()
-                .fullName(finalDisplayName)
+                        .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
                         .email(finalTokenEmail)
                         .phone(request.getPhone())
                         .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .role(finalRole)
                         .build()));
+
+        // If user is a mechanic, ensure corresponding Mechanic entity exists
+        if (finalRole == Role.MECHANIC) {
+            String spec = (request.getSpecialization() != null && !request.getSpecialization().isBlank())
+                    ? request.getSpecialization().trim()
+                    : "General Service";
+            mechanicRepository.findByEmailIgnoreCase(finalTokenEmail)
+                    .ifPresentOrElse(
+                            existing -> {
+                                boolean changed = false;
+                                if (request.getSpecialization() != null && !request.getSpecialization().isBlank()
+                                        && (existing.getSpecialization() == null || existing.getSpecialization().isBlank())) {
+                                    existing.setSpecialization(spec);
+                                    changed = true;
+                                }
+                                if (request.getPhone() != null && !request.getPhone().isBlank()
+                                        && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                                    existing.setPhone(request.getPhone().trim());
+                                    changed = true;
+                                }
+                                if (changed) {
+                                    mechanicRepository.save(existing);
+                                }
+                            },
+                            () -> mechanicRepository.save(Mechanic.builder()
+                                    .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "Mechanic Staff")
+                                    .email(finalTokenEmail)
+                                    .phone(request.getPhone() != null ? request.getPhone() : "")
+                                    .specialization(spec)
+                                    .status(MechanicStatus.AVAILABLE)
+                                    .isActive(false)
+                                    .verificationStatus(MechanicVerificationStatus.INCOMPLETE)
+                                    .build())
+                    );
+        }
 
         // Generate backend JWT using backend numeric user ID for consistency
         String backendToken = jwtTokenProvider.generateToken(backendUser.getId(), backendUser.getRole());

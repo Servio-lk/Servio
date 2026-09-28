@@ -53,6 +53,25 @@ public class AdminStaffController {
         }
     }
 
+    @PatchMapping("/{id}/verify")
+    public ResponseEntity<ApiResponse<MechanicDto>> verifyStaff(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success("Staff verified successfully", mechanicService.verifyMechanic(id)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to verify staff", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<MechanicDto>> rejectStaff(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
+        try {
+            String reason = body != null ? body.get("reason") : "Application details require changes";
+            return ResponseEntity.ok(ApiResponse.success("Staff application rejected", mechanicService.rejectMechanic(id, reason)));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to reject staff", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}/schedule")
     public ResponseEntity<ApiResponse<MechanicScheduleResponse>> getSchedule(@PathVariable Long id) {
         try {

@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <application
         android:usesCleartextTraffic="true"
-        android:label="servio_mobile"
+        android:label="Servio Mechanic"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

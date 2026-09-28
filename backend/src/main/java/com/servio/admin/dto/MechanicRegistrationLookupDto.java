@@ -18,4 +18,6 @@ public class MechanicRegistrationLookupDto {
     private Integer experienceYears;
     private String status;
     private Boolean isActive;
+    private String verificationStatus;
+    private String rejectionReason;
 }

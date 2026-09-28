@@ -47,6 +47,7 @@ dependencies:
   phosphoricons_flutter: ^1.0.0
   qr_flutter: ^4.1.0
   http: ^1.2.0
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

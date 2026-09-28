@@ -20,6 +20,8 @@ public class MechanicDto {
     private Integer experienceYears;
     private String status;
     private Boolean isActive;
+    private String verificationStatus;
+    private String rejectionReason;
     private Long activeJobCount;
     private String employeeCode;
     private String branch;

@@ -39,6 +39,14 @@ public class Mechanic {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "verification_status", nullable = false)
+    @Builder.Default
+    private MechanicVerificationStatus verificationStatus = MechanicVerificationStatus.VERIFIED;
+
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

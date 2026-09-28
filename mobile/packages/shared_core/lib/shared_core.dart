@@ -14,3 +14,4 @@ export 'src/models/service_model.dart';
 export 'src/models/repair_models.dart';
 export 'src/models/offer_model.dart';
 export 'src/core/security/secure_local_storage.dart';
+export 'src/shared/signup_widgets.dart';

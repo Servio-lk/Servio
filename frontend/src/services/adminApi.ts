@@ -200,6 +200,23 @@ class AdminApiService {
     return response.json();
   }
 
+  async verifyStaff(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/verify`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async rejectStaff(id: number, reason: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/reject`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    return response.json();
+  }
+
   async uploadStaffFile(file: File, documentType: string, staffId?: number) {
     const headers: Record<string, string> = {};
 
