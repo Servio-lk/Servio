@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 public class JobTaskDto {
     private Long id;
+    private Long appointmentId;
     private Long jobCardId;
     private String jobNumber;
     private Long mechanicId;

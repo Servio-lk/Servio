@@ -48,6 +48,55 @@ void main() {
       expect(model.formattedCost, 'LKR 15,000');
       expect(model.toJson()['serviceType'], 'Oil Change');
     });
+
+    test('parses customerName and customerEmail from diverse JSON keys', () {
+      final json1 = {
+        'id': 2,
+        'customerName': 'Kamal Silva',
+        'customerEmail': 'kamal@example.com',
+        'serviceType': 'Full Service',
+        'appointmentDate': '2026-09-02T10:00:00',
+        'status': 'IN_PROGRESS',
+        'estimatedCost': 20000.0,
+      };
+      final m1 = AppointmentModel.fromJson(json1);
+      expect(m1.customerName, 'Kamal Silva');
+      expect(m1.customerEmail, 'kamal@example.com');
+      expect(m1.toJson()['customerName'], 'Kamal Silva');
+      expect(m1.toJson()['customerEmail'], 'kamal@example.com');
+
+      final json2 = {
+        'id': 3,
+        'user_name': 'Nimal Perera',
+        'user_email': 'nimal@example.com',
+        'serviceType': 'Wheel Alignment',
+        'appointmentDate': '2026-09-02T10:00:00',
+        'status': 'PENDING',
+        'estimatedCost': 8000.0,
+      };
+      final m2 = AppointmentModel.fromJson(json2);
+      expect(m2.customerName, 'Nimal Perera');
+      expect(m2.customerEmail, 'nimal@example.com');
+
+      final json3 = {
+        'id': 4,
+        'userName': 'Suneth Fernando',
+        'userEmail': 'suneth@example.com',
+        'serviceType': 'Brake Inspection',
+        'appointmentDate': '2026-09-02T10:00:00',
+        'status': 'CONFIRMED',
+        'estimatedCost': 5000.0,
+      };
+      final m3 = AppointmentModel.fromJson(json3);
+      expect(m3.customerName, 'Suneth Fernando');
+      expect(m3.customerEmail, 'suneth@example.com');
+
+      // Test copyWith
+      final updated = m3.copyWith(customerName: 'Updated Name', status: 'COMPLETED');
+      expect(updated.customerName, 'Updated Name');
+      expect(updated.status, 'COMPLETED');
+      expect(updated.customerEmail, 'suneth@example.com');
+    });
   });
 
   group('VehicleModel Tests', () {

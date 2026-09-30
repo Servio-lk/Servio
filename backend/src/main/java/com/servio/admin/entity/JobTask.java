@@ -1,5 +1,6 @@
 package com.servio.admin.entity;
 
+import com.servio.booking.entity.Appointment;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -17,14 +18,18 @@ public class JobTask {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "job_card_id", nullable = false)
+    @JoinColumn(name = "appointment_id")
+    private Appointment appointment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_card_id")
     private JobCard jobCard;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_mechanic_id")
     private Mechanic assignedMechanic;
 
-    @Column(name = "task_number", nullable = false)
+    @Column(name = "task_number")
     private String taskNumber;
 
     @Column(nullable = false)
@@ -63,6 +68,12 @@ public class JobTask {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (taskNumber == null) {
+            taskNumber = "TASK-" + System.currentTimeMillis();
+        }
+        if (status == null) {
+            status = TaskStatus.PENDING;
+        }
     }
 
     @PreUpdate

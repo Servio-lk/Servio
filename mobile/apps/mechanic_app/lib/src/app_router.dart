@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Screens
 import 'package:shared_core/shared_core.dart';
 import 'features/worker/worker_dashboard_screen.dart';
-import 'features/worker/worker_chat_screen.dart';
+import 'features/chats/worker_chat_screen.dart';
 import 'features/auth/mechanic_signup_email_screen.dart';
 import 'features/auth/mechanic_signup_verify_screen.dart';
 import 'features/auth/mechanic_signup_password_screen.dart';

@@ -19,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/staff")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ADMIN')")
+@PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
 public class AdminStaffController {
     private final MechanicService mechanicService;
     private final MechanicScheduleService scheduleService;
@@ -31,11 +31,13 @@ public class AdminStaffController {
     }
 
     @GetMapping("/next-employee-code")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<String>> getNextEmployeeCode() {
         return ResponseEntity.ok(ApiResponse.success("Employee code generated successfully", mechanicService.generateNextEmployeeCode()));
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<MechanicDto>> createStaff(@RequestBody MechanicDto dto) {
         try {
             return ResponseEntity.ok(ApiResponse.success("Staff created successfully", mechanicService.createMechanic(dto)));
@@ -45,6 +47,7 @@ public class AdminStaffController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<MechanicDto>> updateStaff(@PathVariable Long id, @RequestBody MechanicDto dto) {
         try {
             return ResponseEntity.ok(ApiResponse.success("Staff updated successfully", mechanicService.updateMechanic(id, dto)));
@@ -54,6 +57,7 @@ public class AdminStaffController {
     }
 
     @PatchMapping("/{id}/verify")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<MechanicDto>> verifyStaff(@PathVariable Long id) {
         try {
             return ResponseEntity.ok(ApiResponse.success("Staff verified successfully", mechanicService.verifyMechanic(id)));
@@ -63,6 +67,7 @@ public class AdminStaffController {
     }
 
     @PatchMapping("/{id}/reject")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<MechanicDto>> rejectStaff(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
         try {
             String reason = body != null ? body.get("reason") : "Application details require changes";
@@ -82,6 +87,7 @@ public class AdminStaffController {
     }
 
     @PutMapping("/{id}/schedule")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<MechanicScheduleResponse>> updateSchedule(
             @PathVariable Long id,
             @RequestBody MechanicScheduleRequest request
@@ -94,6 +100,7 @@ public class AdminStaffController {
     }
 
     @PostMapping(value = "/uploads", consumes = "multipart/form-data")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<StaffFileUploadResponse>> uploadStaffFile(
             @RequestParam("file") MultipartFile file,
             @RequestParam String documentType,

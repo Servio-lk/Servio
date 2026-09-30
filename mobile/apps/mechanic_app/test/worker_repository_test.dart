@@ -137,4 +137,124 @@ void main() {
       expect(msg.body, 'Oil change complete. Inspecting brake rotors now.');
     });
   });
+
+  group('WorkerRepository Zero-Mock and Live Endpoints Tests', () {
+    test('getActiveAppointments returns empty list on empty data without falling back to mocks', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({'success': true, 'data': []}),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final active = await repo.getActiveAppointments();
+      expect(active, isEmpty);
+    });
+
+    test('getActiveAppointments returns empty list on network failure without falling back to mocks', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response('Server Error', 500);
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final active = await repo.getActiveAppointments();
+      expect(active, isEmpty);
+    });
+
+    test('getPendingAppointments returns empty list on empty response', () async {
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({'success': true, 'data': []}),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final pending = await repo.getPendingAppointments();
+      expect(pending, isEmpty);
+    });
+
+    test('getCompletedAppointmentsThisWeek returns genuine appointments when present', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/api/appointments/status/COMPLETED');
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [
+              {
+                'id': 99,
+                'serviceType': 'Wheel Alignment',
+                'appointmentDate': '2026-09-28T14:00:00',
+                'status': 'COMPLETED',
+                'customerName': 'Anura Silva',
+              }
+            ]
+          }),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final completed = await repo.getCompletedAppointmentsThisWeek();
+      expect(completed.length, 1);
+      expect(completed.first.customerName, 'Anura Silva');
+    });
+
+    test('getJobTasks queries live endpoint and returns empty list when no tasks exist', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/api/admin/job-tasks/appointment/42');
+        return http.Response(
+          jsonEncode({'success': true, 'data': []}),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final tasks = await repo.getJobTasks(42);
+      expect(tasks, isEmpty);
+    });
+
+    test('updateJobTaskStatus sends PATCH to /api/admin/job-tasks/{id}/status/{status}', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.method, 'PATCH');
+        expect(request.url.path, '/api/admin/job-tasks/15/status/COMPLETED');
+        return http.Response(
+          jsonEncode({'success': true, 'message': 'Status updated'}),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final result = await repo.updateJobTaskStatus(15, 'COMPLETED');
+      expect(result, isTrue);
+    });
+
+    test('getNotifications returns empty list on empty response', () async {
+      final mockClient = MockClient((request) async {
+        expect(request.url.path, '/api/notifications');
+        return http.Response(
+          jsonEncode({'success': true, 'data': []}),
+          200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
+        );
+      });
+      final repo = WorkerRepository(
+        apiClient: ApiClient(client: mockClient, baseUrl: 'http://localhost:3001/api'),
+      );
+      final notifs = await repo.getNotifications();
+      expect(notifs, isEmpty);
+    });
+  });
 }

@@ -58,11 +58,15 @@ class ApiClient {
 
     final uri = Uri.parse(fullUrl);
     
-    // Explicitly reject HTTP traffic for non-local endpoints
-    if (uri.scheme == 'http' &&
-        !uri.host.contains('localhost') &&
-        uri.host != '10.0.2.2' &&
-        uri.host != '127.0.0.1') {
+    // Explicitly reject HTTP traffic for non-local endpoints (allow localhost, emulator 10.0.2.2, and private LAN IPs for real devices)
+    final host = uri.host;
+    final isLocalOrLan = host.contains('localhost') ||
+        host == '10.0.2.2' ||
+        host == '127.0.0.1' ||
+        host.startsWith('192.168.') ||
+        host.startsWith('10.') ||
+        host.startsWith('172.');
+    if (uri.scheme == 'http' && !isLocalOrLan) {
       throw const NetworkException('Cleartext HTTP traffic is not allowed for non-local endpoints.');
     }
 

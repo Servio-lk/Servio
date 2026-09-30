@@ -2,10 +2,12 @@ package com.servio.inventory.controller;
 
 import com.servio.admin.dto.InventoryItemDto;
 import com.servio.admin.dto.InventoryItemRequest;
+import com.servio.admin.dto.PartRequestDto;
 import com.servio.admin.dto.StockTransactionDto;
 import com.servio.admin.dto.StockUpdateRequest;
 import com.servio.common.dto.ApiResponse;
 import com.servio.inventory.service.InventoryService;
+import com.servio.inventory.service.PartRequestService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,9 +24,10 @@ import java.util.List;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final PartRequestService partRequestService;
 
     @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<List<InventoryItemDto>>> getAllItems() {
         return ResponseEntity.ok(ApiResponse.<List<InventoryItemDto>>builder()
                 .success(true)
@@ -33,7 +36,7 @@ public class InventoryController {
     }
 
     @GetMapping("/low-stock")
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<List<InventoryItemDto>>> getLowStockItems() {
         return ResponseEntity.ok(ApiResponse.<List<InventoryItemDto>>builder()
                 .success(true)
@@ -105,6 +108,51 @@ public class InventoryController {
         return ResponseEntity.ok(ApiResponse.<List<StockTransactionDto>>builder()
                 .success(true)
                 .data(inventoryService.getTransactionHistory(id))
+                .build());
+    }
+
+    @PostMapping("/requests")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
+    public ResponseEntity<ApiResponse<PartRequestDto>> createPartRequest(
+            @RequestBody PartRequestDto request,
+            Authentication authentication) {
+        PartRequestDto created = partRequestService.createRequest(request, authentication);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<PartRequestDto>builder()
+                .success(true)
+                .message("Part request submitted successfully")
+                .data(created)
+                .build());
+    }
+
+    @GetMapping("/requests")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
+    public ResponseEntity<ApiResponse<List<PartRequestDto>>> getAllPartRequests() {
+        return ResponseEntity.ok(ApiResponse.<List<PartRequestDto>>builder()
+                .success(true)
+                .message("Part requests retrieved successfully")
+                .data(partRequestService.getAllRequests())
+                .build());
+    }
+
+    @GetMapping("/requests/appointment/{appointmentId}")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
+    public ResponseEntity<ApiResponse<List<PartRequestDto>>> getRequestsByAppointment(@PathVariable Long appointmentId) {
+        return ResponseEntity.ok(ApiResponse.<List<PartRequestDto>>builder()
+                .success(true)
+                .message("Part requests for appointment retrieved successfully")
+                .data(partRequestService.getRequestsByAppointment(appointmentId))
+                .build());
+    }
+
+    @PatchMapping("/requests/{id}/status")
+    @PreAuthorize("hasAuthority('ADMIN')")
+    public ResponseEntity<ApiResponse<PartRequestDto>> updateRequestStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+        return ResponseEntity.ok(ApiResponse.<PartRequestDto>builder()
+                .success(true)
+                .message("Part request status updated successfully")
+                .data(partRequestService.updateStatus(id, status))
                 .build());
     }
 }

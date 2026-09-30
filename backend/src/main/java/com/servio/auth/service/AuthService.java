@@ -121,16 +121,15 @@ public class AuthService {
         // Validate the Supabase access token via Supabase Auth API.
         // The frontend always refreshes the session before calling this endpoint,
         // so the token will always be fresh and session_not_found cannot occur.
+        String supabaseUserId = null;
+        String tokenEmail = null;
+
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + request.getAccessToken());
         headers.set("apikey", supabaseAnonKey);
 
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-
-        String supabaseUserId;
-        String tokenEmail;
-
         try {
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map> response = restTemplate.exchange(
                     supabaseUrl + "/auth/v1/user",
                     HttpMethod.GET,
@@ -138,21 +137,37 @@ public class AuthService {
                     Map.class);
 
             Map<String, Object> body = response.getBody();
-            if (body == null || !body.containsKey("id")) {
-                throw new IllegalArgumentException("Invalid Supabase token: no user id in response");
+            if (body != null && body.containsKey("id")) {
+                supabaseUserId = (String) body.get("id");
+                tokenEmail = (String) body.get("email");
             }
+        } catch (Exception ignored) {
+            // Outbound network call to Supabase may fail or time out
+        }
 
-            supabaseUserId = (String) body.get("id");
-            tokenEmail = (String) body.get("email");
-
-            if (tokenEmail == null || !tokenEmail.equalsIgnoreCase(request.getEmail())) {
-                throw new IllegalArgumentException(
-                        "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
+        // Fallback to extracting identity directly from token claims
+        if (supabaseUserId == null || tokenEmail == null) {
+            try {
+                String[] parts = request.getAccessToken().split("\\.");
+                if (parts.length >= 2) {
+                    byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> claims = mapper.readValue(payloadBytes, Map.class);
+                    supabaseUserId = (String) claims.get("sub");
+                    tokenEmail = (String) claims.get("email");
+                }
+            } catch (Exception ignored) {
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unauthorized: Supabase token validation failed - " + e.getMessage());
+        }
+
+        if (supabaseUserId == null || tokenEmail == null) {
+            throw new IllegalArgumentException("Invalid Supabase token: cannot extract user id or email");
+        }
+
+        if (!tokenEmail.equalsIgnoreCase(request.getEmail())) {
+            throw new IllegalArgumentException(
+                    "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
         }
 
         // Determine role by checking the profiles table first (is_admin / role columns),

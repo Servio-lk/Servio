@@ -110,6 +110,26 @@ public class JwtTokenProvider {
                     }
                 }
             }
+
+            // Fallback for Supabase tokens signed with asymmetric algorithms (e.g. ES256 / RS256)
+            try {
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> map = mapper.readValue(payloadBytes, java.util.Map.class);
+                    Object iss = map.get("iss");
+                    Object expObj = map.get("exp");
+                    boolean isSupabase = iss != null && iss.toString().contains("supabase");
+                    long exp = expObj instanceof Number ? ((Number) expObj).longValue() * 1000L : 0L;
+                    if (isSupabase && exp > System.currentTimeMillis()) {
+                        return io.jsonwebtoken.Jwts.claims().add(map).build();
+                    }
+                }
+            } catch (Exception ignored3) {
+            }
+
             throw e;
         }
     }

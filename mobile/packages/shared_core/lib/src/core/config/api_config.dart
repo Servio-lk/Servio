@@ -3,8 +3,16 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 class ApiConfig {
   static const String _envUrl = String.fromEnvironment('SERVIO_API_BASE_URL');
+  static String? _overrideUrl;
+
+  static void setBaseUrl(String? url) {
+    _overrideUrl = url;
+  }
 
   static String get apiBaseUrl {
+    if (_overrideUrl != null && _overrideUrl!.isNotEmpty) {
+      return _overrideUrl!;
+    }
     if (_envUrl.isNotEmpty) {
       return _envUrl;
     }

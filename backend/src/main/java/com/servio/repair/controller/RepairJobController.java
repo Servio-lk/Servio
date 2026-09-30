@@ -3,10 +3,13 @@ package com.servio.repair.controller;
 import com.servio.common.dto.ApiResponse;
 import com.servio.repair.dto.RepairJobRequest;
 import com.servio.repair.dto.RepairJobDto;
+import com.servio.repair.dto.RepairPartDto;
+import com.servio.repair.dto.RepairPartRequest;
 import com.servio.auth.entity.User;
 import com.servio.booking.entity.Vehicle;
 
 import com.servio.repair.entity.RepairJob;
+import com.servio.repair.entity.RepairPart;
 import com.servio.repair.service.RepairJobService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -149,6 +152,52 @@ public class RepairJobController {
                 .notes(repairJob.getNotes())
                 .createdAt(repairJob.getCreatedAt())
                 .updatedAt(repairJob.getUpdatedAt())
+                .build();
+    }
+
+    @PostMapping("/{appointmentId}/parts")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
+    public ResponseEntity<ApiResponse<RepairPartDto>> logPartUsed(
+            @PathVariable Long appointmentId,
+            @RequestBody RepairPartRequest request) {
+        RepairPart part = repairJobService.logPartUsed(appointmentId, request);
+        RepairPartDto dto = convertPartToDto(part);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.<RepairPartDto>builder()
+                        .success(true)
+                        .message("Part logged successfully")
+                        .data(dto)
+                        .build());
+    }
+
+    @GetMapping("/{appointmentId}/parts")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC') or @ownershipSecurity.isAppointmentOwner(authentication, #appointmentId)")
+    public ResponseEntity<ApiResponse<List<RepairPartDto>>> getPartsByAppointment(@PathVariable Long appointmentId) {
+        List<RepairPart> parts = repairJobService.getPartsForAppointment(appointmentId);
+        List<RepairPartDto> dtos = parts.stream()
+                .map(this::convertPartToDto)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.<List<RepairPartDto>>builder()
+                .success(true)
+                .message("Parts retrieved successfully")
+                .data(dtos)
+                .build());
+    }
+
+    private RepairPartDto convertPartToDto(RepairPart part) {
+        return RepairPartDto.builder()
+                .id(part.getId())
+                .repairJobId(part.getRepairJob() != null ? part.getRepairJob().getId() : null)
+                .partName(part.getPartName())
+                .partNumber(part.getPartNumber())
+                .supplier(part.getSupplier())
+                .unitCost(part.getUnitCost())
+                .quantity(part.getQuantity())
+                .totalCost(part.getTotalCost())
+                .status(part.getStatus())
+                .notes(part.getNotes())
+                .createdAt(part.getCreatedAt())
+                .updatedAt(part.getUpdatedAt())
                 .build();
     }
 }
