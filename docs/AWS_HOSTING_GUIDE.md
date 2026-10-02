@@ -639,53 +639,28 @@ EOF
 
 ```bash
 # From your local machine repository root:
-# 1. Copy the production compose file
-scp -i servio-key-new.pem docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
-
-# 2. (For Option A — EC2 Dual-Port Frontend): Copy the frontend project to build the Nginx container
-scp -i servio-key-new.pem -r frontend ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
+# Copy the production compose and .env files
+scp -i ~/Downloads/servio-key-new.pem .env docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
 ```
+
+> **Zero Source Code on EC2**: Notice you do **NOT** need to copy the `frontend/` folder or `backend/` source files to EC2! Both the backend and frontend are pre-built by the GitHub Actions runner into immutable container images on GHCR (`ghcr.io/servio-lk/servio-backend` and `ghcr.io/servio-lk/servio-frontend`). EC2 simply pulls and runs them in seconds.
 
 ---
 
-## 10. First Manual Deploy
-
-### 10.1 Build and Push Backend Image to GHCR (from your local machine)
-
-```bash
-# Export your PAT and log in to ghcr.io
-export CR_PAT="ghp_yourPersonalAccessTokenHere"
-echo $CR_PAT | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
-
-# Build the backend image targeting EC2 x86_64
-docker build --platform linux/amd64 -t ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest ./backend
-
-# Push to GitHub Container Registry
-docker push ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest
-```
-
-> **Tip:** If this is your first push to GHCR, navigate to GitHub → **Packages** → `servio-backend` → **Package settings** → **Danger Zone** → **Change package visibility** → choose **Public** so EC2 can pull without credentials.
-
-### 10.2 Deploy on EC2
+## 10. Deploying Services on EC2
 
 ```bash
 # SSH into EC2
-ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
+ssh -i ~/Downloads/servio-key-new.pem ubuntu@<ELASTIC_IP>
 
 cd /home/ubuntu/servio
 
-# ──────── Option A: Full-Stack on EC2 (Recommended for Dual-Port Frontend) ────────
-# Pulls the backend from GHCR and builds the lightweight Nginx container:
+# Pull both latest images from GHCR and start containers:
 docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml --profile all up -d --build
-
-# ──────── Option B: Backend Only on EC2 (If using S3 + CloudFront for Frontend) ────────
-# docker compose -f docker-compose.prod.yml pull
-# docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # Check status of running containers:
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
 ```
 
 ### 10.3 Deploy Frontend to S3 (Only for Option B — S3 + CloudFront)

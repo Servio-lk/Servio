@@ -106,6 +106,20 @@ jobs:
           docker push $IMAGE_URI:latest
           docker push $IMAGE_URI:${{ github.sha }}
 
+      - name: Build, tag, and push frontend image to GHCR
+        run: |
+          FRONTEND_IMAGE="ghcr.io/${{ github.repository }}/servio-frontend"
+          FRONTEND_IMAGE="${FRONTEND_IMAGE,,}"
+          docker build --platform linux/amd64 \
+            --build-arg VITE_API_URL="/api" \
+            --build-arg VITE_SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --build-arg VITE_SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            -t $FRONTEND_IMAGE:latest \
+            -t $FRONTEND_IMAGE:${{ github.sha }} \
+            ./frontend
+          docker push $FRONTEND_IMAGE:latest
+          docker push $FRONTEND_IMAGE:${{ github.sha }}
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
