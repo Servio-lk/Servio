@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
-import 'signup_widgets.dart';
+import 'package:shared_core/shared_core.dart';
 
 class _VehicleTypeItem {
   final String label;

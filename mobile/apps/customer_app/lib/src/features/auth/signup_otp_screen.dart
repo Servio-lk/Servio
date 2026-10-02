@@ -7,7 +7,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthResponse;
 
 import 'package:shared_core/shared_core.dart';
-import 'signup_widgets.dart';
 
 class SignUpOtpScreen extends StatefulWidget {
   final Map<String, dynamic>? extras;
