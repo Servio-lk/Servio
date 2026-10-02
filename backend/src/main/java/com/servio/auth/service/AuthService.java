@@ -15,6 +15,7 @@ import com.servio.booking.entity.Appointment;
 import com.servio.booking.repository.AppointmentRepository;
 import com.servio.common.util.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import com.servio.admin.entity.Mechanic;
@@ -35,6 +37,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
     private final UserRepository userRepository;
     private final ProfileRepository profileRepository;
@@ -128,6 +131,12 @@ public class AuthService {
         headers.set("Authorization", "Bearer " + request.getAccessToken());
         headers.set("apikey", supabaseAnonKey);
 
+        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
+
+        String supabaseUserId;
+        String tokenEmail;
+        Map<String, Object> authUser = null;
+
         try {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map> response = restTemplate.exchange(
@@ -145,19 +154,13 @@ public class AuthService {
             // Outbound network call to Supabase may fail or time out
         }
 
-        // Fallback to extracting identity directly from token claims
-        if (supabaseUserId == null || tokenEmail == null) {
-            try {
-                String[] parts = request.getAccessToken().split("\\.");
-                if (parts.length >= 2) {
-                    byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
-                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> claims = mapper.readValue(payloadBytes, Map.class);
-                    supabaseUserId = (String) claims.get("sub");
-                    tokenEmail = (String) claims.get("email");
-                }
-            } catch (Exception ignored) {
+            authUser = body;
+            supabaseUserId = (String) body.get("id");
+            tokenEmail = (String) body.get("email");
+
+            if (tokenEmail == null || !tokenEmail.equalsIgnoreCase(request.getEmail())) {
+                throw new IllegalArgumentException(
+                        "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
             }
         }
 
@@ -170,8 +173,8 @@ public class AuthService {
                     "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
         }
 
-        // Determine role by checking the profiles table first (is_admin / role columns),
-        // then checking the existing database user, and falling back to the request role.
+        // Local profiles often miss the Supabase row. Check that row, then Supabase
+        // auth metadata and the remote profiles table, then the existing backend user.
         Role resolvedRole = Role.USER;
         String displayName = request.getFullName();
         try {
@@ -181,10 +184,7 @@ public class AuthService {
                 if (profile.getFullName() != null) {
                     displayName = profile.getFullName();
                 }
-                // Check is_admin flag first, then role column
-                if (Boolean.TRUE.equals(profile.getIsAdmin())) {
-                    resolvedRole = Role.ADMIN;
-                } else if ("ADMIN".equalsIgnoreCase(profile.getRole())) {
+                if (Boolean.TRUE.equals(profile.getIsAdmin()) || "ADMIN".equalsIgnoreCase(profile.getRole())) {
                     resolvedRole = Role.ADMIN;
                 }
             }
@@ -192,8 +192,22 @@ public class AuthService {
             // supabaseUserId was not a valid UUID
         }
 
-        // If profile didn't indicate admin, check if the user already exists in the database with a role,
-        // or fall back to the role specified in the request (e.g. MECHANIC during mechanic signup)
+        if (resolvedRole != Role.ADMIN && isAdminClaim(authUser)) {
+            resolvedRole = Role.ADMIN;
+        }
+
+        if (resolvedRole != Role.ADMIN) {
+            RemoteProfile remoteProfile = fetchSupabaseProfile(request.getAccessToken(), supabaseUserId);
+            if (remoteProfile != null) {
+                if (remoteProfile.fullName != null && !remoteProfile.fullName.isBlank()) {
+                    displayName = remoteProfile.fullName;
+                }
+                if (remoteProfile.admin) {
+                    resolvedRole = Role.ADMIN;
+                }
+            }
+        }
+
         if (resolvedRole != Role.ADMIN) {
             Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
             if (existingUser.isPresent()) {
@@ -299,6 +313,62 @@ public class AuthService {
                 .build();
     }
 
+    private boolean isAdminClaim(Map<String, Object> authUser) {
+        if (authUser == null) {
+            return false;
+        }
+        return isAdminMetadata(authUser.get("app_metadata")) || isAdminMetadata(authUser.get("user_metadata"));
+    }
+
+    private boolean isAdminMetadata(Object metadata) {
+        if (!(metadata instanceof Map<?, ?> map)) {
+            return false;
+        }
+        Object role = map.get("role");
+        if (role != null && "ADMIN".equalsIgnoreCase(role.toString())) {
+            return true;
+        }
+        Object isAdmin = map.get("is_admin");
+        return Boolean.TRUE.equals(isAdmin) || "true".equalsIgnoreCase(String.valueOf(isAdmin));
+    }
+
+    private RemoteProfile fetchSupabaseProfile(String accessToken, String supabaseUserId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", "Bearer " + accessToken);
+            headers.set("apikey", supabaseAnonKey);
+            headers.set("Accept", "application/json");
+
+            String url = supabaseUrl + "/rest/v1/profiles?id=eq." + supabaseUserId
+                    + "&select=full_name,is_admin,role";
+            ResponseEntity<List> response = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(headers), List.class);
+
+            List<?> body = response.getBody();
+            if (body == null || body.isEmpty() || !(body.get(0) instanceof Map<?, ?> row)) {
+                return null;
+            }
+
+            return toRemoteProfile(row);
+        } catch (Exception e) {
+            log.warn("Could not read Supabase profile for {}: {}", supabaseUserId, e.getMessage());
+            return null;
+        }
+    }
+
+    private RemoteProfile toRemoteProfile(Map<?, ?> row) {
+            Object isAdmin = row.get("is_admin");
+            Object roleValue = row.get("role");
+            boolean admin = Boolean.TRUE.equals(isAdmin)
+                    || "true".equalsIgnoreCase(String.valueOf(isAdmin))
+                    || (roleValue != null && "ADMIN".equalsIgnoreCase(roleValue.toString()));
+            Object fullName = row.get("full_name");
+            return new RemoteProfile(admin, fullName instanceof String ? (String) fullName : null);
+    }
+
+    private record RemoteProfile(boolean admin, String fullName) {
+    }
+
     public UserResponse getProfileByUuid(String userId) {
         try {
             UUID uuid = UUID.fromString(userId);
@@ -321,6 +391,8 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
+                .bio(user.getBio())
+                .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();

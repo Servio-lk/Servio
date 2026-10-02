@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
+import { apiFetch } from '../../services/apiFetch';
 import { Users, Search, Mail, Phone, Filter, MoreVertical, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 interface CustomerProfile {
   id: string;
@@ -11,6 +14,7 @@ interface CustomerProfile {
   role?: string | null;
   createdAt?: string | null;
   joined?: string | null;
+  isFallback?: boolean;
 }
 
 interface AdminCustomerUser {
@@ -115,14 +119,71 @@ export function AdminCustomers() {
     loadWalkInCustomers();
   }, []);
 
+  const localUserIdToSyntheticUuid = (userId: number) => {
+    const hex = userId.toString(16).padStart(16, '0');
+    return `00000000-0000-0000-${hex.slice(0, 4)}-${hex.slice(4)}`;
+  };
+
+  const fetchCustomersFromAppointments = async (): Promise<CustomerProfile[]> => {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const response = await apiFetch(`${API_BASE_URL}/appointments`, { headers });
+    const payload = await response.json();
+    const appointments = Array.isArray(payload?.data) ? payload.data : [];
+
+    const uniqueByIdentity = new Map<string, CustomerProfile>();
+
+    for (const appt of appointments) {
+      const name = appt?.userName || 'Unknown';
+      const email = appt?.userEmail || null;
+      const key = email ? `email:${email.toLowerCase()}` : `name:${String(name).toLowerCase()}`;
+      if (uniqueByIdentity.has(key)) continue;
+
+      let id: string;
+      if (typeof appt?.userId === 'number') {
+        id = localUserIdToSyntheticUuid(appt.userId);
+      } else {
+        id = `appt-${appt?.id ?? Math.random().toString(36).slice(2)}`;
+      }
+
+      uniqueByIdentity.set(key, {
+        id,
+        fullName: name,
+        email,
+        phone: null,
+        role: 'CUSTOMER',
+        createdAt: appt?.createdAt || null,
+        joined: appt?.createdAt || null,
+        isFallback: true,
+      });
+    }
+
+    return Array.from(uniqueByIdentity.values());
+  };
+
   const loadCustomers = async () => {
     try {
       setLoading(true);
       const response = await adminApi.getAllCustomers();
-      setCustomers(response.data || []);
+      const adminCustomers = Array.isArray(response?.data) ? response.data : [];
+
+      if (adminCustomers.length > 0) {
+        setCustomers(adminCustomers);
+        return;
+      }
+
+      const fallbackCustomers = await fetchCustomersFromAppointments();
+      setCustomers(fallbackCustomers);
     } catch (error) {
       console.error('Failed to load customers:', error);
-      toast.error('Failed to load customers');
+      try {
+        const fallbackCustomers = await fetchCustomersFromAppointments();
+        setCustomers(fallbackCustomers);
+      } catch {
+        toast.error('Failed to load customers');
+      }
     } finally {
       setLoading(false);
     }
@@ -142,6 +203,11 @@ export function AdminCustomers() {
   };
 
   const openCustomerDetails = async (customer: CustomerProfile) => {
+    if (customer.isFallback && customer.id.startsWith('appt-')) {
+      toast.info('Detailed profile is not available for this appointment-only record');
+      return;
+    }
+
     setSelectedCustomer(customer);
     setCustomerDetails(null);
     setDetailsLoading(true);

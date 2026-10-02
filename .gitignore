@@ -158,16 +158,5 @@ ehthumbs.db
 Thumbs.db
 boot.log
 
-# Terraform
-**/.terraform/
-*.tfstate
-*.tfstate.*
-crash.log
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
-.terraformrc
-terraform.rc
-terraform.tfvars
-!terraform.tfvars.example
+# Android Gradle build cache
+mobile/android/.gradle/

@@ -95,6 +95,16 @@ public class NotificationController {
             .build());
     }
     
+    @DeleteMapping("/user/{userId}")
+    public ResponseEntity<ApiResponse<Void>> clearAll(@PathVariable UUID userId) {
+        notificationService.clearAll(userId);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+            .success(true)
+            .message("Notifications cleared")
+            .data(null)
+            .build());
+    }
+
     @PatchMapping("/user/{userId}/read-all")
     @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
     public ResponseEntity<ApiResponse<Void>> markAllAsRead(@PathVariable UUID userId) {

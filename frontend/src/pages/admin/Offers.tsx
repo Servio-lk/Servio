@@ -3,10 +3,25 @@ import { adminApi } from '../../services/adminApi';
 import { Tag, Plus, Search, Filter, Calendar, Edit, Trash2, Percent, DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
+const emptyForm = {
+  title: '',
+  subtitle: '',
+  description: '',
+  discountType: 'PERCENTAGE',
+  discountValue: '',
+  imageUrl: '',
+  promoCode: '',
+  category: '',
+  validUntil: '',
+};
+
 export function AdminOffers() {
   const [offers, setOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     loadOffers();
@@ -28,6 +43,55 @@ export function AdminOffers() {
   const filteredOffers = offers.filter(offer =>
     offer.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const createOffer = async () => {
+    if (!form.title.trim() || !form.discountValue) {
+      toast.error('Title and discount value are required');
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await adminApi.createOffer({
+        title: form.title.trim(),
+        subtitle: form.subtitle.trim() || null,
+        description: form.description.trim() || null,
+        discountType: form.discountType,
+        discountValue: Number(form.discountValue),
+        imageUrl: form.imageUrl.trim() || null,
+        promoCode: form.promoCode.trim() ? form.promoCode.trim().toUpperCase() : null,
+        category: form.category || null,
+        validUntil: form.validUntil ? `${form.validUntil}:00` : null,
+        isActive: true,
+      });
+      if (response.success) {
+        toast.success('Offer created');
+        setShowForm(false);
+        setForm(emptyForm);
+        await loadOffers();
+      } else {
+        toast.error(response.message || 'Could not create offer');
+      }
+    } catch {
+      toast.error('Could not create offer');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeOffer = async (id: number) => {
+    if (!window.confirm('Delete this offer?')) return;
+    try {
+      const response = await adminApi.deleteOffer(id);
+      if (response.success) {
+        toast.success('Offer deleted');
+        setOffers((prev) => prev.filter((offer) => offer.id !== id));
+      } else {
+        toast.error(response.message || 'Could not delete offer');
+      }
+    } catch {
+      toast.error('Could not delete offer');
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -55,11 +119,40 @@ export function AdminOffers() {
           <h1 className="text-2xl text-left font-bold text-black">Offers Management</h1>
           <p className="text-black/70 mt-1">Manage, create and track promotional offers</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-[#ff5d2e] text-white rounded-lg hover:bg-[#e54d1e] transition-colors shadow-lg shadow-[#ff5d2e]/20">
+        <button
+          type="button"
+          onClick={() => setShowForm((open) => !open)}
+          className="flex items-center gap-2 px-4 py-2 bg-[#ff5d2e] text-white rounded-lg hover:bg-[#e54d1e] transition-colors shadow-lg shadow-[#ff5d2e]/20"
+        >
           <Plus className="h-4 w-4" />
           <span>Create New Offer</span>
         </button>
       </div>
+
+      {showForm && (
+        <div className="bg-white p-5 rounded-xl border border-black/5 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Subtitle" value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 text-sm sm:col-span-2" placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          <select className="border rounded-lg px-3 py-2 text-sm" value={form.discountType} onChange={(e) => setForm({ ...form, discountType: e.target.value })}>
+            <option value="PERCENTAGE">Percentage</option>
+            <option value="FIXED_AMOUNT">Fixed amount</option>
+          </select>
+          <input className="border rounded-lg px-3 py-2 text-sm" type="number" min="0" placeholder="Discount value" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Promo code" value={form.promoCode} onChange={(e) => setForm({ ...form, promoCode: e.target.value })} />
+          <select className="border rounded-lg px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+            <option value="">No category</option>
+            <option value="NEW_USER">New User</option>
+            <option value="LIMITED_TIME">Limited Time</option>
+            <option value="SEASONAL">Seasonal</option>
+          </select>
+          <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Image URL" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
+          <input className="border rounded-lg px-3 py-2 text-sm" type="datetime-local" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} />
+          <button type="button" disabled={saving} onClick={createOffer} className="sm:col-span-2 justify-self-start bg-[#ff5d2e] text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
+            {saving ? 'Saving...' : 'Publish offer'}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-6">
         {/* Toolbar */}
@@ -131,11 +224,17 @@ export function AdminOffers() {
                   {offer.subtitle && (
                     <p className="text-sm text-gray-500 mb-4 line-clamp-2">{offer.subtitle}</p>
                   )}
+                  {(offer.promoCode || offer.category) && (
+                    <p className="text-xs text-black/50 mb-2">
+                      {offer.category ? offer.category.replace('_', ' ') : 'General'}
+                      {offer.promoCode ? ` · ${offer.promoCode}` : ''}
+                    </p>
+                  )}
 
                   <div className="mt-auto space-y-3 pt-4 border-t border-gray-100">
                     <div className="flex items-center text-sm text-gray-600">
                       <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                      <span>Valid until <span className="font-medium text-black">{formatDate(offer.validUntil)}</span></span>
+                      <span>Valid until <span className="font-medium text-black">{offer.validUntil ? formatDate(offer.validUntil) : 'No expiry'}</span></span>
                     </div>
                   </div>
                 </div>
@@ -146,7 +245,7 @@ export function AdminOffers() {
                     <Edit className="w-4 h-4" />
                     Edit
                   </button>
-                  <button className="flex items-center justify-center px-4 py-2 bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-200 transition-colors text-sm font-medium">
+                  <button type="button" onClick={() => removeOffer(offer.id)} className="flex items-center justify-center px-4 py-2 bg-white border border-red-100 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-200 transition-colors text-sm font-medium">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>

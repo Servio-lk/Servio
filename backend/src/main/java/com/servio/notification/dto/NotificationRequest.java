@@ -14,5 +14,6 @@ public class NotificationRequest {
     private UUID userId;
     private String title;
     private String message;
-    private String type; // APPOINTMENT, PAYMENT, REMINDER, PROMOTIONAL
+    private String type; // APPOINTMENT, PAYMENT, REMINDER, PROMO, ACCOUNT, SYSTEM
+    private String actionUrl;
 }

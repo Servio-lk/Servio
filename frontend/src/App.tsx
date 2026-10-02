@@ -23,6 +23,7 @@ import BookingPage from './pages/BookingPage'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 import AccountPage from './pages/AccountPage'
+import AccountSettingsPage from './pages/AccountSettingsPage'
 import AssistantPage from './pages/AssistantPage'
 
 // Lazy-loaded Admin Layout & Pages
@@ -41,6 +42,7 @@ const AdminServiceBays = lazy(() => import('@/pages/admin/ServiceBays'))
 const AdminWalkInCustomers = lazy(() => import('@/pages/admin/WalkInCustomers'))
 
 import './App.css'
+import OffersPage from './pages/OffersPage'
 
 function AdminLoadingFallback() {
   return (
@@ -167,6 +169,23 @@ function App() {
             element={
               <AuthGuard>
                 <AccountPage />
+              </AuthGuard>
+            }
+          />
+
+          <Route 
+            path="/offers" 
+            element={
+              <AuthGuard>
+                <OffersPage />
+              </AuthGuard>} 
+          />
+
+          <Route
+            path="/account/settings"
+            element={
+              <AuthGuard>
+                <AccountSettingsPage />
               </AuthGuard>
             }
           />

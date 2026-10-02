@@ -113,6 +113,23 @@ class AdminApiService {
     return response.json();
   }
 
+  async createOffer(payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/offers`, {
+      method: 'POST',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async deleteOffer(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/offers/${id}`, {
+      method: 'DELETE',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
   async getAllAppointments(status?: string) {
     const url = status
       ? `${API_BASE_URL}/admin/appointments?status=${status}`
@@ -283,7 +300,6 @@ class AdminApiService {
     });
     return response.json();
   }
-
 }
 
 export const adminApi = new AdminApiService();

@@ -35,6 +35,12 @@ public class Offer {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Column(name = "promo_code", length = 50, unique = true)
+    private String promoCode;
+
+    @Column(length = 30)
+    private String category;
+
     @Column(name = "valid_from")
     private LocalDateTime validFrom;
 

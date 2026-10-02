@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, refreshBackendToken } = useAuth();
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -26,6 +26,12 @@ export default function AuthCallback() {
           };
 
           login(userData, session);
+
+          const backendTokenReady = await refreshBackendToken();
+          if (!backendTokenReady) {
+            throw new Error('Backend session could not be initialized');
+          }
+
           toast.success('Welcome to Servio!');
 
           // Redirect to home (ignore admin role for customer frontend)
@@ -42,7 +48,7 @@ export default function AuthCallback() {
     };
 
     handleCallback();
-  }, [navigate, login]);
+  }, [navigate, login, refreshBackendToken]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">

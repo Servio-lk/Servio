@@ -9,16 +9,21 @@ import com.servio.notification.dto.NotificationRequest;
 import com.servio.notification.entity.Notification;
 import com.servio.auth.entity.User;
 import com.servio.notification.repository.NotificationRepository;
+import com.servio.auth.entity.UserNotificationPreference;
+import com.servio.auth.repository.UserNotificationPreferenceRepository;
 import com.servio.auth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import com.servio.common.event.AccountUpdatedEvent;
 import com.servio.common.event.AppointmentCreatedEvent;
+import com.servio.common.event.OfferPublishedEvent;
 import com.servio.common.event.PaymentCompletedEvent;
 import com.servio.common.event.RepairStatusChangedEvent;
 
@@ -35,9 +40,18 @@ public class NotificationService {
     private final UserRepository userRepository;
     @Lazy
     private final AppointmentEventPublisher eventPublisher;
+    private final UserNotificationPreferenceRepository preferenceRepository;
+
+    @Autowired(required = false)
+    private List<NotificationChannel> extraChannels = List.of();
 
     @Transactional
     public NotificationDto createNotification(NotificationRequest request) {
+        if (!allowsDelivery(request.getUserId(), request.getType())) {
+            log.info("Skipped {} notification for user {} because of preferences", request.getType(), request.getUserId());
+            return null;
+        }
+
         User user = userRepository.findById(request.getUserId())
             .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
 
@@ -46,17 +60,30 @@ public class NotificationService {
             .title(request.getTitle())
             .message(request.getMessage())
             .type(request.getType())
+            .actionUrl(request.getActionUrl())
             .isRead(false)
             .build();
 
         notification = notificationRepository.save(notification);
         NotificationDto dto = convertToDto(notification);
 
-        // Push real-time notification via WebSocket
-        try {
-            eventPublisher.publishNotification(request.getUserId(), dto);
-        } catch (Exception e) {
-            log.error("Failed to broadcast WebSocket notification to user {}: {}", request.getUserId(), e.getMessage());
+        if (pushEnabled(request.getUserId())) {
+            try {
+                eventPublisher.publishNotification(request.getUserId(), dto);
+            } catch (Exception e) {
+                log.error("Failed to broadcast WebSocket notification to user {}: {}", request.getUserId(), e.getMessage());
+            }
+        }
+
+        if (extraChannels != null) {
+            for (NotificationChannel channel : extraChannels) {
+                try {
+                    channel.deliver(dto);
+                } catch (Exception e) {
+                    log.warn("Notification channel {} failed for user {}: {}",
+                            channel.getClass().getSimpleName(), request.getUserId(), e.getMessage());
+                }
+            }
         }
 
         return dto;
@@ -196,6 +223,52 @@ public class NotificationService {
         notificationRepository.deleteById(id);
     }
     
+    @Async("taskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onOfferPublished(OfferPublishedEvent event) {
+        try {
+            log.info("Handling OfferPublishedEvent: offerId={}", event.getOfferId());
+            String message = event.getPromoCode() == null
+                    ? "A new offer is available."
+                    : "Use code " + event.getPromoCode();
+            for (User user : userRepository.findAll()) {
+                createNotification(NotificationRequest.builder()
+                        .userId(user.getId())
+                        .title("New offer: " + event.getTitle())
+                        .message(message)
+                        .type("PROMO")
+                        .actionUrl("/offers")
+                        .build());
+            }
+        } catch (Exception e) {
+            log.error("Failed to process OfferPublishedEvent for offerId={}: {}", event.getOfferId(), e.getMessage(), e);
+        }
+    }
+
+    @Async("taskExecutor")
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onAccountUpdated(AccountUpdatedEvent event) {
+        try {
+            if (event.getUserId() == null) {
+                return;
+            }
+            createNotification(NotificationRequest.builder()
+                    .userId(event.getUserId())
+                    .title("Account updated")
+                    .message(event.getMessage())
+                    .type("ACCOUNT")
+                    .actionUrl("/account/settings")
+                    .build());
+        } catch (Exception e) {
+            log.error("Failed to process AccountUpdatedEvent for userId={}: {}", event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    @Transactional
+    public void clearAll(UUID userId) {
+        notificationRepository.deleteByUserId(userId);
+    }
+
     @Transactional
     public void deleteOldNotifications(UUID userId, int daysOld) {
         List<Notification> notifications = notificationRepository.findUserNotificationsOrderByDate(userId);
@@ -215,6 +288,32 @@ public class NotificationService {
             .type(notification.getType())
             .isRead(notification.getIsRead())
             .createdAt(notification.getCreatedAt())
+            .actionUrl(notification.getActionUrl())
             .build();
+    }
+
+    private boolean allowsDelivery(UUID userId, String type) {
+        if (preferenceRepository == null || type == null) {
+            return true;
+        }
+        UserNotificationPreference prefs = preferenceRepository.findById(userId).orElse(null);
+        if (prefs == null) {
+            return true;
+        }
+        String normalized = type.toUpperCase();
+        if (("PROMO".equals(normalized) || "PROMOTIONAL".equals(normalized))
+                && Boolean.FALSE.equals(prefs.getPromotionalOffers())) {
+            return false;
+        }
+        return !"ACCOUNT".equals(normalized) || !Boolean.FALSE.equals(prefs.getSecurityAlerts());
+    }
+
+    private boolean pushEnabled(UUID userId) {
+        if (preferenceRepository == null) {
+            return true;
+        }
+        return preferenceRepository.findById(userId)
+                .map(prefs -> !Boolean.FALSE.equals(prefs.getPushNotifications()))
+                .orElse(true);
     }
 }

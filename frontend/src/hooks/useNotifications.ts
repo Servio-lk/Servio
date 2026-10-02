@@ -10,14 +10,13 @@ export function useNotifications() {
   const [isLoading, setIsLoading] = useState(false);
   const seenIdsRef = useRef<Set<number>>(new Set());
 
-  // Numeric user id — only available for local (non-Supabase) users
-  const numericUserId = user?.id && !isNaN(Number(user.id)) ? Number(user.id) : null;
+  const userId = user?.id ?? null;
 
   const fetchNotifications = useCallback(async () => {
-    if (!numericUserId) return;
+    if (!userId) return;
     setIsLoading(true);
     try {
-      const res = await apiService.getMyNotifications(numericUserId);
+      const res = await apiService.getMyNotifications(userId);
       if (res.success && res.data) {
         setNotifications(res.data);
         seenIdsRef.current = new Set(res.data.map(n => n.id));
@@ -28,41 +27,39 @@ export function useNotifications() {
     } finally {
       setIsLoading(false);
     }
-  }, [numericUserId]);
+  }, [userId]);
 
-  // Poll REST on mount + every 60 seconds
   useEffect(() => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60_000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  // Supabase Realtime subscription. The REST fetch above remains the source of
-  // truth for history and as a fallback when realtime briefly disconnects.
   useEffect(() => {
-    if (!numericUserId) return;
+    if (!userId) return;
 
     const channel = supabase
-      .channel(`notifications:user:${numericUserId}`)
+      .channel(`notifications:user:${userId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${numericUserId}`,
+          filter: `user_id=eq.${userId}`,
         },
         (payload) => {
           const row = payload.new as Record<string, any>;
           const notification: NotificationDto = {
             id: Number(row.id),
-            userId: Number(row.user_id),
+            userId: String(row.user_id),
             userName: row.user_name || '',
             title: row.title,
             message: row.message,
             type: row.type,
             isRead: Boolean(row.is_read),
             createdAt: row.created_at,
+            actionUrl: row.action_url ?? null,
           };
 
           if (seenIdsRef.current.has(notification.id)) {
@@ -81,7 +78,7 @@ export function useNotifications() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [numericUserId]);
+  }, [userId]);
 
   const markAsRead = useCallback(async (id: number) => {
     try {
@@ -96,15 +93,34 @@ export function useNotifications() {
   }, []);
 
   const markAllAsRead = useCallback(async () => {
-    if (!numericUserId) return;
+    if (!userId) return;
     try {
-      await apiService.markAllNotificationsRead(numericUserId);
+      await apiService.markAllNotificationsRead(userId);
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch {
       // silently fail
     }
-  }, [numericUserId]);
+  }, [userId]);
 
-  return { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, refresh: fetchNotifications };
+  const clearAll = useCallback(async () => {
+    if (!userId) return;
+    try {
+      await apiService.clearNotifications(userId);
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch {
+      // silently fail
+    }
+  }, [userId]);
+
+  return {
+    notifications,
+    unreadCount,
+    isLoading,
+    markAsRead,
+    markAllAsRead,
+    clearAll,
+    refresh: fetchNotifications,
+  };
 }

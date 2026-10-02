@@ -88,8 +88,10 @@ export default function HomePage() {
 
       if (servicesResult.status === 'fulfilled') {
         const servicesResponse = servicesResult.value;
-        if (servicesResponse.success && servicesResponse.data) {
+        if (servicesResponse.success && servicesResponse.data && servicesResponse.data.length > 0) {
           setFeaturedServices(servicesResponse.data.slice(0, 4));
+        } else if (allServicesData) {
+          setFeaturedServices(allServicesData.slice(0, 4));
         }
       } else {
         console.error('[HomePage] Failed to load featured services:', servicesResult.reason);
@@ -346,9 +348,13 @@ export default function HomePage() {
                       id={offer.id}
                       title={offer.title}
                       subtitle={offer.subtitle}
+                      description={offer.description}
                       discountType={offer.discountType}
                       discountValue={offer.discountValue}
                       imageUrl={offer.imageUrl}
+                      promoCode={offer.promoCode}
+                      validUntil={offer.validUntil}
+                      expired={offer.expired}
                     />
                   ))}
                 </div>
