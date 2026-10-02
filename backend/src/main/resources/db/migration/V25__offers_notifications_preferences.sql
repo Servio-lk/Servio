@@ -1,0 +1,24 @@
+-- V25__offers_notifications_preferences.sql
+-- Servio: Ensure offers, notifications, and user preferences columns and tables exist
+
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS subtitle VARCHAR(200);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS discount_type VARCHAR(20);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS discount_value DECIMAL(10,2);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS promo_code VARCHAR(50);
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS category VARCHAR(30);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_offers_promo_code
+    ON offers (promo_code) WHERE promo_code IS NOT NULL;
+
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS action_url VARCHAR(500);
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(500);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500);
+
+CREATE TABLE IF NOT EXISTS user_notification_preferences (
+    user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    promotional_offers BOOLEAN NOT NULL DEFAULT TRUE,
+    push_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    security_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+    updated_at TIMESTAMP DEFAULT NOW()
+);
