@@ -14,7 +14,7 @@
 services:
   # Backend API (Spring Boot)
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/servio-lk/servio-backend:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/servio-lk/servio/servio-backend:latest}
     container_name: servio-backend
     restart: unless-stopped
     env_file:
@@ -74,7 +74,7 @@ services:
 
   # Frontend (React/Vite via Nginx) — Serves Customer Portal (port 80) and Admin Portal (port 8081)
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/servio-lk/servio-frontend:latest}
+    image: ${FRONTEND_IMAGE:-ghcr.io/servio-lk/servio/servio-frontend:latest}
     container_name: servio-frontend
     restart: unless-stopped
     ports:

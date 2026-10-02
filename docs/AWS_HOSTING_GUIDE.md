@@ -588,9 +588,9 @@ FRONTEND_PORT=80
 ADMIN_PORT=8081
 BACKEND_PORT=3001
 
-# ---- Container Image (GHCR) ----
-# Replace <YOUR_GITHUB_USERNAME> with your GitHub user or organization name (lowercase)
-BACKEND_IMAGE=ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest
+# ---- Container Images (GHCR) ----
+BACKEND_IMAGE=ghcr.io/servio-lk/servio/servio-backend:latest
+FRONTEND_IMAGE=ghcr.io/servio-lk/servio/servio-frontend:latest
 
 # ---- Supabase Database (Session Pooler — IPv4 compatible) ----
 # Get these from: Supabase Dashboard → Database → Connect → Session Pooler
