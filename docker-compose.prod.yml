@@ -14,7 +14,7 @@
 services:
   # Backend API (Spring Boot)
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/servio-lk/servio-backend:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/servio-lk/servio/servio-backend:latest}
     container_name: servio-backend
     restart: unless-stopped
     env_file:
@@ -73,16 +73,8 @@ services:
       - servio-network
 
   # Frontend (React/Vite via Nginx) — Serves Customer Portal (port 80) and Admin Portal (port 8081)
-  # Active when running full-stack on EC2: --profile all or --profile frontend
   frontend:
-    profiles: ["all", "frontend"]
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL:-/api}
-        - VITE_SUPABASE_URL=${SUPABASE_URL}
-        - VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    image: ${FRONTEND_IMAGE:-ghcr.io/servio-lk/servio/servio-frontend:latest}
     container_name: servio-frontend
     restart: unless-stopped
     ports:

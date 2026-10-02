@@ -1,4 +1,4 @@
--- V20__align_job_card_notes_photos_uuid.sql
+-- V24__align_job_card_notes_photos_uuid.sql
 -- Servio: Align job_card_notes, job_card_photos, and walk_in_customers user references to UUID
 
 DO $$

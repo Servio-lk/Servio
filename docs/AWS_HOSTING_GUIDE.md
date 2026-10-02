@@ -338,10 +338,33 @@ echo $CR_PAT | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
 
 > You should see: `Login Succeeded`.
 
-### 6.3 Public vs. Private Package Visibility
+### 6.3 Build and Push Backend Image to GHCR
 
-After your first image push (via local Docker or GitHub Actions), the package will appear under your GitHub profile:
-- Go to `https://github.com/<YOUR_GITHUB_USERNAME>?tab=packages`
+You have two ways to get the image into GHCR:
+
+#### Option A: Push Manually from your Local Machine (Fastest for first setup)
+From your project root on your local computer:
+
+```bash
+# 1. Set your GitHub username or organization (MUST be lowercase)
+export GH_USER="servio-lk"
+
+# 2. Build for linux/amd64 (matches EC2 architecture)
+docker build --platform linux/amd64 -t ghcr.io/${GH_USER}/servio-backend:latest ./backend
+
+# 3. Push to GitHub Container Registry
+docker push ghcr.io/${GH_USER}/servio-backend:latest
+```
+
+#### Option B: Let GitHub Actions Push Automatically
+Pushing code to the `main` branch automatically triggers the `deploy-backend` workflow in `.github/workflows/deploy.yml`, which builds and pushes the image to GHCR using the built-in `GITHUB_TOKEN`.
+
+---
+
+### 6.4 Public vs. Private Package Visibility
+
+After your first image push (via local Docker or GitHub Actions), the package will appear under your GitHub profile or organization:
+- Go to `https://github.com/orgs/Servio-lk/packages` (or `https://github.com/<YOUR_GITHUB_USERNAME>?tab=packages`)
 - Click `servio-backend` → **Package settings**
 - Scroll to the bottom **Danger Zone**:
   - **Make Public**: Anyone (and your EC2 instance) can pull the image without needing to configure authentication on EC2. Highly recommended for open-source / university projects.
@@ -377,12 +400,12 @@ aws ec2 create-security-group \
   --group-name servio-sg \
   --description "Servio Web & Backend Security Group"
 
-# 3. Allow SSH (port 22) - Restricted to your IP
+# 3. Allow SSH (port 22) — 0.0.0.0/0 is required so GitHub Actions CI/CD runners can deploy via SSH
 aws ec2 authorize-security-group-ingress \
   --group-name servio-sg \
   --protocol tcp \
   --port 22 \
-  --cidr "${MY_IP}/32"
+  --cidr 0.0.0.0/0
 
 # 4. Allow Customer Web Portal (port 80) — Public HTTP access
 aws ec2 authorize-security-group-ingress \
@@ -545,7 +568,18 @@ mkdir -p /home/ubuntu/servio
 cd /home/ubuntu/servio
 ```
 
-### 9.4 Create the `.env` File
+### 9.4 Create or Push the `.env` and `docker-compose.prod.yml` Files
+
+#### Option A: Push Directly from your Local Computer via SCP (Fastest!)
+From your local Mac terminal (in the Servio project root):
+
+```bash
+# Push both files straight to EC2 in one command:
+scp -i ~/Downloads/servio-key-new.pem .env docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
+```
+
+#### Option B: Manually create `.env` on EC2
+On your EC2 SSH terminal:
 
 ```bash
 cat > .env << 'EOF'
@@ -554,9 +588,9 @@ FRONTEND_PORT=80
 ADMIN_PORT=8081
 BACKEND_PORT=3001
 
-# ---- Container Image (GHCR) ----
-# Replace <YOUR_GITHUB_USERNAME> with your GitHub user or organization name (lowercase)
-BACKEND_IMAGE=ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest
+# ---- Container Images (GHCR) ----
+BACKEND_IMAGE=ghcr.io/servio-lk/servio/servio-backend:latest
+FRONTEND_IMAGE=ghcr.io/servio-lk/servio/servio-frontend:latest
 
 # ---- Supabase Database (Session Pooler — IPv4 compatible) ----
 # Get these from: Supabase Dashboard → Database → Connect → Session Pooler
@@ -605,53 +639,28 @@ EOF
 
 ```bash
 # From your local machine repository root:
-# 1. Copy the production compose file
-scp -i servio-key-new.pem docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
-
-# 2. (For Option A — EC2 Dual-Port Frontend): Copy the frontend project to build the Nginx container
-scp -i servio-key-new.pem -r frontend ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
+# Copy the production compose and .env files
+scp -i ~/Downloads/servio-key-new.pem .env docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
 ```
+
+> **Zero Source Code on EC2**: Notice you do **NOT** need to copy the `frontend/` folder or `backend/` source files to EC2! Both the backend and frontend are pre-built by the GitHub Actions runner into immutable container images on GHCR (`ghcr.io/servio-lk/servio-backend` and `ghcr.io/servio-lk/servio-frontend`). EC2 simply pulls and runs them in seconds.
 
 ---
 
-## 10. First Manual Deploy
-
-### 10.1 Build and Push Backend Image to GHCR (from your local machine)
-
-```bash
-# Export your PAT and log in to ghcr.io
-export CR_PAT="ghp_yourPersonalAccessTokenHere"
-echo $CR_PAT | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
-
-# Build the backend image targeting EC2 x86_64
-docker build --platform linux/amd64 -t ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest ./backend
-
-# Push to GitHub Container Registry
-docker push ghcr.io/<YOUR_GITHUB_USERNAME>/servio-backend:latest
-```
-
-> **Tip:** If this is your first push to GHCR, navigate to GitHub → **Packages** → `servio-backend` → **Package settings** → **Danger Zone** → **Change package visibility** → choose **Public** so EC2 can pull without credentials.
-
-### 10.2 Deploy on EC2
+## 10. Deploying Services on EC2
 
 ```bash
 # SSH into EC2
-ssh -i servio-key-new.pem ubuntu@<ELASTIC_IP>
+ssh -i ~/Downloads/servio-key-new.pem ubuntu@<ELASTIC_IP>
 
 cd /home/ubuntu/servio
 
-# ──────── Option A: Full-Stack on EC2 (Recommended for Dual-Port Frontend) ────────
-# Pulls the backend from GHCR and builds the lightweight Nginx container:
+# Pull both latest images from GHCR and start containers:
 docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml --profile all up -d --build
-
-# ──────── Option B: Backend Only on EC2 (If using S3 + CloudFront for Frontend) ────────
-# docker compose -f docker-compose.prod.yml pull
-# docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # Check status of running containers:
 docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f backend
 ```
 
 ### 10.3 Deploy Frontend to S3 (Only for Option B — S3 + CloudFront)
