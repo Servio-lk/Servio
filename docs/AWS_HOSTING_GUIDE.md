@@ -568,7 +568,18 @@ mkdir -p /home/ubuntu/servio
 cd /home/ubuntu/servio
 ```
 
-### 9.4 Create the `.env` File
+### 9.4 Create or Push the `.env` and `docker-compose.prod.yml` Files
+
+#### Option A: Push Directly from your Local Computer via SCP (Fastest!)
+From your local Mac terminal (in the Servio project root):
+
+```bash
+# Push both files straight to EC2 in one command:
+scp -i ~/Downloads/servio-key-new.pem .env docker-compose.prod.yml ubuntu@<ELASTIC_IP>:/home/ubuntu/servio/
+```
+
+#### Option B: Manually create `.env` on EC2
+On your EC2 SSH terminal:
 
 ```bash
 cat > .env << 'EOF'
