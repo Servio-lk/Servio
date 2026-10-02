@@ -400,12 +400,12 @@ aws ec2 create-security-group \
   --group-name servio-sg \
   --description "Servio Web & Backend Security Group"
 
-# 3. Allow SSH (port 22) - Restricted to your IP
+# 3. Allow SSH (port 22) — 0.0.0.0/0 is required so GitHub Actions CI/CD runners can deploy via SSH
 aws ec2 authorize-security-group-ingress \
   --group-name servio-sg \
   --protocol tcp \
   --port 22 \
-  --cidr "${MY_IP}/32"
+  --cidr 0.0.0.0/0
 
 # 4. Allow Customer Web Portal (port 80) — Public HTTP access
 aws ec2 authorize-security-group-ingress \
