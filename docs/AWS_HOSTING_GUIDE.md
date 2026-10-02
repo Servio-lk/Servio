@@ -338,10 +338,33 @@ echo $CR_PAT | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
 
 > You should see: `Login Succeeded`.
 
-### 6.3 Public vs. Private Package Visibility
+### 6.3 Build and Push Backend Image to GHCR
 
-After your first image push (via local Docker or GitHub Actions), the package will appear under your GitHub profile:
-- Go to `https://github.com/<YOUR_GITHUB_USERNAME>?tab=packages`
+You have two ways to get the image into GHCR:
+
+#### Option A: Push Manually from your Local Machine (Fastest for first setup)
+From your project root on your local computer:
+
+```bash
+# 1. Set your GitHub username or organization (MUST be lowercase)
+export GH_USER="servio-lk"
+
+# 2. Build for linux/amd64 (matches EC2 architecture)
+docker build --platform linux/amd64 -t ghcr.io/${GH_USER}/servio-backend:latest ./backend
+
+# 3. Push to GitHub Container Registry
+docker push ghcr.io/${GH_USER}/servio-backend:latest
+```
+
+#### Option B: Let GitHub Actions Push Automatically
+Pushing code to the `main` branch automatically triggers the `deploy-backend` workflow in `.github/workflows/deploy.yml`, which builds and pushes the image to GHCR using the built-in `GITHUB_TOKEN`.
+
+---
+
+### 6.4 Public vs. Private Package Visibility
+
+After your first image push (via local Docker or GitHub Actions), the package will appear under your GitHub profile or organization:
+- Go to `https://github.com/orgs/Servio-lk/packages` (or `https://github.com/<YOUR_GITHUB_USERNAME>?tab=packages`)
 - Click `servio-backend` → **Package settings**
 - Scroll to the bottom **Danger Zone**:
   - **Make Public**: Anyone (and your EC2 instance) can pull the image without needing to configure authentication on EC2. Highly recommended for open-source / university projects.
