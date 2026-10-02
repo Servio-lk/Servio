@@ -725,7 +725,8 @@ Add the following repository secrets:
 |---|---|---|
 | `EC2_HOST` | `<ELASTIC_IP>` | Your EC2 Elastic IP address for SSH deployment |
 | `EC2_SSH_KEY` | `-----BEGIN RSA PRIVATE...` | Entire contents of `servio-key-new.pem` private key |
-| `AWS_ROLE_ARN` *(or Key ID / Secret)* | `arn:aws:iam:...` | IAM credentials for S3/CloudFront (Only needed for Option B Frontend) |
+| `AWS_ACCESS_KEY_ID` *(or `AWS_ROLE_ARN`)* | `AKIA...` | AWS Access Key ID for S3/CloudFront deployment |
+| `AWS_SECRET_ACCESS_KEY` | `wJalr...` | AWS Secret Access Key (paired with `AWS_ACCESS_KEY_ID`) |
 | `SUPABASE_URL` | `https://xxx.supabase.co` | Supabase project URL (used during Vite production build) |
 | `SUPABASE_ANON_KEY` | `eyJ...` | Supabase anonymous public key |
 | `VITE_API_URL` | `http://<ELASTIC_IP>:3001/api` | Backend API URL embedded into Vite static bundle |
