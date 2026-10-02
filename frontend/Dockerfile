@@ -30,8 +30,8 @@ COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built static files from builder
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# Expose unprivileged port 8080
-EXPOSE 8080
+# Expose unprivileged ports (8080 for Customer, 8081 for Admin)
+EXPOSE 8080 8081
 
 # Health check against unprivileged endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
