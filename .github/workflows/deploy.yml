@@ -13,6 +13,7 @@ env:
 permissions:
   id-token: write
   contents: read
+  packages: write
 
 jobs:
   # ──────────────────────────────────────────────
@@ -71,35 +72,38 @@ jobs:
             --paths "/*"
 
   # ──────────────────────────────────────────────
-  # Job 2: Build & Deploy Backend to EC2 via ECR
+  # Job 2: Build & Deploy Backend to EC2 via GHCR
   # ──────────────────────────────────────────────
   deploy-backend:
-    name: Deploy Backend (ECR + EC2)
+    name: Deploy Backend (GHCR + EC2)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2.0.1
-
-      - name: Build, tag, and push backend image to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+      - name: Downcase repository name
+        id: image-name
         run: |
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
-                        -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+          IMAGE_NAME="ghcr.io/${{ github.repository }}/servio-backend"
+          echo "image=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+      - name: Build, tag, and push backend image to GHCR
+        env:
+          IMAGE_URI: ${{ steps.image-name.outputs.image }}
+        run: |
+          docker build --platform linux/amd64 -t $IMAGE_URI:latest \
+                        -t $IMAGE_URI:${{ github.sha }} \
                         ./backend
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+          docker push $IMAGE_URI:latest
+          docker push $IMAGE_URI:${{ github.sha }}
 
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@3ceb8be661c2bc56fd2d9dbd40409c916f437025 # v1.0.3
@@ -108,15 +112,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Login to ECR
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
-              docker login --username AWS --password-stdin \
-              ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-
             # Navigate to app directory
             cd /home/ubuntu/servio
 
-            # Pull latest image
+            # Pull latest image from GHCR
             docker compose -f docker-compose.prod.yml pull
 
             # Restart with zero downtime

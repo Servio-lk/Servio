@@ -7,7 +7,8 @@ import '../../core/services/supabase_service.dart';
 
 class SignInScreen extends StatefulWidget {
   final String? allowedRole;
-  const SignInScreen({super.key, this.allowedRole});
+  final String? subtitle;
+  const SignInScreen({super.key, this.allowedRole, this.subtitle});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -200,98 +201,116 @@ class _SignInScreenState extends State<SignInScreen> {
       body: Stack(
         children: [
           // Background with overlay
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFFBFBFB),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.2),
-                  Colors.black.withValues(alpha: 0.2),
-                ],
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFFBFBFB),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.2),
+                    Colors.black.withValues(alpha: 0.2),
+                  ],
+                ),
               ),
             ),
           ),
           // Bottom sheet
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height -
+                      MediaQuery.of(context).padding.top,
                 ),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Grabber
-                    Padding(
-                      padding: const EdgeInsets.only(top: 5),
-                      child: Container(
-                        width: 36,
-                        height: 5,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFCFCFCF),
-                          borderRadius: BorderRadius.circular(100),
-                        ),
-                      ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
                     ),
-                    // Close button
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 16),
-                        child: SizedBox(
-                          width: 44,
-                          height: 44,
-                          child: Material(
-                            color: const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(8),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: () => context.go('/signin'),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.close,
-                                  size: 24,
-                                  color: Colors.black,
+                  ),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Grabber
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5),
+                          child: Container(
+                            width: 36,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCFCFCF),
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                          ),
+                        ),
+                        // Close button
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
+                            child: SizedBox(
+                              width: 44,
+                              height: 44,
+                              child: Material(
+                                color: const Color(0xFFF5F5F5),
+                                borderRadius: BorderRadius.circular(8),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(8),
+                                  onTap: () {
+                                    if (Navigator.of(context).canPop()) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 24,
+                                      color: Colors.black,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                    // Welcome Message
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 16),
-                            Text(
-                              'Welcome Back to Servio',
-                              style: GoogleFonts.instrumentSans(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              "Log in to manage your vehicle's service.",
-                              style: GoogleFonts.instrumentSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.black,
-                                height: 22 / 16,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
+                        // Welcome Message
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Welcome Back to Servio',
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  widget.subtitle ??
+                                      (widget.allowedRole == 'MECHANIC'
+                                          ? 'Log in to manage your assigned services and tasks.'
+                                          : "Log in to manage your vehicle's service."),
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w400,
+                                    color: Colors.black,
+                                    height: 22 / 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
                             // Email Input
                             _buildInputField(
                               controller: _emailController,
@@ -307,7 +326,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 return null;
                               },
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 16),
                             // Password Input
                             _buildInputField(
                               controller: _passwordController,
@@ -430,62 +449,64 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                             if (widget.allowedRole == null || widget.allowedRole == 'MECHANIC')
                               const SizedBox(height: 16),
-                            // Divider with "or"
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      height: 1,
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                    ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                    ),
-                                    child: Text(
-                                      'or',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                        fontFamily: 'Instrument Sans',
+                            if (widget.allowedRole != 'MECHANIC') ...[
+                              // Divider with "or"
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.black.withValues(alpha: 0.1),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: Container(
-                                      height: 1,
-                                      color: Colors.black.withValues(alpha: 0.1),
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                      ),
+                                      child: Text(
+                                        'or',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black,
+                                          fontFamily: 'Instrument Sans',
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                    Expanded(
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Google Login Button
-                            _buildSocialLoginButton(
-                              label: 'Log In with Google',
-                              icon: Image.asset(
-                                'assets/icons/google.png',
-                                width: 24,
-                                height: 24,
+                              const SizedBox(height: 16),
+                              // Google Login Button
+                              _buildSocialLoginButton(
+                                label: 'Log In with Google',
+                                icon: Image.asset(
+                                  'assets/icons/google.png',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                                onTap: _handleGoogleSignIn,
                               ),
-                              onTap: _handleGoogleSignIn,
-                            ),
-                            const SizedBox(height: 16),
-                            // Facebook Login Button
-                            _buildSocialLoginButton(
-                              label: 'Log In with Facebook',
-                              icon: Image.asset(
-                                'assets/icons/facebook.png',
-                                width: 24,
-                                height: 24,
+                              const SizedBox(height: 16),
+                              // Facebook Login Button
+                              _buildSocialLoginButton(
+                                label: 'Log In with Facebook',
+                                icon: Image.asset(
+                                  'assets/icons/facebook.png',
+                                  width: 24,
+                                  height: 24,
+                                ),
+                                onTap: _handleFacebookSignIn,
                               ),
-                              onTap: _handleFacebookSignIn,
-                            ),
+                            ],
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -496,9 +517,11 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-        ],
+        ),
       ),
-    );
+    ],
+  ),
+);
   }
 
   Widget _buildInputField({

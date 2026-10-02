@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/appointments")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ADMIN')")
 public class AdminAppointmentController {
 
     private final AdminAppointmentService adminAppointmentService;
@@ -37,6 +36,7 @@ public class AdminAppointmentController {
     private final RepairChatService repairChatService;
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<List<AppointmentDto>>> getAllAppointments(
             @RequestParam(required = false) String status) {
         List<Appointment> appointments = status != null
@@ -51,6 +51,7 @@ public class AdminAppointmentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<AppointmentDto>> getAppointmentById(@PathVariable Long id) {
         Appointment appointment = adminAppointmentService.getAppointmentById(id);
         AppointmentDto appointmentDto = convertToDto(appointment);
@@ -58,6 +59,7 @@ public class AdminAppointmentController {
     }
 
     @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<AppointmentDto>> updateAppointment(
             @PathVariable Long id,
             @Valid @RequestBody AppointmentUpdateRequest request) {
@@ -67,6 +69,7 @@ public class AdminAppointmentController {
     }
 
     @PostMapping("/{id}/payments")
+    @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<AppointmentDto>> recordPayment(
             @PathVariable Long id,
             @Valid @RequestBody PaymentCollectionRequest request) {
@@ -77,6 +80,7 @@ public class AdminAppointmentController {
     }
 
     @PostMapping("/{id}/assign-mechanic")
+    @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
     public ResponseEntity<ApiResponse<RepairConversationDto>> assignMechanic(
             @PathVariable Long id,
             @RequestBody AssignMechanicRequest request) {

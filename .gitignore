@@ -145,6 +145,8 @@ servio-key-new.pem
 
 # Agent internal scratch & workspace
 .agents/
+scratch/
+**/.gradle/
 
 # Operating System Files
 .DS_Store

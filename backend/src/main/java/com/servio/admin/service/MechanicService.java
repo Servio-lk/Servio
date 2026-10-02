@@ -9,6 +9,7 @@ import com.servio.admin.entity.Mechanic;
 import com.servio.admin.entity.MechanicDocument;
 import com.servio.admin.entity.MechanicStaffDetails;
 import com.servio.admin.entity.MechanicStatus;
+import com.servio.admin.entity.MechanicVerificationStatus;
 import com.servio.admin.repository.MechanicDocumentRepository;
 import com.servio.admin.repository.MechanicRepository;
 import com.servio.admin.repository.MechanicStaffDetailsRepository;
@@ -90,8 +91,109 @@ public class MechanicService {
 
     public List<MechanicDto> getAvailableMechanics() {
         return mechanicRepository.findByStatus(MechanicStatus.AVAILABLE).stream()
+                .filter(m -> !Boolean.FALSE.equals(m.getIsActive()) && (m.getVerificationStatus() == null || m.getVerificationStatus() == MechanicVerificationStatus.VERIFIED))
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+    }
+
+    public MechanicDto verifyMechanic(Long id) {
+        Mechanic mechanic = mechanicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
+        mechanic.setVerificationStatus(MechanicVerificationStatus.VERIFIED);
+        mechanic.setIsActive(true);
+        mechanic.setRejectionReason(null);
+
+        // Ensure mechanic has employee code generated
+        MechanicStaffDetails details = staffDetailsRepository.findByMechanicId(mechanic.getId())
+                .orElseGet(() -> MechanicStaffDetails.builder().mechanic(mechanic).build());
+        if (details.getEmployeeCode() == null || details.getEmployeeCode().isBlank()) {
+            details.setEmployeeCode(generateNextEmployeeCode());
+        }
+        if (details.getJobTitle() == null || details.getJobTitle().isBlank()) {
+            details.setJobTitle("Mechanic");
+        }
+        staffDetailsRepository.save(details);
+
+        Mechanic updated = mechanicRepository.save(mechanic);
+        return convertToDto(updated);
+    }
+
+    public MechanicDto rejectMechanic(Long id, String reason) {
+        Mechanic mechanic = mechanicRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found with id: " + id));
+        mechanic.setVerificationStatus(MechanicVerificationStatus.REJECTED);
+        mechanic.setRejectionReason(reason);
+        Mechanic updated = mechanicRepository.save(mechanic);
+        return convertToDto(updated);
+    }
+
+    public MechanicDto getMechanicByEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        Mechanic mechanic = mechanicRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found for email: " + email));
+        return convertToDto(mechanic);
+    }
+
+    public MechanicDto updateMechanicProfileByEmail(String email, MechanicDto dto, boolean submitForVerification) {
+        if (email == null || email.trim().isEmpty()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        Mechanic mechanic = mechanicRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Mechanic not found for email: " + email));
+
+        if (dto.getFullName() != null && !dto.getFullName().isBlank()) {
+            mechanic.setFullName(dto.getFullName().trim());
+        }
+        if (dto.getPhone() != null && !dto.getPhone().isBlank()) {
+            mechanic.setPhone(dto.getPhone().trim());
+        }
+        if (dto.getSpecialization() != null) {
+            mechanic.setSpecialization(dto.getSpecialization().trim());
+        }
+        if (dto.getExperienceYears() != null) {
+            mechanic.setExperienceYears(dto.getExperienceYears());
+        }
+
+        if (submitForVerification) {
+            mechanic.setVerificationStatus(MechanicVerificationStatus.PENDING_VERIFICATION);
+            mechanic.setRejectionReason(null);
+        }
+
+        Mechanic updated = mechanicRepository.save(mechanic);
+
+        if (dto.getDetails() != null) {
+            syncStaffDetails(updated, dto.getDetails());
+        }
+        if (dto.getDocuments() != null) {
+            syncDocuments(updated, dto.getDocuments());
+        }
+
+        if (submitForVerification) {
+            notifyAdminsNewSubmission(updated);
+        }
+
+        return convertToDto(updated);
+    }
+
+    private void notifyAdminsNewSubmission(Mechanic mechanic) {
+        List<User> admins = userRepository.findByRole(Role.ADMIN);
+        if (admins.isEmpty()) {
+            return;
+        }
+
+        List<Notification> notifications = admins.stream()
+                .map(admin -> Notification.builder()
+                        .user(admin)
+                        .title("Mechanic Verification Submitted")
+                        .message("Mechanic " + mechanic.getFullName() + " (" + mechanic.getEmail() + ") has submitted their profile for verification.")
+                        .type("ALERT")
+                        .isRead(false)
+                        .build())
+                .collect(Collectors.toList());
+
+        notificationRepository.saveAll(notifications);
     }
 
     public Optional<MechanicRegistrationLookupDto> findActiveRegistrationByEmail(String email) {
@@ -156,6 +258,14 @@ public class MechanicService {
         if (dto.getIsActive() != null) {
             mechanic.setIsActive(dto.getIsActive());
         }
+        if (dto.getVerificationStatus() != null) {
+            try {
+                mechanic.setVerificationStatus(MechanicVerificationStatus.valueOf(dto.getVerificationStatus()));
+            } catch (IllegalArgumentException ignored) {}
+        }
+        if (dto.getRejectionReason() != null) {
+            mechanic.setRejectionReason(dto.getRejectionReason());
+        }
 
         Mechanic updated = mechanicRepository.save(mechanic);
         if (dto.getDetails() != null) {
@@ -201,6 +311,8 @@ public class MechanicService {
                 .experienceYears(mechanic.getExperienceYears())
                 .status(mechanic.getStatus().toString())
                 .isActive(mechanic.getIsActive())
+                .verificationStatus(mechanic.getVerificationStatus() != null ? mechanic.getVerificationStatus().name() : MechanicVerificationStatus.VERIFIED.name())
+                .rejectionReason(mechanic.getRejectionReason())
                 .activeJobCount(repairJobRepository.countByAssignedTechnicianIdAndStatusNotIn(
                         mechanic.getId(),
                         List.of("COMPLETED", "CANCELLED")
@@ -226,6 +338,8 @@ public class MechanicService {
                 .experienceYears(mechanic.getExperienceYears())
                 .status(mechanic.getStatus() != null ? mechanic.getStatus().toString() : null)
                 .isActive(mechanic.getIsActive())
+                .verificationStatus(mechanic.getVerificationStatus() != null ? mechanic.getVerificationStatus().name() : MechanicVerificationStatus.VERIFIED.name())
+                .rejectionReason(mechanic.getRejectionReason())
                 .build();
     }
 

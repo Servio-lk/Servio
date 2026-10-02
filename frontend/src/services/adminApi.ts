@@ -3,9 +3,14 @@ import { API_BASE_URL } from './api';
 
 class AdminApiService {
   private getHeaders(): Record<string, string> {
-    return {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   async getDashboardStats() {
@@ -208,6 +213,23 @@ class AdminApiService {
       method: 'PATCH',
       headers: this.getHeaders(),
       body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
+  async verifyStaff(id: number) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/verify`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return response.json();
+  }
+
+  async rejectStaff(id: number, reason: string) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/staff/${id}/reject`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify({ reason }),
     });
     return response.json();
   }

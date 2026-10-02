@@ -46,9 +46,14 @@ export interface StockUpdateRequest {
 
 class InventoryApiService {
   private getHeaders(): Record<string, string> {
-    return {
+    const token = localStorage.getItem('token');
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
   }
 
   async getAllItems() {

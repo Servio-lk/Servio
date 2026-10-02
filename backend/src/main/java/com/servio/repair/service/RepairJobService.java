@@ -6,11 +6,14 @@ import com.servio.booking.repository.AppointmentRepository;
 import com.servio.booking.repository.VehicleRepository;
 import com.servio.common.event.RepairStatusChangedEvent;
 import com.servio.common.exception.ResourceNotFoundException;
+import com.servio.repair.dto.RepairPartRequest;
 import com.servio.repair.entity.RepairActivity;
 import com.servio.repair.entity.RepairJob;
+import com.servio.repair.entity.RepairPart;
 import com.servio.repair.entity.RepairProgress;
 import com.servio.repair.repository.RepairActivityRepository;
 import com.servio.repair.repository.RepairJobRepository;
+import com.servio.repair.repository.RepairPartRepository;
 import com.servio.repair.repository.RepairProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -28,6 +31,7 @@ import java.util.UUID;
 public class RepairJobService {
     
     private final RepairJobRepository repairJobRepository;
+    private final RepairPartRepository repairPartRepository;
     private final RepairProgressRepository repairProgressRepository;
     private final RepairActivityRepository repairActivityRepository;
     private final AppointmentRepository appointmentRepository;
@@ -151,5 +155,48 @@ public class RepairJobService {
     
     public void deleteRepairJob(Long id) {
         repairJobRepository.deleteById(id);
+    }
+
+    public RepairPart logPartUsed(Long appointmentId, RepairPartRequest request) {
+        RepairJob repairJob = getOrCreateRepairJobForAppointment(appointmentId);
+
+        BigDecimal unitCost = request.getUnitCost() != null ? request.getUnitCost() : BigDecimal.ZERO;
+        int qty = request.getQuantity() != null ? request.getQuantity() : 1;
+        BigDecimal totalCost = request.getTotalCost() != null
+                ? request.getTotalCost()
+                : unitCost.multiply(BigDecimal.valueOf(qty));
+
+        RepairPart part = RepairPart.builder()
+                .repairJob(repairJob)
+                .partName(request.getPartName())
+                .partNumber(request.getPartNumber())
+                .supplier(request.getSupplier())
+                .unitCost(unitCost)
+                .quantity(qty)
+                .totalCost(totalCost)
+                .status(request.getStatus() != null ? request.getStatus() : "INSTALLED")
+                .notes(request.getNotes())
+                .build();
+
+        RepairPart savedPart = repairPartRepository.save(part);
+
+        // Update parts cost and actual cost on repair job
+        BigDecimal currentPartsCost = repairJob.getPartsCost() != null ? repairJob.getPartsCost() : BigDecimal.ZERO;
+        BigDecimal newPartsCost = currentPartsCost.add(totalCost);
+        repairJob.setPartsCost(newPartsCost);
+        BigDecimal currentLaborCost = repairJob.getLaborCost() != null ? repairJob.getLaborCost() : BigDecimal.ZERO;
+        repairJob.setActualCost(newPartsCost.add(currentLaborCost));
+        repairJobRepository.save(repairJob);
+
+        return savedPart;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RepairPart> getPartsForAppointment(Long appointmentId) {
+        RepairJob repairJob = repairJobRepository.findFirstByAppointmentId(appointmentId).orElse(null);
+        if (repairJob == null) {
+            return List.of();
+        }
+        return repairPartRepository.findByRepairJobIdOrderByCreatedDateDesc(repairJob.getId());
     }
 }

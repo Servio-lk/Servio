@@ -198,7 +198,7 @@ public class TransactionalEventIsolationAdversarialTest {
                 .build();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(appointmentRepository.findByAppointmentDateAndStatusNotIn(eq(targetDate), anyList()))
+        when(appointmentRepository.findForUpdateByAppointmentDateAndStatusNotIn(eq(targetDate), anyList()))
                 .thenReturn(Collections.emptyList());
         when(appointmentRepository.saveAndFlush(any(Appointment.class))).thenAnswer(inv -> {
             Appointment a = inv.getArgument(0);

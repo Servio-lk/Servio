@@ -15,4 +15,8 @@ public interface JobTaskRepository extends JpaRepository<JobTask, Long> {
     List<JobTask> findByStatus(TaskStatus status);
 
     List<JobTask> findByJobCardIdOrderBySequenceOrder(Long jobCardId);
+
+    List<JobTask> findByAppointmentId(Long appointmentId);
+
+    List<JobTask> findByAppointmentIdOrderBySequenceOrder(Long appointmentId);
 }

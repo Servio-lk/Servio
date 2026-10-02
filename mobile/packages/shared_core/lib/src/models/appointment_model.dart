@@ -21,6 +21,8 @@ class AppointmentModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String? assignedMechanicName;
+  final String? customerName;
+  final String? customerEmail;
 
   const AppointmentModel({
     required this.id,
@@ -43,6 +45,8 @@ class AppointmentModel {
     required this.createdAt,
     this.updatedAt,
     this.assignedMechanicName,
+    this.customerName,
+    this.customerEmail,
   });
 
   factory AppointmentModel.fromJson(Map<String, dynamic> json) {
@@ -97,6 +101,14 @@ class AppointmentModel {
     }
 
     final mechNameVal = (json['assignedMechanicName'] ?? json['technicianName']) as String?;
+    final custNameVal = (json['customerName'] ??
+        json['customer_name'] ??
+        json['userName'] ??
+        json['user_name']) as String?;
+    final custEmailVal = (json['customerEmail'] ??
+        json['customer_email'] ??
+        json['userEmail'] ??
+        json['user_email']) as String?;
 
     return AppointmentModel(
       id: parsedId,
@@ -119,6 +131,8 @@ class AppointmentModel {
       createdAt: createdAtVal,
       updatedAt: updatedAtVal,
       assignedMechanicName: mechNameVal,
+      customerName: custNameVal,
+      customerEmail: custEmailVal,
     );
   }
 
@@ -144,7 +158,59 @@ class AppointmentModel {
       'createdAt': createdAt.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
       if (assignedMechanicName != null) 'assignedMechanicName': assignedMechanicName,
+      if (customerName != null) 'customerName': customerName,
+      if (customerEmail != null) 'customerEmail': customerEmail,
     };
+  }
+
+  AppointmentModel copyWith({
+    int? id,
+    String? userId,
+    String? profileId,
+    int? vehicleId,
+    String? vehicleMake,
+    String? vehicleModel,
+    int? vehicleYear,
+    String? licensePlate,
+    String? serviceType,
+    DateTime? appointmentDate,
+    String? status,
+    String? location,
+    String? notes,
+    double? estimatedCost,
+    double? actualCost,
+    double? paidAmount,
+    String? paymentMethod,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? assignedMechanicName,
+    String? customerName,
+    String? customerEmail,
+  }) {
+    return AppointmentModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      profileId: profileId ?? this.profileId,
+      vehicleId: vehicleId ?? this.vehicleId,
+      vehicleMake: vehicleMake ?? this.vehicleMake,
+      vehicleModel: vehicleModel ?? this.vehicleModel,
+      vehicleYear: vehicleYear ?? this.vehicleYear,
+      licensePlate: licensePlate ?? this.licensePlate,
+      serviceType: serviceType ?? this.serviceType,
+      appointmentDate: appointmentDate ?? this.appointmentDate,
+      status: status ?? this.status,
+      location: location ?? this.location,
+      notes: notes ?? this.notes,
+      estimatedCost: estimatedCost ?? this.estimatedCost,
+      actualCost: actualCost ?? this.actualCost,
+      paidAmount: paidAmount ?? this.paidAmount,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      assignedMechanicName: assignedMechanicName ?? this.assignedMechanicName,
+      customerName: customerName ?? this.customerName,
+      customerEmail: customerEmail ?? this.customerEmail,
+    );
   }
 
   Map<String, dynamic> toCreateRequestJson() {

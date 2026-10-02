@@ -12,11 +12,27 @@ cd "$REPO_ROOT/backend" || exit 1
 # Force Java 17 if available on macOS
 if [ -x "/usr/libexec/java_home" ]; then
     JAVA_HOME_17=$(/usr/libexec/java_home -v 17 2>/dev/null)
-    if [ -n "$JAVA_HOME_17" ]; then
-        export JAVA_HOME="$JAVA_HOME_17"
-        export PATH="$JAVA_HOME/bin:$PATH"
-        echo "✅ Using Java 17: $JAVA_HOME"
-    fi
+fi
+
+if [ -z "$JAVA_HOME_17" ]; then
+    for candidate in \
+        "/Library/Java/JavaVirtualMachines/jdk-17.jdk/Contents/Home" \
+        "/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home" \
+        "/Library/Java/JavaVirtualMachines/amazon-corretto-17.jdk/Contents/Home" \
+        "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home" \
+        "/opt/homebrew/opt/openjdk@17" \
+        "/usr/local/opt/openjdk@17"; do
+        if [ -d "$candidate" ]; then
+            JAVA_HOME_17="$candidate"
+            break
+        fi
+    done
+fi
+
+if [ -n "$JAVA_HOME_17" ]; then
+    export JAVA_HOME="$JAVA_HOME_17"
+    export PATH="$JAVA_HOME/bin:$PATH"
+    echo "✅ Using Java 17: $JAVA_HOME"
 fi
 
 # Determine active .env file (check backend/.env first, then root .env)

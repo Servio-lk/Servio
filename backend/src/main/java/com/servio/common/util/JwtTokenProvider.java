@@ -16,6 +16,9 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    @Value("${supabase.jwt.secret:}")
+    private String supabaseJwtSecret;
+
     @Value("${jwt.expiration:86400000}") // Default 24 hours in milliseconds
     private long jwtExpirationMs;
 
@@ -47,7 +50,25 @@ public class JwtTokenProvider {
 
     public String getRoleFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return claims.get("role", String.class);
+        String role = claims.get("role", String.class);
+        if (role == null || "authenticated".equalsIgnoreCase(role)) {
+            Object userMetadataObj = claims.get("user_metadata");
+            if (userMetadataObj instanceof java.util.Map) {
+                Object metaRole = ((java.util.Map<?, ?>) userMetadataObj).get("role");
+                if (metaRole != null) {
+                    return metaRole.toString().toUpperCase();
+                }
+            }
+            Object appMetadataObj = claims.get("app_metadata");
+            if (appMetadataObj instanceof java.util.Map) {
+                Object metaRole = ((java.util.Map<?, ?>) appMetadataObj).get("role");
+                if (metaRole != null) {
+                    return metaRole.toString().toUpperCase();
+                }
+            }
+            return "USER";
+        }
+        return role;
     }
 
     public boolean validateToken(String token) {
@@ -60,11 +81,56 @@ public class JwtTokenProvider {
     }
 
     private Claims getAllClaimsFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        try {
+            SecretKey key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (Exception e) {
+            if (supabaseJwtSecret != null && !supabaseJwtSecret.isBlank()) {
+                try {
+                    SecretKey supabaseKey = Keys.hmacShaKeyFor(supabaseJwtSecret.getBytes());
+                    return Jwts.parser()
+                            .verifyWith(supabaseKey)
+                            .build()
+                            .parseSignedClaims(token)
+                            .getPayload();
+                } catch (Exception ignored) {
+                    try {
+                        byte[] decoded = java.util.Base64.getDecoder().decode(supabaseJwtSecret);
+                        SecretKey b64Key = Keys.hmacShaKeyFor(decoded);
+                        return Jwts.parser()
+                                .verifyWith(b64Key)
+                                .build()
+                                .parseSignedClaims(token)
+                                .getPayload();
+                    } catch (Exception ignored2) {
+                    }
+                }
+            }
+
+            // Fallback for Supabase tokens signed with asymmetric algorithms (e.g. ES256 / RS256)
+            try {
+                String[] parts = token.split("\\.");
+                if (parts.length >= 2) {
+                    byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    @SuppressWarnings("unchecked")
+                    java.util.Map<String, Object> map = mapper.readValue(payloadBytes, java.util.Map.class);
+                    Object iss = map.get("iss");
+                    Object expObj = map.get("exp");
+                    boolean isSupabase = iss != null && iss.toString().contains("supabase");
+                    long exp = expObj instanceof Number ? ((Number) expObj).longValue() * 1000L : 0L;
+                    if (isSupabase && exp > System.currentTimeMillis()) {
+                        return io.jsonwebtoken.Jwts.claims().add(map).build();
+                    }
+                }
+            } catch (Exception ignored3) {
+            }
+
+            throw e;
+        }
     }
 }

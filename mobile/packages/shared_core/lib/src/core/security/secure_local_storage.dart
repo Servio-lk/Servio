@@ -6,7 +6,9 @@ class SecureLocalStorage extends LocalStorage {
 
   const SecureLocalStorage([this._storage = const FlutterSecureStorage()]);
 
-  AndroidOptions get _androidOptions => const AndroidOptions();
+  AndroidOptions get _androidOptions => const AndroidOptions(
+        resetOnError: true,
+      );
 
   IOSOptions get _iosOptions => const IOSOptions(
         accessibility: KeychainAccessibility.first_unlock,

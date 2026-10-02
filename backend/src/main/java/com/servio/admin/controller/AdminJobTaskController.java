@@ -13,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/admin/job-tasks")
 @RequiredArgsConstructor
-@PreAuthorize("hasAuthority('ADMIN')")
+@PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
 public class AdminJobTaskController {
     private final JobTaskService jobTaskService;
 
@@ -27,6 +27,12 @@ public class AdminJobTaskController {
     public ResponseEntity<ApiResponse<JobTaskDto>> getJobTaskById(@PathVariable Long id) {
         JobTaskDto task = jobTaskService.getJobTaskById(id);
         return ResponseEntity.ok(ApiResponse.success("Job task retrieved successfully", task));
+    }
+
+    @GetMapping("/appointment/{appointmentId}")
+    public ResponseEntity<ApiResponse<List<JobTaskDto>>> getTasksByAppointment(@PathVariable Long appointmentId) {
+        List<JobTaskDto> tasks = jobTaskService.getTasksByAppointment(appointmentId);
+        return ResponseEntity.ok(ApiResponse.success("Job tasks retrieved successfully", tasks));
     }
 
     @GetMapping("/job-card/{jobCardId}")

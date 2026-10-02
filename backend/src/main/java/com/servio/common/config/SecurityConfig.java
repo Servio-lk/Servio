@@ -60,6 +60,17 @@ public class SecurityConfig {
                         .requestMatchers(new AntPathRequestMatcher("/api/payments/payhere/notify")).permitAll()
                         // WebSocket handshake and SockJS fallback endpoints
                         .requestMatchers("/api/ws", "/api/ws/**", "/api/ws-sockjs/**", "/ws", "/ws/**", "/ws-sockjs/**").permitAll()
+                        // Mechanic and Admin shared operational endpoints
+                        .requestMatchers(
+                                "/api/admin/inventory",
+                                "/api/admin/inventory/low-stock",
+                                "/api/admin/inventory/requests",
+                                "/api/admin/inventory/requests/**",
+                                "/api/admin/job-tasks/**",
+                                "/api/admin/staff",
+                                "/api/admin/staff/**",
+                                "/api/admin/appointments/*/assign-mechanic"
+                        ).hasAnyAuthority("ADMIN", "MECHANIC")
                         // Updated Role-Based Access Control
                         .requestMatchers("/api/admin/**").hasAuthority("ADMIN")
                         .requestMatchers("/actuator/metrics/**", "/actuator/prometheus").hasAuthority("ADMIN")

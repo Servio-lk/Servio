@@ -16,3 +16,12 @@ scripts:
   build:runner:
     run: melos exec --depends-on="build_runner" -- "dart run build_runner build --delete-conflicting-outputs"
     description: Run `build_runner build` in all packages that depend on it.
+
+  run:customer:
+    run: cd apps/customer_app && flutter run --dart-define-from-file=../../.env
+    description: Run Customer App with environment variables from root .env.
+
+  run:mechanic:
+    run: cd apps/mechanic_app && flutter run --dart-define-from-file=../../.env
+    description: Run Mechanic App with environment variables from root .env.
+

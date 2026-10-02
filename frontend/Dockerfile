@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-alpine@sha256:7c7c34d31489e2dd60ee25fbc72d1af205d836ea7baf5f396fc4c32b90623a81 AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ COPY . .
 RUN npm run build
 
 # Production runtime stage with unprivileged Nginx (non-root)
-FROM nginxinc/nginx-unprivileged:alpine@sha256:4d7ba91730a3b2b4d1b714b62db4cc42ec88a804ec607c30d93daff0f81d5b12 AS runner
+FROM nginxinc/nginx-unprivileged:alpine AS runner
 
 # Copy custom nginx configuration
 COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
@@ -30,8 +30,8 @@ COPY --chown=nginx:nginx nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built static files from builder
 COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
 
-# Expose unprivileged port 8080
-EXPOSE 8080
+# Expose unprivileged ports (8080 for Customer, 8081 for Admin)
+EXPOSE 8080 8081
 
 # Health check against unprivileged endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

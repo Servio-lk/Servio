@@ -42,6 +42,10 @@ class ApiClient {
       return await provider();
     }
     try {
+      final backendToken = SupabaseService().backendToken;
+      if (backendToken != null && backendToken.isNotEmpty) {
+        return backendToken;
+      }
       return SupabaseService().currentSession?.accessToken;
     } catch (_) {
       return null;
@@ -54,11 +58,15 @@ class ApiClient {
 
     final uri = Uri.parse(fullUrl);
     
-    // Explicitly reject HTTP traffic for non-local endpoints
-    if (uri.scheme == 'http' &&
-        !uri.host.contains('localhost') &&
-        uri.host != '10.0.2.2' &&
-        uri.host != '127.0.0.1') {
+    // Explicitly reject HTTP traffic for non-local endpoints (allow localhost, emulator 10.0.2.2, and private LAN IPs for real devices)
+    final host = uri.host;
+    final isLocalOrLan = host.contains('localhost') ||
+        host == '10.0.2.2' ||
+        host == '127.0.0.1' ||
+        host.startsWith('192.168.') ||
+        host.startsWith('10.') ||
+        host.startsWith('172.');
+    if (uri.scheme == 'http' && !isLocalOrLan) {
       throw const NetworkException('Cleartext HTTP traffic is not allowed for non-local endpoints.');
     }
 
@@ -381,6 +389,45 @@ class ApiClient {
           traceId: traceId,
         );
     }
+  }
+
+  Future<ApiResponse<T>> uploadMultipart<T>({
+    required String path,
+    required File file,
+    required String fileParamName,
+    Map<String, String>? fields,
+    Map<String, String>? headers,
+    T Function(dynamic data)? fromJson,
+    String? token,
+  }) async {
+    final uri = _buildUri(path);
+    final request = http.MultipartRequest('POST', uri);
+
+    final requestHeaders = await _buildHeaders(
+      customHeaders: headers,
+      token: token,
+      hasBody: false,
+    );
+    request.headers.addAll(requestHeaders);
+
+    if (fields != null) {
+      request.fields.addAll(fields);
+    }
+
+    final multipartFile = await http.MultipartFile.fromPath(
+      fileParamName,
+      file.path,
+    );
+    request.files.add(multipartFile);
+
+    return _sendRequest<T>(
+      () async {
+        final streamed = await request.send().timeout(timeout);
+        return await http.Response.fromStream(streamed);
+      },
+      uri: uri,
+      fromJson: fromJson,
+    );
   }
 
   void close() {

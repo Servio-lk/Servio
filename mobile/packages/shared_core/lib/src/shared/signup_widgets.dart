@@ -4,11 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 
 // ─── Color constants ─────────────────────────────────────────────────────────
-const Color _kPrimaryOrange = Color(0xFFFF5D2E);
-const Color _kSubtitleGrey = Color(0xFF4B4B4B);
-const Color _kHintGrey = Color(0xFF8A8A8A);
-const Color _kProgressTrack = Color(0xFFD6DADB);
-const Color _kInputBg = Colors.white;
+const Color kPrimaryOrange = Color(0xFFFF5D2E);
+const Color kSubtitleGrey = Color(0xFF4B4B4B);
+const Color kHintGrey = Color(0xFF8A8A8A);
+const Color kProgressTrack = Color(0xFFD6DADB);
+const Color kInputBg = Colors.white;
 
 // ─── Progress Bar ────────────────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ class SignUpProgressBar extends StatelessWidget {
       width: 160,
       height: 4,
       decoration: BoxDecoration(
-        color: _kProgressTrack,
+        color: kProgressTrack,
         borderRadius: BorderRadius.circular(2),
       ),
       child: ClipRRect(
@@ -38,7 +38,7 @@ class SignUpProgressBar extends StatelessWidget {
             return Container(
               width: 160.0 / totalSteps,
               height: 4,
-              color: i < filledSteps ? _kPrimaryOrange : Colors.transparent,
+              color: i < filledSteps ? kPrimaryOrange : Colors.transparent,
             );
           }),
         ),
@@ -51,6 +51,7 @@ class SignUpProgressBar extends StatelessWidget {
 
 class SignUpHeader extends StatelessWidget {
   final int step;
+  final int totalSteps;
   final String title;
   final String subtitle;
   final VoidCallback onBack;
@@ -58,6 +59,7 @@ class SignUpHeader extends StatelessWidget {
   const SignUpHeader({
     super.key,
     required this.step,
+    this.totalSteps = 4,
     required this.title,
     required this.subtitle,
     required this.onBack,
@@ -92,7 +94,10 @@ class SignUpHeader extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.only(right: 40),
                   child: Center(
-                    child: SignUpProgressBar(filledSteps: step),
+                    child: SignUpProgressBar(
+                      filledSteps: step,
+                      totalSteps: totalSteps,
+                    ),
                   ),
                 ),
               ),
@@ -112,7 +117,7 @@ class SignUpHeader extends StatelessWidget {
             style: GoogleFonts.instrumentSans(
               fontSize: 13,
               fontWeight: FontWeight.w400,
-              color: _kSubtitleGrey,
+              color: kSubtitleGrey,
             ),
           ),
         ],
@@ -157,7 +162,7 @@ class SignUpHelperText extends StatelessWidget {
       style: GoogleFonts.instrumentSans(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: _kSubtitleGrey,
+        color: kSubtitleGrey,
         letterSpacing: 0.36,
         height: 16 / 12,
       ),
@@ -175,6 +180,8 @@ class SignUpInputField extends StatelessWidget {
   final String? Function(String?)? validator;
   final bool readOnly;
   final VoidCallback? onTap;
+  final Widget? suffixIcon;
+  final int maxLines;
 
   const SignUpInputField({
     super.key,
@@ -185,6 +192,8 @@ class SignUpInputField extends StatelessWidget {
     this.validator,
     this.readOnly = false,
     this.onTap,
+    this.suffixIcon,
+    this.maxLines = 1,
   });
 
   @override
@@ -193,11 +202,11 @@ class SignUpInputField extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 59),
       decoration: BoxDecoration(
-        color: _kInputBg,
+        color: kInputBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -209,6 +218,7 @@ class SignUpInputField extends StatelessWidget {
               validator: validator,
               readOnly: readOnly,
               onTap: onTap,
+              maxLines: maxLines,
               style: GoogleFonts.instrumentSans(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -219,7 +229,7 @@ class SignUpInputField extends StatelessWidget {
                 hintStyle: GoogleFonts.instrumentSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: _kHintGrey,
+                  color: kHintGrey,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
@@ -227,6 +237,7 @@ class SignUpInputField extends StatelessWidget {
               ),
             ),
           ),
+          if (suffixIcon != null) suffixIcon!,
         ],
       ),
     );
@@ -257,7 +268,7 @@ class SignUpPasswordField extends StatelessWidget {
       width: double.infinity,
       constraints: const BoxConstraints(minHeight: 59),
       decoration: BoxDecoration(
-        color: _kInputBg,
+        color: kInputBg,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
       ),
@@ -280,7 +291,7 @@ class SignUpPasswordField extends StatelessWidget {
                 hintStyle: GoogleFonts.instrumentSans(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: _kHintGrey,
+                  color: kHintGrey,
                 ),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
@@ -297,11 +308,68 @@ class SignUpPasswordField extends StatelessWidget {
                     ? PhosphorIconsRegular.eyeSlash
                     : PhosphorIconsRegular.eye,
                 size: 24,
-                color: _kSubtitleGrey,
+                color: kSubtitleGrey,
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Dropdown Field ──────────────────────────────────────────────────────────
+
+class SignUpDropdownField<T> extends StatelessWidget {
+  final T? value;
+  final String hint;
+  final List<DropdownMenuItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  final String? Function(T?)? validator;
+
+  const SignUpDropdownField({
+    super.key,
+    required this.value,
+    required this.hint,
+    required this.items,
+    required this.onChanged,
+    this.validator,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 59),
+      decoration: BoxDecoration(
+        color: kInputBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.1)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      alignment: Alignment.center,
+      child: DropdownButtonFormField<T>(
+        initialValue: value,
+        items: items,
+        onChanged: onChanged,
+        validator: validator,
+        icon: const Icon(PhosphorIconsRegular.caretDown, size: 20, color: Colors.black54),
+        style: GoogleFonts.instrumentSans(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: Colors.black,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: GoogleFonts.instrumentSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: kHintGrey,
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+          isDense: true,
+        ),
       ),
     );
   }
@@ -328,15 +396,15 @@ class SignUpPrimaryButton extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: isLoading
-              ? _kPrimaryOrange.withValues(alpha: 0.6)
-              : _kPrimaryOrange,
+              ? kPrimaryOrange.withValues(alpha: 0.6)
+              : kPrimaryOrange,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
           boxShadow: isLoading
               ? []
               : [
                   BoxShadow(
-                    color: _kPrimaryOrange.withValues(alpha: 0.5),
+                    color: kPrimaryOrange.withValues(alpha: 0.5),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),

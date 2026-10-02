@@ -11,6 +11,9 @@ Future<void> main() async {
   // Use bundled fonts instead of fetching from the network
   GoogleFonts.config.allowRuntimeFetching = true;
 
+  // Validate environment variables before initializing external services
+  SupabaseConfig.validate();
+
   // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseConfig.supabaseUrl,

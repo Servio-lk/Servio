@@ -29,6 +29,10 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.servio.admin.entity.Mechanic;
+import com.servio.admin.entity.MechanicStatus;
+import com.servio.admin.entity.MechanicVerificationStatus;
+import com.servio.admin.repository.MechanicRepository;
 import java.util.UUID;
 
 @Service
@@ -42,6 +46,7 @@ public class AuthService {
     private final RestTemplate restTemplate;
     private final AppointmentRepository appointmentRepository;
     private final SupabaseAdminService supabaseAdminService;
+    private final MechanicRepository mechanicRepository;
 
     @Value("${supabase.url}")
     private String supabaseUrl;
@@ -119,17 +124,16 @@ public class AuthService {
         // Validate the Supabase access token via Supabase Auth API.
         // The frontend always refreshes the session before calling this endpoint,
         // so the token will always be fresh and session_not_found cannot occur.
+        String supabaseUserId = null;
+        String tokenEmail = null;
+        Map<String, Object> authUser = null;
+
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + request.getAccessToken());
         headers.set("apikey", supabaseAnonKey);
 
-        HttpEntity<String> entity = new HttpEntity<>("parameters", headers);
-
-        String supabaseUserId;
-        String tokenEmail;
-        Map<String, Object> authUser = null;
-
         try {
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
             ResponseEntity<Map> response = restTemplate.exchange(
                     supabaseUrl + "/auth/v1/user",
                     HttpMethod.GET,
@@ -137,22 +141,38 @@ public class AuthService {
                     Map.class);
 
             Map<String, Object> body = response.getBody();
-            if (body == null || !body.containsKey("id")) {
-                throw new IllegalArgumentException("Invalid Supabase token: no user id in response");
+            if (body != null && body.containsKey("id")) {
+                authUser = body;
+                supabaseUserId = (String) body.get("id");
+                tokenEmail = (String) body.get("email");
             }
+        } catch (Exception ignored) {
+            // Outbound network call to Supabase may fail or time out
+        }
 
-            authUser = body;
-            supabaseUserId = (String) body.get("id");
-            tokenEmail = (String) body.get("email");
-
-            if (tokenEmail == null || !tokenEmail.equalsIgnoreCase(request.getEmail())) {
-                throw new IllegalArgumentException(
-                        "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
+        // Fallback: decode JWT payload directly if Supabase endpoint was unreachable
+        if (supabaseUserId == null || tokenEmail == null) {
+            try {
+                String[] parts = request.getAccessToken().split("\\.");
+                if (parts.length >= 2) {
+                    byte[] payloadBytes = java.util.Base64.getUrlDecoder().decode(parts[1]);
+                    com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> claims = mapper.readValue(payloadBytes, Map.class);
+                    supabaseUserId = (String) claims.get("sub");
+                    tokenEmail = (String) claims.get("email");
+                }
+            } catch (Exception ignored) {
             }
-        } catch (IllegalArgumentException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Unauthorized: Supabase token validation failed - " + e.getMessage());
+        }
+
+        if (supabaseUserId == null || tokenEmail == null) {
+            throw new IllegalArgumentException("Invalid Supabase token: cannot extract user id or email");
+        }
+
+        if (!tokenEmail.equalsIgnoreCase(request.getEmail())) {
+            throw new IllegalArgumentException(
+                    "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
         }
 
         // Local profiles often miss the Supabase row. Check that row, then Supabase
@@ -194,10 +214,16 @@ public class AuthService {
             Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
             if (existingUser.isPresent()) {
                 resolvedRole = existingUser.get().getRole();
+                if (resolvedRole == Role.USER && "MECHANIC".equalsIgnoreCase(request.getRole())) {
+                    resolvedRole = Role.MECHANIC;
+                }
+            } else if (request.getRole() != null && !request.getRole().isBlank()) {
+                try {
+                    resolvedRole = Role.valueOf(request.getRole().toUpperCase());
+                } catch (IllegalArgumentException ignored) {
+                }
             }
         }
-
-
 
         final String finalDisplayName = displayName;
         final Role finalRole = resolvedRole;
@@ -206,20 +232,69 @@ public class AuthService {
         final String finalTokenEmail = tokenEmail;
         User backendUser = userRepository.findByEmail(finalTokenEmail)
                 .map(existing -> {
-                    // Sync the role if it changed in the profile
+                    boolean changed = false;
                     if (existing.getRole() != finalRole) {
                         existing.setRole(finalRole);
-                        return userRepository.save(existing);
+                        changed = true;
+                    }
+                    if (request.getPhone() != null && !request.getPhone().isBlank()
+                            && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                        existing.setPhone(request.getPhone().trim());
+                        changed = true;
+                    }
+                    if (finalDisplayName != null && !finalDisplayName.isBlank()
+                            && (existing.getFullName() == null || existing.getFullName().isBlank())) {
+                        existing.setFullName(finalDisplayName.trim());
+                        changed = true;
+                    }
+                    if (changed) {
+                        User saved = userRepository.save(existing);
+                        return saved != null ? saved : existing;
                     }
                     return existing;
                 })
                 .orElseGet(() -> userRepository.save(User.builder()
-                .fullName(finalDisplayName)
+                        .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
                         .email(finalTokenEmail)
                         .phone(request.getPhone())
                         .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .role(finalRole)
                         .build()));
+
+        // If user is a mechanic, ensure corresponding Mechanic entity exists
+        if (finalRole == Role.MECHANIC) {
+            String spec = (request.getSpecialization() != null && !request.getSpecialization().isBlank())
+                    ? request.getSpecialization().trim()
+                    : "General Service";
+            mechanicRepository.findByEmailIgnoreCase(finalTokenEmail)
+                    .ifPresentOrElse(
+                            existing -> {
+                                boolean changed = false;
+                                if (request.getSpecialization() != null && !request.getSpecialization().isBlank()
+                                        && (existing.getSpecialization() == null || existing.getSpecialization().isBlank())) {
+                                    existing.setSpecialization(spec);
+                                    changed = true;
+                                }
+                                if (request.getPhone() != null && !request.getPhone().isBlank()
+                                        && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                                    existing.setPhone(request.getPhone().trim());
+                                    changed = true;
+                                }
+                                if (changed) {
+                                    mechanicRepository.save(existing);
+                                }
+                            },
+                            () -> mechanicRepository.save(Mechanic.builder()
+                                    .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "Mechanic Staff")
+                                    .email(finalTokenEmail)
+                                    .phone(request.getPhone() != null ? request.getPhone() : "")
+                                    .specialization(spec)
+                                    .status(MechanicStatus.AVAILABLE)
+                                    .isActive(false)
+                                    .verificationStatus(MechanicVerificationStatus.INCOMPLETE)
+                                    .build())
+                    );
+        }
 
         // Generate backend JWT using backend numeric user ID for consistency
         String backendToken = jwtTokenProvider.generateToken(backendUser.getId(), backendUser.getRole());

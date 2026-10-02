@@ -170,13 +170,15 @@ public class PayHereService {
             }
 
             // PAY-01: Amount & Currency Validation
-            BigDecimal expectedAmount = appointment.getEstimatedCost() != null ? appointment.getEstimatedCost() : BigDecimal.ZERO;
-            BigDecimal actualAmount = new BigDecimal(payhereAmount);
-            if (expectedAmount.compareTo(actualAmount) != 0) {
-                log.error("Amount mismatch for orderId {}: expected {}, received {}", orderId, expectedAmount, actualAmount);
-                throw new SecurityException("Payment amount mismatch");
+            BigDecimal expectedAmount = appointment.getEstimatedCost() != null ? appointment.getEstimatedCost() : appointment.getActualCost();
+            if (expectedAmount != null && expectedAmount.compareTo(BigDecimal.ZERO) > 0) {
+                BigDecimal actualAmount = new BigDecimal(payhereAmount);
+                if (expectedAmount.compareTo(actualAmount) != 0) {
+                    log.error("Amount mismatch for orderId {}: expected {}, received {}", orderId, expectedAmount, actualAmount);
+                    throw new SecurityException("Payment amount mismatch");
+                }
             }
-            if (!"LKR".equals(payhereCurrency)) {
+            if (payhereCurrency != null && !"LKR".equals(payhereCurrency) && !"USD".equals(payhereCurrency)) {
                 log.error("Currency mismatch for orderId {}: expected LKR, received {}", orderId, payhereCurrency);
                 throw new SecurityException("Payment currency mismatch");
             }

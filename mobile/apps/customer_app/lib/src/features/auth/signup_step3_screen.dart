@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import 'package:shared_core/shared_core.dart';
 import '../profile/vehicles_repository.dart';
-import 'signup_widgets.dart';
 
 class SignUpStep3Screen extends StatefulWidget {
   final Map<String, dynamic>? extras;
