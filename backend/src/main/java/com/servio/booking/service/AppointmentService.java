@@ -105,15 +105,20 @@ public class AppointmentService {
                 .build();
 
         try {
-            appointment = appointmentRepository.saveAndFlush(appointment);
+            Appointment saved = appointmentRepository.saveAndFlush(appointment);
+            if (saved != null) {
+                appointment = saved;
+            }
         } catch (DataIntegrityViolationException ex) {
             throw new ConflictException("This time slot is already booked. Please choose another time.");
         }
         AppointmentDto dto = convertToDto(appointment);
-        eventPublisher.publish("CREATED", dto);
+        if (dto != null) {
+            eventPublisher.publish("CREATED", dto);
+        }
 
         // Send booking confirmation notification to the user
-        if (user != null) {
+        if (user != null && appointment != null && appointment.getAppointmentDate() != null) {
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' h:mm a");
             String dateStr = appointment.getAppointmentDate().format(fmt);
             
@@ -284,6 +289,9 @@ public class AppointmentService {
     }
 
     private AppointmentDto convertToDto(Appointment appointment) {
+        if (appointment == null) {
+            return null;
+        }
         UUID userId = appointment.getUser() != null ? appointment.getUser().getId() : null;
         String userName = appointment.getUser() != null ? appointment.getUser().getFullName() : null;
         String userEmail = appointment.getUser() != null ? appointment.getUser().getEmail() : null;
