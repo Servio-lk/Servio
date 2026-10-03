@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabaseAuth } from "@/services/supabaseAuth";
 import LogoImage from "/ServioLogo.png";
-import GarageImage from "@/assets/images/Garage image.png";
+import { AuthOnboardingCarousel } from "@/components/auth/AuthOnboardingCarousel";
 
 function PasswordField({
   id,
@@ -187,12 +187,9 @@ export default function ResetPassword() {
         </div>
       </div>
 
+      {/* Right side - Onboarding Carousel */}
       <div className="hidden lg:block w-[500px] xl:w-[690px] h-full relative">
-        <img
-          src={GarageImage}
-          alt="Garage"
-          className="w-full h-full object-cover"
-        />
+        <AuthOnboardingCarousel />
       </div>
     </div>
   );
