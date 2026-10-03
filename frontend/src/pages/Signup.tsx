@@ -8,7 +8,7 @@ import { apiService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "/ServioLogo.png";
 import { AuthOnboardingCarousel } from "@/components/auth/AuthOnboardingCarousel";
-import { Car, CarFront, Bike, Truck, Bus } from "lucide-react";
+import { Car, CarFront, Bike, Truck, Bus, Eye, EyeOff } from "lucide-react";
 
 // ----------------------------------------------------------------------
 // Reusable Sub-components
@@ -62,12 +62,14 @@ function CustomInput({
   placeholder,
   type = "text",
   maxLength,
+  inputMode,
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder: string;
   type?: string;
   maxLength?: number;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }) {
   return (
     <div className="w-full">
@@ -77,8 +79,45 @@ function CustomInput({
         onChange={onChange}
         placeholder={placeholder}
         maxLength={maxLength}
+        inputMode={inputMode}
         className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
       />
+    </div>
+  );
+}
+
+function PasswordInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="w-full relative">
+      <Input
+        type={showPassword ? "text" : "password"}
+        name="password"
+        autoComplete="new-password"
+        value={value}
+        onChange={onChange}
+        placeholder="Password"
+        className="h-11 md:h-12 lg:h-[48px] rounded-lg border border-gray-200 px-3 md:px-4 pr-11 text-sm md:text-base focus-visible:ring-2 focus-visible:ring-[#FF5D2E]"
+      />
+      <button
+        type="button"
+        onClick={() => setShowPassword((prev) => !prev)}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+        aria-label={showPassword ? "Hide password" : "Show password"}
+      >
+        {showPassword ? (
+          <EyeOff className="w-5 h-5" />
+        ) : (
+          <Eye className="w-5 h-5" />
+        )}
+      </button>
     </div>
   );
 }
@@ -124,6 +163,7 @@ export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const phoneInvalid = phone.length > 0 && !/^\d+$/.test(phone);
   const [password, setPassword] = useState("");
   // Step 2 State: OTP
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -162,6 +202,10 @@ export default function Signup() {
   const handleCreateAccount = async () => {
     if (!name || !email || !phone || !password) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+    if (phoneInvalid) {
+      toast.error("Enter a valid phone number");
       return;
     }
     if (password.length < 8) {
@@ -290,11 +334,21 @@ export default function Signup() {
       </div>
       <div className="w-full">
         <label className="text-sm font-medium mb-1.5 block text-left">Phone Number:</label>
-        <CustomInput value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="07X XXX XXXX" type="tel" maxLength={10} />
+        <CustomInput
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="07X XXX XXXX"
+          type="tel"
+          maxLength={10}
+          inputMode="numeric"
+        />
+        {phoneInvalid && (
+          <p className="text-xs text-red-500 mt-1 text-left">Invalid phone number. Use numbers only.</p>
+        )}
       </div>
       <div className="w-full">
         <label className="text-sm font-medium mb-1.5 block text-left">Password:</label>
-        <CustomInput value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+        <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
         <p className="text-xs text-gray-500 mt-1 text-left">Minimum 8 characters.</p>
       </div>
 
