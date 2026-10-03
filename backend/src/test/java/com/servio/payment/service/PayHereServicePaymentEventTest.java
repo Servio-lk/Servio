@@ -90,7 +90,7 @@ class PayHereServicePaymentEventTest {
     }
 
     @Test
-    @DisplayName("Valid PayHere notification confirms appointment, persists payment, and publishes PaymentCompletedEvent")
+    @DisplayName("Valid PayHere notification records payment, leaves appointment pending review, and publishes PaymentCompletedEvent")
     void testHandleNotificationPublishesEvent() throws Exception {
         String orderId = "ORD-" + appointmentId;
         String amount = "8500.00";
@@ -114,8 +114,8 @@ class PayHereServicePaymentEventTest {
                 "VISA"
         );
 
-        // Verify appointment confirmed
-        assertEquals("CONFIRMED", appointment.getStatus());
+        // Payment is recorded; confirmation waits for admin review
+        assertEquals("PENDING", appointment.getStatus());
         verify(appointmentRepository, times(1)).save(appointment);
 
         // Verify payment record

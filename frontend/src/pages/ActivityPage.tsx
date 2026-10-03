@@ -179,7 +179,9 @@ export default function ActivityPage() {
                       nextUpcoming.status === 'PENDING' ? 'bg-yellow-500' :
                       'bg-blue-500'
                     }`}>
-                      {nextUpcoming.status}
+                      {nextUpcoming.status === 'PENDING' ? 'Pending Confirmation' :
+                       nextUpcoming.status === 'CONFIRMED' ? 'Confirmed' :
+                       nextUpcoming.status}
                     </div>
                   </div>
                   
