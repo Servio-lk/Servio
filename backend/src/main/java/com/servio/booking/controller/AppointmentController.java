@@ -6,6 +6,8 @@ import com.servio.booking.dto.AppointmentRequest;
 import com.servio.common.dto.ApiResponse;
 import com.servio.booking.dto.AppointmentDto;
 
+import com.servio.repair.service.RepairChatService;
+import com.servio.repair.dto.RepairConversationDto;
 import com.servio.booking.service.AppointmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,7 @@ import java.util.List;
 public class AppointmentController {
 
         private final AppointmentService appointmentService;
+        private final RepairChatService repairChatService;
 
         @PostMapping
         @PreAuthorize("isAuthenticated()")
@@ -182,5 +185,26 @@ public class AppointmentController {
                                 .message("Appointment cancelled successfully")
                                 .data(appointment)
                                 .build());
+        }
+
+        @GetMapping("/{id}/conversation")
+        @PreAuthorize("isAuthenticated()")
+        public ResponseEntity<ApiResponse<RepairConversationDto>> getConversationByAppointment(
+                @PathVariable Long id,
+                Authentication authentication
+        ) {
+                try {
+                        RepairConversationDto conversation = repairChatService.getConversationByAppointment(id, authentication);
+                        return ResponseEntity.ok(ApiResponse.<RepairConversationDto>builder()
+                                        .success(true)
+                                        .message("Conversation retrieved successfully")
+                                        .data(conversation)
+                                        .build());
+                } catch (RuntimeException e) {
+                        return ResponseEntity.badRequest().body(ApiResponse.<RepairConversationDto>builder()
+                                        .success(false)
+                                        .message(e.getMessage())
+                                        .build());
+                }
         }
 }

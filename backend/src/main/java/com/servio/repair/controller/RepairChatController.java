@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -48,7 +49,7 @@ public class RepairChatController {
     @PostMapping("/messages")
     public ResponseEntity<ApiResponse<RepairMessageDto>> sendMessage(
             @PathVariable Long repairId,
-            @RequestBody RepairMessageRequest request,
+            @Valid @RequestBody RepairMessageRequest request,
             Authentication authentication
     ) {
         try {
@@ -56,6 +57,20 @@ public class RepairChatController {
             return ResponseEntity.ok(ApiResponse.success("Message sent successfully", message));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(ApiResponse.error("Failed to send message", e.getMessage()));
+        }
+    }
+
+    @PatchMapping("/messages/read")
+    public ResponseEntity<ApiResponse<Void>> markMessagesAsRead(
+            @PathVariable Long repairId,
+            Authentication authentication
+    ) {
+        try {
+            RepairConversationDto conversation = repairChatService.getConversationDto(repairId, authentication);
+            repairChatService.markMessagesRead(conversation.getId(), authentication);
+            return ResponseEntity.ok(ApiResponse.success("Messages marked as read", null));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Failed to mark messages as read", e.getMessage()));
         }
     }
 }

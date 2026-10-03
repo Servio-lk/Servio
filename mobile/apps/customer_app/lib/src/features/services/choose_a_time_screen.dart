@@ -12,6 +12,9 @@ class ChooseATimeScreen extends StatefulWidget {
   final String basePriceStr;
   final String? optionName;
   final String? optionPriceStr;
+  final String? discountStr;
+  final String? discountLabel;
+  final String? promoCode;
 
   const ChooseATimeScreen({
     super.key,
@@ -20,6 +23,9 @@ class ChooseATimeScreen extends StatefulWidget {
     required this.basePriceStr,
     this.optionName,
     this.optionPriceStr,
+    this.discountStr,
+    this.discountLabel,
+    this.promoCode,
   });
 
   @override
@@ -228,6 +234,9 @@ class _ChooseATimeScreenState extends State<ChooseATimeScreen> {
                 basePriceStr: widget.basePriceStr,
                 optionName: widget.optionName,
                 optionPriceStr: widget.optionPriceStr,
+                discountStr: widget.discountStr,
+                discountLabel: widget.discountLabel,
+                promoCode: widget.promoCode,
               ),
             ],
           ),
@@ -564,6 +573,9 @@ class _BottomButtonSection extends StatelessWidget {
   final String basePriceStr;
   final String? optionName;
   final String? optionPriceStr;
+  final String? discountStr;
+  final String? discountLabel;
+  final String? promoCode;
 
   const _BottomButtonSection({
     required this.selectedDate,
@@ -573,6 +585,9 @@ class _BottomButtonSection extends StatelessWidget {
     required this.basePriceStr,
     this.optionName,
     this.optionPriceStr,
+    this.discountStr,
+    this.discountLabel,
+    this.promoCode,
   });
 
   @override
@@ -596,6 +611,9 @@ class _BottomButtonSection extends StatelessWidget {
                       basePriceStr: basePriceStr,
                       optionName: optionName,
                       optionPriceStr: optionPriceStr,
+                      discountStr: discountStr,
+                      discountLabel: discountLabel,
+                      promoCode: promoCode,
                     ),
                   ),
                 );

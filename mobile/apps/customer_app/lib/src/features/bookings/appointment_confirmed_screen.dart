@@ -95,7 +95,7 @@ class _HeaderSection extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: Text(
-              'Appointment Confirmed!',
+              'Appointment Requested!',
               style: GoogleFonts.instrumentSans(
                 fontSize: 28,
                 fontWeight: FontWeight.w600,
@@ -251,6 +251,34 @@ class _QrCodeSection extends StatelessWidget {
             dataModuleStyle: const QrDataModuleStyle(
               dataModuleShape: QrDataModuleShape.square,
               color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7ED),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFED7AA)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const PhosphorIcon(
+                  PhosphorIconsFill.clockCounterClockwise,
+                  size: 16,
+                  color: Color(0xFFF59E0B),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Pending admin approval',
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFF59E0B),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

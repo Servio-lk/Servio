@@ -160,6 +160,54 @@ void main() {
       expect(offer.title, 'Monsoon Discount');
       expect(offer.formattedDiscount, '20% OFF');
       expect(offer.isActive, true);
+
+      // Spring Boot OfferResponse format with discountType and discountValue
+      final springBootOfferJson = {
+        'id': 2,
+        'title': 'Summer Wash',
+        'subtitle': 'Hot Summer Deal',
+        'discountType': 'PERCENTAGE',
+        'discountValue': 15.0,
+        'expired': false,
+        'category': 'WASH',
+      };
+      final springOffer = OfferModel.fromJson(springBootOfferJson);
+      expect(springOffer.formattedDiscount, '15% OFF');
+      expect(springOffer.isActive, true);
+      expect(springOffer.category, 'WASH');
+
+      // Fixed discount format
+      final fixedOfferJson = {
+        'id': 3,
+        'title': 'Major Service Promo',
+        'discountType': 'FIXED',
+        'discountValue': 2500.0,
+        'expired': false,
+      };
+      final fixedOffer = OfferModel.fromJson(fixedOfferJson);
+      expect(fixedOffer.formattedDiscount, 'LKR 2500 OFF');
+      expect(fixedOffer.isActive, true);
+
+      // Supabase snake_case format
+      final supaOfferJson = {
+        'id': 4,
+        'title': 'Brake Pad Special',
+        'discount_type': 'PERCENTAGE',
+        'discount_value': 10,
+        'is_active': true,
+      };
+      final supaOffer = OfferModel.fromJson(supaOfferJson);
+      expect(supaOffer.formattedDiscount, '10% OFF');
+      expect(supaOffer.isActive, true);
+
+      // Expired offer
+      final expiredOfferJson = {
+        'id': 5,
+        'title': 'Past Holiday Deal',
+        'expired': true,
+      };
+      final expiredOffer = OfferModel.fromJson(expiredOfferJson);
+      expect(expiredOffer.isActive, false);
     });
   });
 }

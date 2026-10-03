@@ -93,6 +93,10 @@ public class RepairChatService {
     public List<RepairMessageDto> getMessages(Long repairId, Authentication authentication) {
         RepairConversation conversation = getOrCreateConversation(repairId);
         requireReadAccess(conversation, authentication);
+        
+        // Auto mark unread messages as read
+        markMessagesRead(conversation.getId(), authentication);
+
         return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversation.getId()).stream()
                 .map(this::toMessageDto)
                 .toList();
@@ -346,8 +350,16 @@ public class RepairChatService {
     }
 
     private boolean isClosed(RepairJob repairJob) {
-        return "COMPLETED".equalsIgnoreCase(repairJob.getStatus())
+        boolean jobClosed = "COMPLETED".equalsIgnoreCase(repairJob.getStatus())
                 || "CANCELLED".equalsIgnoreCase(repairJob.getStatus());
+        if (jobClosed) return true;
+
+        if (repairJob.getAppointment() != null) {
+            String apptStatus = repairJob.getAppointment().getStatus();
+            return "COMPLETED".equalsIgnoreCase(apptStatus)
+                    || "CANCELLED".equalsIgnoreCase(apptStatus);
+        }
+        return false;
     }
 
     private RepairConversationDto toConversationDto(RepairConversation conversation) {
@@ -375,6 +387,41 @@ public class RepairChatService {
                 .build();
     }
 
+    public List<RepairConversationDto> getAdminConversationList() {
+        return conversationRepository.findAllOrderByUpdatedAtDesc().stream()
+                .map(this::toAdminConversationDto)
+                .toList();
+    }
+
+    private RepairConversationDto toAdminConversationDto(RepairConversation conversation) {
+        RepairConversationDto dto = toConversationDto(conversation);
+        RepairJob job = conversation.getRepairJob();
+        if (job != null && job.getAppointment() != null) {
+            dto.setAppointmentId(job.getAppointment().getId());
+            if (job.getAppointment().getUser() != null) {
+                dto.setCustomerName(job.getAppointment().getUser().getFullName());
+            }
+            if (job.getAppointment().getVehicle() != null) {
+                dto.setVehicleInfo(job.getAppointment().getVehicle().getMake() + " " + job.getAppointment().getVehicle().getModel());
+            }
+        }
+        
+        messageRepository.findTopByConversationIdOrderByCreatedAtDesc(conversation.getId())
+                .ifPresent(msg -> dto.setLastMessage(msg.getBody()));
+                
+        dto.setUnreadCount(messageRepository.countUnreadForRole(conversation.getId(), "ADMIN"));
+        return dto;
+    }
+
+    public void markMessagesRead(Long conversationId, Authentication authentication) {
+        RepairConversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new RuntimeException("Conversation not found"));
+        requireReadAccess(conversation, authentication);
+        
+        String readerRole = resolveSenderRole(conversation, authentication);
+        messageRepository.markReadForRole(conversationId, readerRole, java.time.LocalDateTime.now());
+    }
+
     private RepairMessageDto toMessageDto(RepairMessage message) {
         return RepairMessageDto.builder()
                 .id(message.getId())
@@ -386,5 +433,13 @@ public class RepairChatService {
                 .createdAt(message.getCreatedAt())
                 .readAt(message.getReadAt())
                 .build();
+    }
+
+    public long getGlobalUnreadCount(Authentication authentication) {
+        if (isAdmin(authentication)) {
+            return messageRepository.countGlobalUnreadForAdmin();
+        } else {
+            return messageRepository.countGlobalUnreadForClient(authentication.getName());
+        }
     }
 }

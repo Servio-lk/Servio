@@ -12,6 +12,10 @@ class ServiceDetailData {
   final String? imagePath; // local asset path, null = placeholder
   final String optionsTitle;
   final List<ServiceOption> options;
+  final double? discountPercentage;
+  final double? discountAmount;
+  final String? promoCode;
+  final String? discountLabel;
 
   const ServiceDetailData({
     required this.title,
@@ -20,6 +24,10 @@ class ServiceDetailData {
     this.imagePath,
     this.optionsTitle = 'Pricing and Options',
     this.options = const [],
+    this.discountPercentage,
+    this.discountAmount,
+    this.promoCode,
+    this.discountLabel,
   });
 }
 
@@ -45,15 +53,46 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
   int _selectedOptionIndex = 0;
   bool _showFullDescription = false;
 
-  // Calculate total price (base + selected option add-on)
-  String get _totalPrice {
+  // Calculate subtotal before discount (base + selected option add-on)
+  int get _subtotal {
+    final base = _parseLKR(widget.data.basePrice) ?? 0;
     final options = widget.data.options;
-    if (options.isEmpty) return widget.data.basePrice;
-    final base = _parseLKR(widget.data.basePrice);
-    final addon = _parseLKR(options[_selectedOptionIndex].price);
-    if (base == null || addon == null) return widget.data.basePrice;
-    final total = base + addon;
+    if (options.isEmpty || _selectedOptionIndex >= options.length) {
+      return base;
+    }
+    final addon = _parseLKR(options[_selectedOptionIndex].price) ?? 0;
+    return base + addon;
+  }
+
+  // Calculate discount value to reduce from subtotal
+  int get _discountValue {
+    final subtotal = _subtotal;
+    if (widget.data.discountPercentage != null &&
+        widget.data.discountPercentage! > 0) {
+      return ((subtotal * widget.data.discountPercentage!) / 100).round();
+    }
+    if (widget.data.discountAmount != null &&
+        widget.data.discountAmount! > 0) {
+      final amount = widget.data.discountAmount!.round();
+      return amount > subtotal ? subtotal : amount;
+    }
+    return 0;
+  }
+
+  String? get _originalPrice {
+    if (_discountValue <= 0) return null;
+    return 'LKR ${_formatNumber(_subtotal)}';
+  }
+
+  // Calculate total price after discount reduction
+  String get _totalPrice {
+    final total = (_subtotal - _discountValue).clamp(0, 999999999);
     return 'LKR ${_formatNumber(total)}';
+  }
+
+  String? get _discountStr {
+    if (_discountValue <= 0) return null;
+    return '-LKR ${_formatNumber(_discountValue)}';
   }
 
   // Returns null if the price string is non-numeric (e.g. 'Free consultation')
@@ -106,6 +145,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       _DescriptionSection(
                         title: widget.data.title,
                         basePrice: widget.data.basePrice,
+                        discountLabel: widget.data.discountLabel,
                         description: widget.data.description,
                         showFull: _showFullDescription,
                         onToggle: () => setState(
@@ -141,6 +181,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
             // ── Sticky bottom button ──
             _BottomButtonSection(
               totalPrice: _totalPrice,
+              originalPrice: _originalPrice,
               serviceType: widget.data.title,
               onBook: () {
                 Navigator.of(context).push(
@@ -151,6 +192,9 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
                       basePriceStr: widget.data.basePrice,
                       optionName: widget.data.options.isNotEmpty ? widget.data.options[_selectedOptionIndex].name : null,
                       optionPriceStr: widget.data.options.isNotEmpty ? widget.data.options[_selectedOptionIndex].price : null,
+                      discountStr: _discountStr,
+                      discountLabel: widget.data.discountLabel ?? widget.data.promoCode,
+                      promoCode: widget.data.promoCode,
                     ),
                   ),
                 );
@@ -177,12 +221,21 @@ class _ServiceImageSection extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           // Image
-          imagePath != null
-              ? Image.asset(
-                  imagePath!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => _placeholder(),
-                )
+          (imagePath != null && imagePath!.isNotEmpty)
+              ? (imagePath!.startsWith('http://') ||
+                      imagePath!.startsWith('https://'))
+                  ? Image.network(
+                      imagePath!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _placeholder(),
+                    )
+                  : Image.asset(
+                      imagePath!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          _placeholder(),
+                    )
               : _placeholder(),
 
           // Back button
@@ -230,6 +283,7 @@ class _ServiceImageSection extends StatelessWidget {
 class _DescriptionSection extends StatelessWidget {
   final String title;
   final String basePrice;
+  final String? discountLabel;
   final String description;
   final bool showFull;
   final VoidCallback onToggle;
@@ -237,6 +291,7 @@ class _DescriptionSection extends StatelessWidget {
   const _DescriptionSection({
     required this.title,
     required this.basePrice,
+    this.discountLabel,
     required this.description,
     required this.showFull,
     required this.onToggle,
@@ -265,13 +320,35 @@ class _DescriptionSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            basePrice,
-            style: GoogleFonts.instrumentSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF4B4B4B),
-            ),
+          Row(
+            children: [
+              Text(
+                basePrice,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF4B4B4B),
+                ),
+              ),
+              if (discountLabel != null && discountLabel!.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE7DF),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    discountLabel!,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFFFF5D2E),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           const SizedBox(height: 8),
           Text(
@@ -525,11 +602,13 @@ class _SpecialInstructionsSection extends StatelessWidget {
 
 class _BottomButtonSection extends StatelessWidget {
   final String totalPrice;
+  final String? originalPrice;
   final String serviceType;
   final VoidCallback onBook;
 
   const _BottomButtonSection({
     required this.totalPrice,
+    this.originalPrice,
     required this.serviceType,
     required this.onBook,
   });
@@ -585,6 +664,19 @@ class _BottomButtonSection extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  if (originalPrice != null) ...[
+                    Text(
+                      originalPrice!,
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.white70,
+                        decoration: TextDecoration.lineThrough,
+                        decorationColor: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
                     totalPrice,
                     style: GoogleFonts.instrumentSans(
