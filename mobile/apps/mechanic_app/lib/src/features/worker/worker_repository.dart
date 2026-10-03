@@ -127,6 +127,21 @@ class WorkerRepository {
     }
   }
 
+  /// Scans customer appointment QR code and transitions status to IN_PROGRESS.
+  Future<AppointmentModel?> scanAppointmentQr(String qrData) async {
+    try {
+      final response = await _apiClient.post<AppointmentModel>(
+        '/appointments/scan-qr',
+        body: {'qrData': qrData},
+        fromJson: (data) => AppointmentModel.fromJson(data as Map<String, dynamic>),
+      );
+      return response.data;
+    } catch (e) {
+      debugPrint('Error checking in via QR scan: $e');
+      rethrow;
+    }
+  }
+
   /// Assigns a mechanic to an appointment via /api/admin/appointments/{id}/assign-mechanic.
   Future<bool> assignMechanic(int appointmentId, int mechanicId) async {
     try {

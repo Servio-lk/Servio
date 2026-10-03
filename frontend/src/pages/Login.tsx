@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -223,6 +223,7 @@ function LanguageSelector() {
 
 function LoginForm() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, refreshBackendToken } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -262,8 +263,34 @@ function LoginForm() {
           throw new Error('Sign in succeeded, but backend session initialization failed.');
         }
 
+        // Determine destination based on authoritative backend user role
+        let userRole = 'USER';
+        try {
+          const storedUserJson = localStorage.getItem('user');
+          if (storedUserJson) {
+            const parsed = JSON.parse(storedUserJson);
+            userRole = (parsed.role || 'USER').toUpperCase();
+          }
+        } catch {}
+
         toast.success("Welcome back!");
-        navigate('/home');
+
+        if (userRole === 'ADMIN') {
+          // If on EC2 customer port (port 80 or empty with public hostname), redirect to admin portal on port 8081
+          const host = window.location.hostname;
+          const port = window.location.port;
+          const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+
+          if (isCustomerPortOnEc2) {
+            window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+          } else {
+            navigate('/admin', { replace: true });
+          }
+        } else {
+          // Regular customer destination
+          const from = (location.state as any)?.from?.pathname;
+          navigate(from && from !== '/login' ? from : '/home', { replace: true });
+        }
       }
     } catch (err: any) {
       console.error("Login error:", err);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
-import { Tag, Plus, Search, Filter, Calendar, Edit, Trash2, Percent, DollarSign } from 'lucide-react';
+import { Tag, Plus, Search, Filter, Calendar, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const emptyForm = {
@@ -21,6 +21,7 @@ export function AdminOffers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
@@ -44,35 +45,61 @@ export function AdminOffers() {
     offer.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const createOffer = async () => {
+  const offerPayload = () => ({
+    title: form.title.trim(),
+    subtitle: form.subtitle.trim() || null,
+    description: form.description.trim() || null,
+    discountType: form.discountType,
+    discountValue: Number(form.discountValue),
+    imageUrl: form.imageUrl.trim() || null,
+    promoCode: form.promoCode.trim() ? form.promoCode.trim().toUpperCase() : null,
+    category: form.category || null,
+    validUntil: form.validUntil
+      ? (form.validUntil.length === 16 ? `${form.validUntil}:00` : form.validUntil)
+      : null,
+    isActive: true,
+  });
+
+  const startEdit = (offer: any) => {
+    setEditingId(offer.id);
+    setForm({
+      title: offer.title || '',
+      subtitle: offer.subtitle || '',
+      description: offer.description || '',
+      discountType: offer.discountType || 'PERCENTAGE',
+      discountValue: offer.discountValue != null ? String(offer.discountValue) : '',
+      imageUrl: offer.imageUrl || '',
+      promoCode: offer.promoCode || '',
+      category: offer.category || '',
+      validUntil: offer.validUntil ? String(offer.validUntil).slice(0, 16) : '',
+    });
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const saveOffer = async () => {
     if (!form.title.trim() || !form.discountValue) {
       toast.error('Title and discount value are required');
       return;
     }
     setSaving(true);
     try {
-      const response = await adminApi.createOffer({
-        title: form.title.trim(),
-        subtitle: form.subtitle.trim() || null,
-        description: form.description.trim() || null,
-        discountType: form.discountType,
-        discountValue: Number(form.discountValue),
-        imageUrl: form.imageUrl.trim() || null,
-        promoCode: form.promoCode.trim() ? form.promoCode.trim().toUpperCase() : null,
-        category: form.category || null,
-        validUntil: form.validUntil ? `${form.validUntil}:00` : null,
-        isActive: true,
-      });
+      const payload = offerPayload();
+      const current = offers.find((offer) => offer.id === editingId);
+      const response = editingId
+        ? await adminApi.updateOffer(editingId, { ...payload, isActive: current?.isActive ?? true })
+        : await adminApi.createOffer(payload);
       if (response.success) {
-        toast.success('Offer created');
+        toast.success(editingId ? 'Offer updated' : 'Offer created');
         setShowForm(false);
+        setEditingId(null);
         setForm(emptyForm);
         await loadOffers();
       } else {
-        toast.error(response.message || 'Could not create offer');
+        toast.error(response.message || 'Could not save offer');
       }
     } catch {
-      toast.error('Could not create offer');
+      toast.error('Could not save offer');
     } finally {
       setSaving(false);
     }
@@ -121,7 +148,15 @@ export function AdminOffers() {
         </div>
         <button
           type="button"
-          onClick={() => setShowForm((open) => !open)}
+          onClick={() => {
+            if (showForm && editingId == null) {
+              setShowForm(false);
+              return;
+            }
+            setEditingId(null);
+            setForm(emptyForm);
+            setShowForm(true);
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-[#ff5d2e] text-white rounded-lg hover:bg-[#e54d1e] transition-colors shadow-lg shadow-[#ff5d2e]/20"
         >
           <Plus className="h-4 w-4" />
@@ -148,8 +183,8 @@ export function AdminOffers() {
           </select>
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Image URL" value={form.imageUrl} onChange={(e) => setForm({ ...form, imageUrl: e.target.value })} />
           <input className="border rounded-lg px-3 py-2 text-sm" type="datetime-local" value={form.validUntil} onChange={(e) => setForm({ ...form, validUntil: e.target.value })} />
-          <button type="button" disabled={saving} onClick={createOffer} className="sm:col-span-2 justify-self-start bg-[#ff5d2e] text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
-            {saving ? 'Saving...' : 'Publish offer'}
+          <button type="button" disabled={saving} onClick={saveOffer} className="sm:col-span-2 justify-self-start bg-[#ff5d2e] text-white text-sm font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
+            {saving ? 'Saving...' : editingId ? 'Save changes' : 'Publish offer'}
           </button>
         </div>
       )}
@@ -212,8 +247,7 @@ export function AdminOffers() {
                       {offer.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#ff5d2e] flex items-center shadow-sm">
-                    {offer.discountType === 'PERCENTAGE' ? <Percent className="w-3 h-3 mr-1" /> : <DollarSign className="w-3 h-3 mr-1" />}
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold text-[#ff5d2e] shadow-sm">
                     {offer.discountType === 'PERCENTAGE' ? `${offer.discountValue}% OFF` : `Rs. ${offer.discountValue} OFF`}
                   </div>
                 </div>
@@ -241,7 +275,7 @@ export function AdminOffers() {
 
                 {/* Actions Section */}
                 <div className="px-5 py-4 bg-gray-50/50 border-t border-gray-100 flex gap-2">
-                  <button className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-black hover:border-gray-300 transition-colors text-sm font-medium">
+                  <button type="button" onClick={() => startEdit(offer)} className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-black hover:border-gray-300 transition-colors text-sm font-medium cursor-pointer">
                     <Edit className="w-4 h-4" />
                     Edit
                   </button>

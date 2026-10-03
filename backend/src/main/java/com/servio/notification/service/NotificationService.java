@@ -7,6 +7,7 @@ import com.servio.booking.entity.Appointment;
 import com.servio.notification.dto.NotificationDto;
 import com.servio.notification.dto.NotificationRequest;
 import com.servio.notification.entity.Notification;
+import com.servio.auth.entity.Role;
 import com.servio.auth.entity.User;
 import com.servio.notification.repository.NotificationRepository;
 import com.servio.auth.entity.UserNotificationPreference;
@@ -27,20 +28,47 @@ import com.servio.common.event.OfferPublishedEvent;
 import com.servio.common.event.PaymentCompletedEvent;
 import com.servio.common.event.RepairStatusChangedEvent;
 
+import com.servio.notification.dto.DeviceTokenRequest;
+import com.servio.notification.entity.DeviceToken;
+import com.servio.notification.repository.DeviceTokenRepository;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    @Lazy
     private final AppointmentEventPublisher eventPublisher;
     private final UserNotificationPreferenceRepository preferenceRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
+
+    @Autowired
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            @Lazy AppointmentEventPublisher eventPublisher,
+            UserNotificationPreferenceRepository preferenceRepository,
+            DeviceTokenRepository deviceTokenRepository
+    ) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
+        this.preferenceRepository = preferenceRepository;
+        this.deviceTokenRepository = deviceTokenRepository;
+    }
+
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            AppointmentEventPublisher eventPublisher,
+            UserNotificationPreferenceRepository preferenceRepository
+    ) {
+        this(notificationRepository, userRepository, eventPublisher, preferenceRepository, null);
+    }
 
     @Autowired(required = false)
     private List<NotificationChannel> extraChannels = List.of();
@@ -93,11 +121,23 @@ public class NotificationService {
     public void createAppointmentNotification(UUID userId, String appointmentDetails) {
         NotificationRequest request = NotificationRequest.builder()
             .userId(userId)
-            .title("Appointment Confirmation")
-            .message("Your appointment has been confirmed: " + appointmentDetails)
+            .title("Appointment Request Received")
+            .message("Your request has been submitted and is awaiting confirmation: " + appointmentDetails)
             .type("APPOINTMENT")
             .build();
         createNotification(request);
+    }
+
+    private void notifyAdminsOfPendingRequest(Long appointmentId, String details) {
+        for (User admin : userRepository.findByRole(Role.ADMIN)) {
+            createNotification(NotificationRequest.builder()
+                .userId(admin.getId())
+                .title("Appointment awaiting review")
+                .message("Request #" + appointmentId + " needs confirmation: " + details)
+                .type("APPOINTMENT")
+                .actionUrl("/admin/appointments")
+                .build());
+        }
     }
     
     @Transactional
@@ -131,6 +171,7 @@ public class NotificationService {
             if (event.getUserId() != null) {
                 String details = event.getServiceType() + " on " + event.getAppointmentDate();
                 createAppointmentNotification(event.getUserId(), details);
+                notifyAdminsOfPendingRequest(event.getAppointmentId(), details);
             }
         } catch (Exception e) {
             log.error("Failed to process AppointmentCreatedEvent for appointmentId={}: {}", 
@@ -281,8 +322,8 @@ public class NotificationService {
     private NotificationDto convertToDto(Notification notification) {
         return NotificationDto.builder()
             .id(notification.getId())
-            .userId(notification.getUser().getId())
-            .userName(notification.getUser().getFullName())
+            .userId(notification.getUser() != null ? notification.getUser().getId() : null)
+            .userName(notification.getUser() != null ? notification.getUser().getFullName() : null)
             .title(notification.getTitle())
             .message(notification.getMessage())
             .type(notification.getType())
@@ -315,5 +356,40 @@ public class NotificationService {
         return preferenceRepository.findById(userId)
                 .map(prefs -> !Boolean.FALSE.equals(prefs.getPushNotifications()))
                 .orElse(true);
+    }
+
+    @Transactional
+    public void registerDeviceToken(UUID userId, DeviceTokenRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        deviceTokenRepository.findByToken(request.getToken())
+                .ifPresentOrElse(
+                        existing -> {
+                            existing.setUser(user);
+                            if (request.getDeviceType() != null) {
+                                existing.setDeviceType(request.getDeviceType());
+                            }
+                            deviceTokenRepository.save(existing);
+                            log.info("Updated FCM device token for user: {}", userId);
+                        },
+                        () -> {
+                            DeviceToken deviceToken = DeviceToken.builder()
+                                    .user(user)
+                                    .token(request.getToken())
+                                    .deviceType(request.getDeviceType() != null ? request.getDeviceType() : "ANDROID")
+                                    .build();
+                            deviceTokenRepository.save(deviceToken);
+                            log.info("Registered new FCM device token for user: {}", userId);
+                        }
+                );
+    }
+
+    @Transactional
+    public void unregisterDeviceToken(String token) {
+        if (token != null && !token.trim().isEmpty()) {
+            deviceTokenRepository.deleteByToken(token.trim());
+            log.info("Unregistered FCM device token");
+        }
     }
 }

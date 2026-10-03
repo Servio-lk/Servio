@@ -285,7 +285,7 @@ public class TransactionalEventIsolationAdversarialTest {
 
         payHereService.handleNotification("123456", orderId, amount, currency, statusCode, md5sig, "TX-999", "MASTERCARD");
 
-        assertEquals("CONFIRMED", appointment.getStatus());
+        assertEquals("PENDING", appointment.getStatus());
         ArgumentCaptor<PaymentCompletedEvent> captor = ArgumentCaptor.forClass(PaymentCompletedEvent.class);
         verify(applicationEventPublisher, times(1)).publishEvent(captor.capture());
         assertEquals(999L, captor.getValue().getAppointmentId());

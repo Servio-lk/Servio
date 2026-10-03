@@ -84,11 +84,19 @@ public class AdminAppointmentController {
     public ResponseEntity<ApiResponse<RepairConversationDto>> assignMechanic(
             @PathVariable Long id,
             @RequestBody AssignMechanicRequest request) {
+        if (request == null || request.getMechanicId() == null) {
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("Mechanic ID is required", null));
+        }
+
         Appointment appointment = adminAppointmentService.getAppointmentById(id);
-        if (!"CONFIRMED".equalsIgnoreCase(appointment.getStatus())
+        if ("PENDING".equalsIgnoreCase(appointment.getStatus())) {
+            appointment = adminAppointmentService.updateAppointment(id,
+                    AppointmentUpdateRequest.builder().status("CONFIRMED").build());
+        } else if (!"CONFIRMED".equalsIgnoreCase(appointment.getStatus())
                 && !"IN_PROGRESS".equalsIgnoreCase(appointment.getStatus())) {
             return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("Mechanic assignment requires a confirmed appointment", appointment.getStatus()));
+                    .body(ApiResponse.error("Mechanic assignment requires a pending, confirmed, or in-progress appointment", appointment.getStatus()));
         }
 
         RepairConversationDto conversation = repairChatService.assignMechanicToAppointment(id, request.getMechanicId());

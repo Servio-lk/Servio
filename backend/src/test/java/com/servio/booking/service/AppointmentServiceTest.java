@@ -272,4 +272,66 @@ class AppointmentServiceTest {
         assertEquals("09:30", bookedSlots.get(0));
         assertEquals("14:00", bookedSlots.get(1));
     }
+
+    @Test
+    @DisplayName("checkInWithQr succeeds with Flutter mobile app QR format (SERVIO-APT-500)")
+    void testCheckInWithQr_flutterAppFormat() {
+        Appointment appointment = Appointment.builder()
+                .id(500L)
+                .user(testUser)
+                .serviceType("Full Service")
+                .status("CONFIRMED")
+                .build();
+
+        when(appointmentRepository.findById(500L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AppointmentDto result = appointmentService.checkInWithQr("SERVIO-APT-500", null);
+
+        assertNotNull(result);
+        assertEquals("IN_PROGRESS", result.getStatus());
+        verify(applicationEventPublisher, times(1)).publishEvent(any(RepairStatusChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("checkInWithQr succeeds with React web app URL format (https://servio.lk/appointment/500)")
+    void testCheckInWithQr_webUrlFormat() {
+        Appointment appointment = Appointment.builder()
+                .id(500L)
+                .user(testUser)
+                .serviceType("Full Service")
+                .status("CONFIRMED")
+                .build();
+
+        when(appointmentRepository.findById(500L)).thenReturn(Optional.of(appointment));
+        when(appointmentRepository.save(any(Appointment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AppointmentDto result = appointmentService.checkInWithQr("https://servio.lk/appointment/500", null);
+
+        assertNotNull(result);
+        assertEquals("IN_PROGRESS", result.getStatus());
+        verify(applicationEventPublisher, times(1)).publishEvent(any(RepairStatusChangedEvent.class));
+    }
+
+    @Test
+    @DisplayName("checkInWithQr throws ConflictException when appointment is already COMPLETED")
+    void testCheckInWithQr_alreadyCompleted_throwsConflict() {
+        Appointment appointment = Appointment.builder()
+                .id(500L)
+                .user(testUser)
+                .serviceType("Full Service")
+                .status("COMPLETED")
+                .build();
+
+        when(appointmentRepository.findById(500L)).thenReturn(Optional.of(appointment));
+
+        assertThrows(ConflictException.class, () -> appointmentService.checkInWithQr("SERVIO-APT-500", null));
+    }
+
+    @Test
+    @DisplayName("checkInWithQr throws IllegalArgumentException for empty or invalid QR")
+    void testCheckInWithQr_invalidFormat_throwsIllegalArgument() {
+        assertThrows(IllegalArgumentException.class, () -> appointmentService.checkInWithQr("", null));
+        assertThrows(IllegalArgumentException.class, () -> appointmentService.checkInWithQr("INVALID-QR-CODE", null));
+    }
 }

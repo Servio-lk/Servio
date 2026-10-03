@@ -35,7 +35,7 @@ EXPOSE 8080 8081
 
 # Health check against unprivileged endpoint
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1
 
 # Start nginx in foreground
 CMD ["nginx", "-g", "daemon off;"]

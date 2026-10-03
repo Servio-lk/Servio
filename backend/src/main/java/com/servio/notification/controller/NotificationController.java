@@ -5,11 +5,16 @@ import com.servio.notification.dto.NotificationRequest;
 import com.servio.notification.dto.NotificationDto;
 import com.servio.common.dto.ApiResponse;
 
+import com.servio.auth.entity.User;
+import com.servio.auth.repository.UserRepository;
+import com.servio.notification.dto.DeviceTokenRequest;
 import com.servio.notification.service.NotificationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +26,7 @@ import java.util.UUID;
 public class NotificationController {
     
     private final NotificationService notificationService;
+    private final UserRepository userRepository;
     
     @PostMapping
     @PreAuthorize("hasAuthority('ADMIN')")
@@ -140,5 +146,48 @@ public class NotificationController {
             .message("Old notifications deleted successfully")
             .data(null)
             .build());
+    }
+
+    @PostMapping("/devices")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> registerDevice(
+        @Valid @RequestBody DeviceTokenRequest request,
+        Authentication authentication
+    ) {
+        User user = resolveUser(authentication);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("User not authenticated")
+                    .build());
+        }
+        notificationService.registerDeviceToken(user.getId(), request);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+            .success(true)
+            .message("Device token registered successfully")
+            .build());
+    }
+
+    @DeleteMapping("/devices")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Void>> unregisterDevice(
+        @RequestParam String token
+    ) {
+        notificationService.unregisterDeviceToken(token);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+            .success(true)
+            .message("Device token unregistered successfully")
+            .build());
+    }
+
+    private User resolveUser(Authentication auth) {
+        if (auth == null || auth.getName() == null) return null;
+        String name = auth.getName();
+        try {
+            return userRepository.findById(UUID.fromString(name)).orElse(null);
+        } catch (IllegalArgumentException e) {
+            return userRepository.findByEmail(name).orElse(null);
+        }
     }
 }

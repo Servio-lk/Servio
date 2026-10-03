@@ -146,6 +146,19 @@ public class AppointmentController {
                                 .build());
         }
 
+        @PostMapping("/scan-qr")
+        @PreAuthorize("hasAnyAuthority('ADMIN', 'MECHANIC')")
+        public ResponseEntity<ApiResponse<AppointmentDto>> checkInWithQr(
+                        @Valid @RequestBody com.servio.booking.dto.AppointmentQrCheckInRequest request,
+                        Authentication authentication) {
+                AppointmentDto appointment = appointmentService.checkInWithQr(request.getQrData(), authentication);
+                return ResponseEntity.ok(ApiResponse.<AppointmentDto>builder()
+                                .success(true)
+                                .message("Service started successfully for appointment #" + appointment.getId())
+                                .data(appointment)
+                                .build());
+        }
+
         @DeleteMapping("/{id}")
         @PreAuthorize("hasAuthority('ADMIN')")
         public ResponseEntity<ApiResponse<Void>> deleteAppointment(@PathVariable Long id) {

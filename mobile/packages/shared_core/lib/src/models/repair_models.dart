@@ -199,18 +199,12 @@ class RepairMessageModel {
     final role = (json['senderRole'] ?? json['sender_role'] ?? 'CUSTOMER').toString();
     final msgBody = (json['body'] as String?) ?? '';
 
-    DateTime createdAtVal;
-    final rawCreatedAt = json['createdAt'] ?? json['created_at'];
-    if (rawCreatedAt != null) {
-      createdAtVal = DateTime.tryParse(rawCreatedAt.toString()) ?? DateTime.now();
-    } else {
-      createdAtVal = DateTime.now();
-    }
+    final createdAtVal = parseUtcDateTime(json['createdAt'] ?? json['created_at']);
 
     DateTime? readAtVal;
     final rawReadAt = json['readAt'] ?? json['read_at'];
     if (rawReadAt != null) {
-      readAtVal = DateTime.tryParse(rawReadAt.toString());
+      readAtVal = parseUtcDateTime(rawReadAt);
     }
 
     return RepairMessageModel(
@@ -225,6 +219,34 @@ class RepairMessageModel {
     );
   }
 
+  static DateTime parseUtcDateTime(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is DateTime) return v.toLocal();
+    final str = v.toString().trim();
+    if (str.isEmpty) return DateTime.now();
+
+    // If string has explicit timezone offset or 'Z', parse directly and convert to local
+    if (str.endsWith('Z') || str.contains('+') || RegExp(r'-\d{2}(:\d{2})?$').hasMatch(str)) {
+      return (DateTime.tryParse(str) ?? DateTime.now()).toLocal();
+    }
+
+    // String has NO timezone offset (e.g. "2026-10-03T11:44:00" from Spring Boot or Postgres).
+    // Standard server/db timestamps are UTC.
+    final iso = str.contains(' ') ? str.replaceFirst(' ', 'T') : str;
+    final asUtc = DateTime.tryParse('${iso}Z');
+    if (asUtc != null) {
+      final localFromUtc = asUtc.toLocal();
+      // Safety check: If treating it as UTC pushes it more than 5 minutes into the future,
+      // then the string was actually already a local timestamp.
+      if (localFromUtc.isAfter(DateTime.now().add(const Duration(minutes: 5)))) {
+        return (DateTime.tryParse(str) ?? DateTime.now()).toLocal();
+      }
+      return localFromUtc;
+    }
+
+    return (DateTime.tryParse(str) ?? DateTime.now()).toLocal();
+  }
+
   int get repairJobId => repairId ?? 0;
   bool get isMechanic => senderRole.toUpperCase() == 'MECHANIC';
   bool get isAdmin => senderRole.toUpperCase() == 'ADMIN';
@@ -232,6 +254,7 @@ class RepairMessageModel {
   bool get isMechanicSender => isMechanic;
   bool get isAdminSender => isAdmin;
   bool get isCustomerSender => isCustomer;
+  bool get isRead => readAt != null;
 
   Map<String, dynamic> toJson() {
     return {

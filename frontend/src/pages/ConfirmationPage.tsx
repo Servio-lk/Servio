@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useLocation} from 'react-router-dom';
 import { Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
 import { ChatCircleDots } from '@phosphor-icons/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -13,6 +13,12 @@ export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const breakdown = (location.state ?? null) as {
+    originalTotal?: number;
+    discount?: number;
+    offerName?: string | null;
+  } | null;
   
   const [appointment, setAppointment] = useState<AppointmentDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,6 +65,34 @@ export default function ConfirmationPage() {
       navigator.clipboard.writeText(url);
       toast.success('Link copied to clipboard!');
     }
+  };
+
+  const addToCalendar = () => {
+    if (!appointment) return;
+
+    const start = new Date(appointment.appointmentDate);
+    if (Number.isNaN(start.getTime())) {
+      toast.error('Could not add this appointment to your calendar');
+      return;
+    }
+
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const toGoogleDate = (date: Date) =>
+      date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `Servio — ${appointment.serviceType}`,
+      dates: `${toGoogleDate(start)}/${toGoogleDate(end)}`,
+      details: `Appointment #APT-${appointment.id.toString().padStart(6, '0')}`,
+      location: appointment.location || 'Service Center',
+    });
+
+    window.open(
+      `https://calendar.google.com/calendar/render?${params.toString()}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
   };
 
   useEffect(() => {
@@ -164,7 +198,9 @@ export default function ConfirmationPage() {
         {/* Header */}
         <div className="sticky top-0 bg-gradient-to-b from-[#fff7f5] to-transparent z-10 pb-4">
           <div className="flex items-center justify-center gap-4 px-4 py-3 lg:px-0">
-            <h1 className="text-xl lg:text-2xl font-semibold text-black text-center">Appointment Confirmed!</h1>
+            <h1 className="text-xl lg:text-2xl font-semibold text-black text-center">
+              {appointment.status === 'PENDING' ? 'Appointment Request Received' : 'Appointment Confirmed!'}
+            </h1>
           </div>
         </div>
 
@@ -189,9 +225,16 @@ export default function ConfirmationPage() {
                     appointmentDisplay.status === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {appointmentDisplay.status}
+                    {appointmentDisplay.status === 'PENDING' ? 'Pending Confirmation' :
+                     appointmentDisplay.status === 'CONFIRMED' ? 'Confirmed' :
+                     appointmentDisplay.status}
                   </span>
                 </div>
+                {appointment.status === 'PENDING' && (
+                  <p className="mt-3 text-sm text-black/70 max-w-sm mx-auto">
+                    Your request has been submitted. We will notify you as soon as your appointment is confirmed.
+                  </p>
+                )}
               </div>
 
               {/* QR Code */}
@@ -206,7 +249,7 @@ export default function ConfirmationPage() {
               </div>
 
               <p className="text-xs text-center text-black/50 max-w-[250px]">
-                Scan this QR code to view your appointment status anytime
+                 Show this QR at the service center
               </p>
 
               {/* Action buttons - Desktop */}
@@ -273,9 +316,23 @@ export default function ConfirmationPage() {
               </div>
 
               {/* Total */}
-              <div className="flex items-center justify-between p-4 bg-[#fff7f5] rounded-lg">
-                <span className="font-semibold text-black">Total Amount</span>
-                <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointmentDisplay.total.toLocaleString()}</span>
+              <div className="flex flex-col gap-2 p-4 bg-[#fff7f5] rounded-lg">
+                {breakdown?.discount ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-black/70">Total</span>
+                      <span className="font-medium text-black">LKR {breakdown.originalTotal?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[#ff5d2e]">{breakdown.offerName} applied</span>
+                      <span className="font-medium text-[#ff5d2e]">-LKR {breakdown.discount.toLocaleString()}</span>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-black">Total Amount</span>
+                  <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointmentDisplay.total.toLocaleString()}</span>
+                </div>
               </div>
 
               {/* Desktop buttons */}
@@ -289,13 +346,23 @@ export default function ConfirmationPage() {
                     Message your service team
                   </Link>
                 )}
-                <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black hover:bg-[#fff7f5] transition-colors">
+                <button
+                  type="button"
+                  onClick={addToCalendar}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black hover:bg-[#fff7f5] transition-colors"
+                >
                   <Calendar className="w-5 h-5" />
                   Add to Calendar
                 </button>
                 <Link
-                  to="/home"
+                  to="/activity"
                   className="w-full flex items-center justify-center gap-2 py-3 bg-[#ff5d2e] text-white rounded-xl font-medium hover:bg-[#e54d1e] transition-colors shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
+                >
+                  View My Bookings
+                </Link>
+                <Link
+                  to="/home"
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] text-black rounded-xl font-medium hover:bg-[#fff7f5] transition-colors"
                 >
                   <Home className="w-5 h-5" />
                   Back to Home
@@ -316,13 +383,23 @@ export default function ConfirmationPage() {
               Message your service team
             </Link>
           )}
-          <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black">
+          <button
+            type="button"
+            onClick={addToCalendar}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black"
+          >
             <Calendar className="w-5 h-5" />
             Add to Calendar
           </button>
           <Link
-            to="/home"
+            to="/activity"
             className="w-full flex items-center justify-center gap-2 py-3 bg-[#ff5d2e] text-white rounded-xl font-medium shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
+          >
+            View My Bookings
+          </Link>
+          <Link
+            to="/home"
+            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] text-black rounded-xl font-medium"
           >
             <Home className="w-5 h-5" />
             Back to Home

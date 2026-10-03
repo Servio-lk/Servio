@@ -18,9 +18,23 @@ interface RecentService {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
   const homeDataLoaded = useRef(false);
+
+  useEffect(() => {
+    if (!authLoading && isAdmin) {
+      const host = window.location.hostname;
+      const port = window.location.port;
+      const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+
+      if (isCustomerPortOnEc2) {
+        window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+      } else {
+        navigate('/admin', { replace: true });
+      }
+    }
+  }, [authLoading, isAdmin, navigate]);
 
   const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -373,6 +387,7 @@ export default function HomePage() {
                       promoCode={offer.promoCode}
                       validUntil={offer.validUntil}
                       expired={offer.expired}
+                      titleHref="/account#promotions"
                     />
                   ))}
                 </div>
