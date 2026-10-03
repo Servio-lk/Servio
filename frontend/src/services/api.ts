@@ -230,6 +230,7 @@ interface AppointmentDto {
   notes: string | null;
   estimatedCost: number;
   actualCost: number | null;
+  paymentMethod: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -10,6 +10,7 @@ import com.servio.booking.repository.AppointmentRepository;
 import com.servio.booking.repository.VehicleRepository;
 import com.servio.common.exception.ConflictException;
 import com.servio.notification.service.AppointmentEventPublisher;
+import com.servio.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,6 +58,8 @@ public class AppointmentConcurrencyAdversarialTest {
     private AppointmentEventPublisher eventPublisher;
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
+    @Mock
+    private PaymentRepository paymentRepository;
     @Mock
     private Authentication authentication;
 
