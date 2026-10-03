@@ -40,6 +40,7 @@ const AdminMechanics = lazy(() => import('@/pages/admin/Mechanics'))
 const AdminJobCards = lazy(() => import('@/pages/admin/JobCards'))
 const AdminServiceBays = lazy(() => import('@/pages/admin/ServiceBays'))
 const AdminWalkInCustomers = lazy(() => import('@/pages/admin/WalkInCustomers'))
+const AdminMessages = lazy(() => import('@/pages/admin/Messages'))
 
 import './App.css'
 
@@ -198,6 +199,7 @@ function App() {
             }
           >
             <Route index element={<Suspense fallback={<AdminLoadingFallback />}><AdminDashboard /></Suspense>} />
+            <Route path="messages" element={<Suspense fallback={<AdminLoadingFallback />}><AdminMessages /></Suspense>} />
             <Route path="services" element={<Suspense fallback={<AdminLoadingFallback />}><AdminServices /></Suspense>} />
             <Route path="offers" element={<Suspense fallback={<AdminLoadingFallback />}><AdminOffers /></Suspense>} />
             <Route path="appointments" element={<Suspense fallback={<AdminLoadingFallback />}><AdminAppointments /></Suspense>} />

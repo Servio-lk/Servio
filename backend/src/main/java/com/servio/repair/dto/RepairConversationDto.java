@@ -21,4 +21,11 @@ public class RepairConversationDto {
     private List<RepairConversationMemberDto> members;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Extra fields for admin inbox view
+    private Long appointmentId;
+    private String customerName;
+    private String vehicleInfo;
+    private String lastMessage;
+    private Long unreadCount;
 }

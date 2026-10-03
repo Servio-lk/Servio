@@ -50,7 +50,7 @@ function MessagesList() {
         setLoading(true);
         const response = await apiService.getUserAppointments();
         const rows = (response.data || [])
-          .filter((appointment) => chatStatuses.has(appointment.status))
+          .filter((appointment) => appointment.status !== 'CANCELLED' && appointment.status !== 'COMPLETED')
           .sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
         setAppointments(rows);
       } catch {
@@ -67,7 +67,7 @@ function MessagesList() {
       <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-black">Messages</h1>
-          <p className="mt-1 text-sm text-black/60">Chat with your service team about confirmed appointments.</p>
+          <p className="mt-1 text-sm text-black/60">Chat with your service team about active appointments.</p>
         </div>
 
         {loading ? (
@@ -79,7 +79,7 @@ function MessagesList() {
             <ChatCircleDots className="mx-auto mb-3 h-12 w-12 text-black/25" />
             <h2 className="font-semibold text-black">No active chats yet</h2>
             <p className="mt-1 text-sm text-black/60">
-              Messages appear here once your appointment is confirmed and a mechanic is assigned.
+              Messages appear here once you have an active appointment.
             </p>
             <div className="mt-5">
               <Link
@@ -93,32 +93,45 @@ function MessagesList() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {appointments.map((appointment) => (
-              <button
-                key={appointment.id}
-                onClick={() => navigate(`/messages/${appointment.id}`)}
-                className="flex items-center gap-4 rounded-2xl border border-black/5 bg-white p-4 text-left shadow-sm transition-colors hover:bg-[#fff7f5]"
-              >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#ffe7df] text-[#ff5d2e]">
-                  <Wrench className="h-6 w-6" weight="duotone" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-black">{appointment.serviceType}</p>
-                  <p className="mt-1 flex items-center gap-1 text-sm text-black/55">
-                    <Clock className="h-4 w-4" />
-                    {new Date(appointment.appointmentDate).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </p>
-                </div>
-                <span className="rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-                  {appointment.status.replace(/_/g, ' ')}
-                </span>
-              </button>
-            ))}
+            {appointments.map((appointment) => {
+              const isAvailable = ['CONFIRMED', 'IN_PROGRESS'].includes(appointment.status);
+              return (
+                <button
+                  key={appointment.id}
+                  onClick={() => isAvailable && navigate(`/messages/${appointment.id}`)}
+                  disabled={!isAvailable}
+                  className={`flex items-center gap-4 rounded-2xl border border-black/5 bg-white p-4 text-left shadow-sm transition-colors ${
+                    !isAvailable ? 'opacity-70 cursor-not-allowed' : 'hover:bg-[#fff7f5]'
+                  }`}
+                >
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${!isAvailable ? 'bg-gray-100 text-gray-400' : 'bg-[#ffe7df] text-[#ff5d2e]'}`}>
+                    <Wrench className="h-6 w-6" weight="duotone" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-black">{appointment.serviceType}</p>
+                    <p className="mt-1 flex items-center gap-1 text-sm text-black/55">
+                      <Clock className="h-4 w-4" />
+                      {new Date(appointment.appointmentDate).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    {!isAvailable && (
+                      <p className="mt-1.5 text-xs text-orange-600 font-medium">
+                        Chat will be available once the service center confirms your booking
+                      </p>
+                    )}
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    !isAvailable ? 'bg-yellow-50 text-yellow-700' : 'bg-green-50 text-green-700'
+                  }`}>
+                    {appointment.status.replace(/_/g, ' ')}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 

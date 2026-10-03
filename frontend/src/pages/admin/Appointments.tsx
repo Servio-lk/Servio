@@ -4,8 +4,9 @@ import { apiFetch } from '../../services/apiFetch';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import {
   Calendar, Filter, Clock, CreditCard, Banknote,
-  CheckCircle, ChevronDown, X, AlertCircle, RefreshCw,
+  CheckCircle, ChevronDown, X, AlertCircle, RefreshCw, MessageCircle
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
@@ -383,6 +384,15 @@ export function AdminAppointments() {
                             <p className="truncate text-sm font-semibold leading-tight text-black">{appt.userName || 'Unknown'}</p>
                             <p className="truncate text-xs text-gray-400">{appt.userEmail || 'No email'}</p>
                           </div>
+                          {['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(appt.status) && (
+                            <Link 
+                              to={`/admin/messages?repairId=${appt.id}`}
+                              className="ml-auto p-1.5 text-gray-400 hover:text-[#ff5d2e] hover:bg-orange-50 rounded-full transition-colors flex-shrink-0"
+                              title="Chat with customer"
+                            >
+                              <MessageCircle className="w-4 h-4" />
+                            </Link>
+                          )}
                         </div>
                       </td>
 

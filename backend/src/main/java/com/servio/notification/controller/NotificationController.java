@@ -37,7 +37,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}")
-    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name.equals(#userId.toString())")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUserNotifications(
         @PathVariable UUID userId
     ) {
@@ -50,7 +50,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}/unread")
-    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name.equals(#userId.toString())")
     public ResponseEntity<ApiResponse<List<NotificationDto>>> getUnreadNotifications(
         @PathVariable UUID userId
     ) {
@@ -63,7 +63,7 @@ public class NotificationController {
     }
     
     @GetMapping("/user/{userId}/unread/count")
-    @PreAuthorize("hasAuthority('ADMIN') or authentication.name == #userId.toString()")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name.equals(#userId.toString())")
     public ResponseEntity<ApiResponse<Long>> getUnreadCount(@PathVariable UUID userId) {
         Long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.<Long>builder()
@@ -96,6 +96,7 @@ public class NotificationController {
     }
     
     @DeleteMapping("/user/{userId}")
+    @PreAuthorize("hasAuthority('ADMIN') or authentication.name.equals(#userId.toString())")
     public ResponseEntity<ApiResponse<Void>> clearAll(@PathVariable UUID userId) {
         notificationService.clearAll(userId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
