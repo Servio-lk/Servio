@@ -4,7 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import '../features/home/home_screen.dart';
 import '../features/services/services_screen.dart';
+import '../features/services/service_detail_screen.dart';
+import '../features/services/service_detail_resolver.dart';
+import '../features/services/services_providers.dart';
 import '../features/bookings/activity_screen.dart';
+import '../features/chats/customer_chats_tab_screen.dart';
 import '../features/profile/profile_screen.dart';
 import '../features/assistant/assistant_screen.dart';
 
@@ -20,26 +24,79 @@ class MainNavigationScreen extends ConsumerStatefulWidget {
 
 class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   late int _selectedIndex;
-
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    ServicesScreen(),
-    ActivityScreen(),
-    AssistantScreen(),
-    ProfileScreen(),
-  ];
+  late final ServicesScreenController _servicesController;
+  late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex =
-        widget.initialIndex.clamp(0, _screens.length - 1).toInt();
+    _selectedIndex = widget.initialIndex.clamp(0, 4).toInt();
+    _servicesController = ServicesScreenController();
+    _screens = [
+      HomeScreen(
+        onSearchTap: () {
+          _servicesController.openSearch(query: '', focusKeyboard: true);
+          setState(() => _selectedIndex = 1);
+        },
+        onSeeAllServices: () {
+          _servicesController.clearSearch();
+          setState(() => _selectedIndex = 1);
+        },
+        onSuggestionTap: (title) {
+          final categories = ref.read(serviceCategoriesProvider).asData?.value;
+          final detail = resolveServiceDetail(title, categories);
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ServiceDetailScreen(data: detail),
+            ),
+          );
+        },
+        onOfferTap: (offer) {
+          final categories = ref.read(serviceCategoriesProvider).asData?.value;
+          final detail = resolveOfferDetail(offer, categories);
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ServiceDetailScreen(data: detail),
+            ),
+          );
+        },
+      ),
+      ServicesScreen(controller: _servicesController),
+      const ActivityScreen(),
+      CustomerChatsTabScreen(
+        onExploreServices: () => setState(() => _selectedIndex = 1),
+      ),
+      const ProfileScreen(),
+    ];
+  }
+
+  @override
+  void dispose() {
+    _servicesController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: _screens),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFFFF5D2E),
+        elevation: 4,
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const AssistantScreen(),
+              fullscreenDialog: true,
+            ),
+          );
+        },
+        child: const PhosphorIcon(
+          PhosphorIconsFill.robot,
+          color: Colors.white,
+          size: 24,
+        ),
+      ),
       bottomNavigationBar: _buildCustomTabBar(),
     );
   }
@@ -52,46 +109,56 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
           top: BorderSide(color: Color.fromRGBO(0, 0, 0, 0.2), width: 0.4),
         ),
       ),
-      padding: const EdgeInsets.only(left: 12, right: 12, bottom: 4),
+      padding: const EdgeInsets.only(left: 4, right: 4, bottom: 4),
       child: SafeArea(
         top: false,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _TabBarItem(
-              icon: PhosphorIconsFill.house,
-              inactiveIcon: PhosphorIconsBold.house,
-              label: 'Home',
-              isSelected: _selectedIndex == 0,
-              onTap: () => setState(() => _selectedIndex = 0),
+            Expanded(
+              child: _TabBarItem(
+                icon: PhosphorIconsFill.house,
+                inactiveIcon: PhosphorIconsBold.house,
+                label: 'Home',
+                isSelected: _selectedIndex == 0,
+                onTap: () => setState(() => _selectedIndex = 0),
+              ),
             ),
-            _TabBarItem(
-              icon: PhosphorIconsBold.dotsNine,
-              inactiveIcon: PhosphorIconsRegular.dotsNine,
-              label: 'Services',
-              isSelected: _selectedIndex == 1,
-              onTap: () => setState(() => _selectedIndex = 1),
+            Expanded(
+              child: _TabBarItem(
+                icon: PhosphorIconsBold.dotsNine,
+                inactiveIcon: PhosphorIconsRegular.dotsNine,
+                label: 'Services',
+                isSelected: _selectedIndex == 1,
+                onTap: () => setState(() => _selectedIndex = 1),
+              ),
             ),
-            _TabBarItem(
-              icon: PhosphorIconsFill.fileMagnifyingGlass,
-              inactiveIcon: PhosphorIconsBold.fileMagnifyingGlass,
-              label: 'Activity',
-              isSelected: _selectedIndex == 2,
-              onTap: () => setState(() => _selectedIndex = 2),
+            Expanded(
+              child: _TabBarItem(
+                icon: PhosphorIconsFill.fileMagnifyingGlass,
+                inactiveIcon: PhosphorIconsBold.fileMagnifyingGlass,
+                label: 'Activity',
+                isSelected: _selectedIndex == 2,
+                onTap: () => setState(() => _selectedIndex = 2),
+              ),
             ),
-            _TabBarItem(
-              icon: PhosphorIconsFill.robot,
-              inactiveIcon: PhosphorIconsBold.robot,
-              label: 'Assistant',
-              isSelected: _selectedIndex == 3,
-              onTap: () => setState(() => _selectedIndex = 3),
+            Expanded(
+              child: _TabBarItem(
+                icon: PhosphorIconsFill.chatCircleDots,
+                inactiveIcon: PhosphorIconsBold.chatCircleDots,
+                label: 'Chat',
+                isSelected: _selectedIndex == 3,
+                onTap: () => setState(() => _selectedIndex = 3),
+              ),
             ),
-            _TabBarItem(
-              icon: PhosphorIconsFill.userCircle,
-              inactiveIcon: PhosphorIconsBold.userCircle,
-              label: 'Account',
-              isSelected: _selectedIndex == 4,
-              onTap: () => setState(() => _selectedIndex = 4),
+            Expanded(
+              child: _TabBarItem(
+                icon: PhosphorIconsFill.userCircle,
+                inactiveIcon: PhosphorIconsBold.userCircle,
+                label: 'Account',
+                isSelected: _selectedIndex == 4,
+                onTap: () => setState(() => _selectedIndex = 4),
+              ),
             ),
           ],
         ),
@@ -120,50 +187,46 @@ class _TabBarItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 75.75,
-        child: Padding(
-          padding: const EdgeInsets.only(top: 8, left: 8, right: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Icon
-              PhosphorIcon(
-                isSelected ? icon : inactiveIcon,
-                size: 24,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8, left: 4, right: 4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            PhosphorIcon(
+              isSelected ? icon : inactiveIcon,
+              size: 24,
+              color: isSelected
+                  ? Colors.black
+                  : Colors.black.withAlpha(128),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.instrumentSans(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                 color: isSelected
                     ? Colors.black
                     : Colors.black.withAlpha(128),
+                height: 22 / 12,
               ),
-              const SizedBox(height: 8),
-              // Label
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? Colors.black
-                      : Colors.black.withAlpha(128),
-                  height: 22 / 12,
+            ),
+            const SizedBox(height: 8),
+            if (isSelected)
+              Container(
+                width: 16,
+                height: 2,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5D2E),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ),
-              const SizedBox(height: 8),
-              // Indicator
-              if (isSelected)
-                Container(
-                  width: 16,
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF5D2E),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                )
-              else
-                const SizedBox(height: 2),
-            ],
-          ),
+              )
+            else
+              const SizedBox(height: 2),
+          ],
         ),
       ),
     );

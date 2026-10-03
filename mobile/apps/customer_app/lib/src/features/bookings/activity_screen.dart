@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'appointments_providers.dart';
 import 'package:shared_core/shared_core.dart';
 
@@ -64,13 +65,147 @@ String? _imageForService(String serviceType) => _serviceImageMap[serviceType];
 String _iconForService(String serviceType) =>
     _serviceIconMap[serviceType] ?? 'assets/service icons/Lube Services.png';
 
+Color _statusColor(String status) {
+  switch (status.toUpperCase()) {
+    case 'CONFIRMED':
+      return const Color(0xFF22C55E);
+    case 'IN_PROGRESS':
+      return const Color(0xFFFF5D2E);
+    case 'COMPLETED':
+      return const Color(0xFF6B7280);
+    case 'CANCELLED':
+      return const Color(0xFFEF4444);
+    default:
+      return const Color(0xFFF59E0B); // PENDING = amber
+  }
+}
+
 // ─── ACTIVITY SCREEN ─────────────────────────────────────────────────────────
 
-class ActivityScreen extends ConsumerWidget {
+class ActivityScreen extends ConsumerStatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ActivityScreen> createState() => _ActivityScreenState();
+}
+
+class _ActivityScreenState extends ConsumerState<ActivityScreen> {
+  void _showAppointmentQr(BuildContext context, AppointmentModel appt) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Appointment QR',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Show this at the service center',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 24),
+              QrImageView(
+                data: 'SERVIO-APT-${appt.id}',
+                version: QrVersions.auto,
+                size: 220,
+                backgroundColor: Colors.white,
+                eyeStyle: const QrEyeStyle(
+                  eyeShape: QrEyeShape.square,
+                  color: Colors.black,
+                ),
+                dataModuleStyle: const QrDataModuleStyle(
+                  dataModuleShape: QrDataModuleShape.square,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _statusColor(appt.status).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  appt.statusLabel,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _statusColor(appt.status),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '#${appt.id}',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                appt.serviceType,
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              if (appt.vehicleMake != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  appt.vehicleDisplay,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 4),
+              Text(
+                '${appt.formattedDate} · ${appt.formattedTime}',
+                style: GoogleFonts.instrumentSans(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final userId = Supabase.instance.client.auth.currentUser?.id;
     final appointmentsAsync = ref.watch(userAppointmentsProvider(userId));
 
@@ -97,12 +232,30 @@ class ActivityScreen extends ConsumerWidget {
                       ref.invalidate(userAppointmentsProvider(userId)),
                 ),
                 data: (appointments) {
+                  final ongoing = appointments
+                      .where((a) => a.status.toUpperCase() == 'IN_PROGRESS')
+                      .toList()
+                    ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+
                   final upcoming = appointments
-                      .where((a) => a.isUpcoming)
-                      .toList();
+                      .where(
+                        (a) =>
+                            a.status.toUpperCase() != 'IN_PROGRESS' &&
+                            !['COMPLETED', 'CANCELLED'].contains(
+                              a.status.toUpperCase(),
+                            ),
+                      )
+                      .toList()
+                    ..sort((a, b) => a.appointmentDate.compareTo(b.appointmentDate));
+
                   final past = appointments
-                      .where((a) => !a.isUpcoming)
-                      .toList();
+                      .where(
+                        (a) => ['COMPLETED', 'CANCELLED'].contains(
+                          a.status.toUpperCase(),
+                        ),
+                      )
+                      .toList()
+                    ..sort((a, b) => b.appointmentDate.compareTo(a.appointmentDate));
 
                   if (appointments.isEmpty) {
                     return const _EmptyView();
@@ -120,13 +273,26 @@ class ActivityScreen extends ConsumerWidget {
                         children: [
                           // ── Title ──
                           const _TitleSection(),
-
                           const SizedBox(height: 24),
 
-                          // ── Upcoming Service ──
+                          // ── Ongoing Service Section (if any) ──
+                          if (ongoing.isNotEmpty) ...[
+                            _AppointmentCardSection(
+                              title: 'Ongoing service',
+                              appointment: ongoing.first,
+                              onTap: () =>
+                                  _showAppointmentQr(context, ongoing.first),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+
+                          // ── Upcoming Service Section ──
                           if (upcoming.isNotEmpty) ...[
-                            _UpcomingServiceSection(
+                            _AppointmentCardSection(
+                              title: 'Upcoming service',
                               appointment: upcoming.first,
+                              onTap: () =>
+                                  _showAppointmentQr(context, upcoming.first),
                             ),
                             const SizedBox(height: 24),
                           ],
@@ -148,101 +314,6 @@ class ActivityScreen extends ConsumerWidget {
   }
 }
 
-// ─── EMPTY VIEW ──────────────────────────────────────────────────────────────
-
-class _EmptyView extends StatelessWidget {
-  const _EmptyView();
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const PhosphorIcon(
-            PhosphorIconsRegular.calendarBlank,
-            size: 48,
-            color: Colors.black26,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No bookings yet',
-            style: GoogleFonts.instrumentSans(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.black54,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Your appointment history will appear here.',
-            style: GoogleFonts.instrumentSans(
-              fontSize: 14,
-              color: Colors.black38,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── ERROR VIEW ──────────────────────────────────────────────────────────────
-
-class _ErrorView extends StatelessWidget {
-  final VoidCallback onRetry;
-  const _ErrorView({required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const PhosphorIcon(
-              PhosphorIconsRegular.wifiSlash,
-              size: 48,
-              color: Colors.black26,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Could not load appointments.\nPlease check your connection.',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.instrumentSans(
-                fontSize: 15,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: onRetry,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFF5D2E),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Retry',
-                  style: GoogleFonts.instrumentSans(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ─── TITLE SECTION ───────────────────────────────────────────────────────────
 
 class _TitleSection extends StatelessWidget {
@@ -253,7 +324,6 @@ class _TitleSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: 4),
         Text(
           'Activity',
           style: GoogleFonts.instrumentSans(
@@ -262,16 +332,32 @@ class _TitleSection extends StatelessWidget {
             color: Colors.black,
           ),
         ),
+        const SizedBox(height: 4),
+        Text(
+          'Track your vehicle service progress and history',
+          style: GoogleFonts.instrumentSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: Colors.black54,
+          ),
+        ),
       ],
     );
   }
 }
 
-// ─── UPCOMING SERVICE SECTION ────────────────────────────────────────────────
+// ─── APPOINTMENT CARD SECTION (Upcoming or Ongoing) ──────────────────────────
 
-class _UpcomingServiceSection extends StatelessWidget {
+class _AppointmentCardSection extends StatelessWidget {
+  final String title;
   final AppointmentModel appointment;
-  const _UpcomingServiceSection({required this.appointment});
+  final VoidCallback? onTap;
+
+  const _AppointmentCardSection({
+    required this.title,
+    required this.appointment,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -280,9 +366,8 @@ class _UpcomingServiceSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section title (18px SemiBold, black)
         Text(
-          'Upcoming service',
+          title,
           style: GoogleFonts.instrumentSans(
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -290,54 +375,110 @@ class _UpcomingServiceSection extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Upcoming service card (rounded: 16, border #FFE7DF, p: 8, gap: 8)
-        Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
-          ),
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Service image (h: 185, rounded: 8)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  height: 185,
-                  width: double.infinity,
-                  color: const Color(0xFFFFE7DF),
-                  child: imagePath != null
-                      ? Image.asset(
-                          imagePath,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _imagePlaceholder(),
-                        )
-                      : _imagePlaceholder(),
+        GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.04),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              // Service name (16px SemiBold, black)
-              Text(
-                appointment.serviceType,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
+              ],
+            ),
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 185,
+                    width: double.infinity,
+                    color: const Color(0xFFFFE7DF),
+                    child: imagePath != null
+                        ? Image.asset(
+                            imagePath,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                _imagePlaceholder(),
+                          )
+                        : _imagePlaceholder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-
-              // For: Vehicle (gap: 4)
-              if (appointment.vehicleMake != null) ...[
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        appointment.serviceType,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _statusColor(
+                          appointment.status,
+                        ).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        appointment.statusLabel,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _statusColor(appointment.status),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                if (appointment.vehicleMake != null) ...[
+                  Row(
+                    children: [
+                      Text(
+                        'For:',
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF4B4B4B),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          appointment.vehicleDisplay,
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                ],
                 Row(
                   children: [
                     Text(
-                      'For:',
+                      appointment.formattedDate,
                       style: GoogleFonts.instrumentSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
@@ -345,64 +486,59 @@ class _UpcomingServiceSection extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        appointment.vehicleDisplay,
-                        style: GoogleFonts.instrumentSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
+                    Container(
+                      width: 4,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF4B4B4B),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      appointment.formattedTime,
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF4B4B4B),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
-              ],
-
-              // Date/Time row (gap: 4)
-              Row(
-                children: [
-                  Text(
-                    appointment.formattedDate,
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF4B4B4B),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      appointment.formattedCost,
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF4B4B4B),
-                      shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        const PhosphorIcon(
+                          PhosphorIconsRegular.qrCode,
+                          size: 16,
+                          color: Color(0xFFFF5D2E),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'View QR',
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFFF5D2E),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    appointment.formattedTime,
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF4B4B4B),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-
-              // Price (14px Medium, black)
-              Text(
-                appointment.formattedCost,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
+                  ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -429,7 +565,6 @@ class _PastServicesSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header: "Past" + SlidersHorizontal icon (gap: 8)
         Row(
           children: [
             Expanded(
@@ -450,8 +585,6 @@ class _PastServicesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 16),
-
-        // Past service items (gap: 8)
         ...appointments.asMap().entries.map((entry) {
           final index = entry.key;
           final appointment = entry.value;
@@ -477,7 +610,6 @@ class _PastServiceItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final iconPath = _iconForService(appointment.serviceType);
 
-    // bg: white, rounded: 8, shadow 0 2 8 rgba(0,0,0,0.04), p: 4, gap: 12
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -494,7 +626,6 @@ class _PastServiceItem extends StatelessWidget {
       padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
       child: Row(
         children: [
-          // Icon Container (bg: #FFE7DF, p: 8, rounded: 4, image 40x40)
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -518,14 +649,11 @@ class _PastServiceItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Details Container (flex-1, gap: 4)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Service name (16px Medium, black, ellipsis)
                 Text(
                   appointment.serviceType,
                   style: GoogleFonts.instrumentSans(
@@ -537,8 +665,6 @@ class _PastServiceItem extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
-
-                // Date/Time (gap: 4, 12px Medium #4B4B4B)
                 Row(
                   children: [
                     Text(
@@ -570,8 +696,6 @@ class _PastServiceItem extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-
-                // Price (12px Medium, black)
                 Text(
                   appointment.formattedCost,
                   style: GoogleFonts.instrumentSans(
@@ -584,12 +708,9 @@ class _PastServiceItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-
-          // Rebook Button (bg: #FF5D2E, rounded: 8, p: 12, gap: 8,
-          // border white, shadow 0 4 8 rgba(255,93,46,0.5))
           GestureDetector(
             onTap: () {
-              // Handle rebook — navigate to services or booking flow
+              // Handle rebook — navigate to services
             },
             child: Container(
               decoration: BoxDecoration(
@@ -623,6 +744,101 @@ class _PastServiceItem extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── EMPTY & ERROR VIEWS ─────────────────────────────────────────────────────
+
+class _EmptyView extends StatelessWidget {
+  const _EmptyView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const PhosphorIcon(
+            PhosphorIconsRegular.calendarX,
+            size: 64,
+            color: Color(0xFFFF5D2E),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No appointments yet',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Your upcoming and past bookings will appear here.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.instrumentSans(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ErrorView({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const PhosphorIcon(
+            PhosphorIconsRegular.warningCircle,
+            size: 64,
+            color: Color(0xFFFF5D2E),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to load activity',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Please check your connection and try again.',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 14,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5D2E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              'Retry',
+              style: GoogleFonts.instrumentSans(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
               ),
             ),
           ),

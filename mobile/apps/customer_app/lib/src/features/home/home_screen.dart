@@ -1,8 +1,14 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_core/shared_core.dart';
+import '../services/services_providers.dart';
+import '../services/service_detail_screen.dart';
+import '../services/service_detail_resolver.dart';
 
 class _SuggestionUiItem {
   final String title;
@@ -11,14 +17,122 @@ class _SuggestionUiItem {
   const _SuggestionUiItem({required this.title, required this.iconPath});
 }
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   final VoidCallback? onSearchTap;
+  final VoidCallback? onSeeAllServices;
   final ValueChanged<String>? onSuggestionTap;
+  final ValueChanged<OfferModel>? onOfferTap;
 
-  const HomeScreen({super.key, this.onSearchTap, this.onSuggestionTap});
+  const HomeScreen({
+    super.key,
+    this.onSearchTap,
+    this.onSeeAllServices,
+    this.onSuggestionTap,
+    this.onOfferTap,
+  });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  StreamSubscription? _pushSubscription;
+  RealtimeChannel? _offersChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupPushNotificationsListener();
+    _setupSupabaseRealtime();
+  }
+
+  void _setupPushNotificationsListener() {
+    try {
+      _pushSubscription = PushNotificationService.onMessageStream.listen((message) {
+        final type = message.data['type']?.toString().toUpperCase();
+        final title = message.notification?.title?.toLowerCase() ?? '';
+        final body = message.notification?.body?.toLowerCase() ?? '';
+        if (type == 'PROMO' || title.contains('offer') || body.contains('offer')) {
+          debugPrint('⚡ Offer notification received in foreground. Refreshing active offers.');
+          if (mounted) {
+            ref.invalidate(activeOffersProvider);
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Error attaching push notification listener: $e');
+    }
+  }
+
+  void _setupSupabaseRealtime() {
+    try {
+      final client = SupabaseService().safeClient;
+      if (client != null) {
+        _offersChannel = client.channel('public:offers_realtime')
+          ..onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'offers',
+            callback: (payload) {
+              debugPrint('⚡ Supabase realtime change in offers table: ${payload.eventType}');
+              if (mounted) {
+                ref.invalidate(activeOffersProvider);
+              }
+            },
+          )
+          ..subscribe();
+      }
+    } catch (e) {
+      debugPrint('Error attaching Supabase offers realtime: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pushSubscription?.cancel();
+    if (_offersChannel != null) {
+      SupabaseService().safeClient?.removeChannel(_offersChannel!);
+    }
+    super.dispose();
+  }
+
+  Future<void> _onRefresh() async {
+    ref.invalidate(activeOffersProvider);
+    ref.invalidate(featuredServicesProvider);
+    ref.invalidate(serviceCategoriesProvider);
+    await ref.read(activeOffersProvider.future);
+  }
+
+  void _openServiceDetail(String title) {
+    if (widget.onSuggestionTap != null) {
+      widget.onSuggestionTap!(title);
+      return;
+    }
+    final categories = ref.read(serviceCategoriesProvider).asData?.value;
+    final detail = resolveServiceDetail(title, categories);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServiceDetailScreen(data: detail),
+      ),
+    );
+  }
+
+  void _openOfferDetail(OfferModel offer) {
+    if (widget.onOfferTap != null) {
+      widget.onOfferTap!(offer);
+      return;
+    }
+    final categories = ref.read(serviceCategoriesProvider).asData?.value;
+    final detail = resolveOfferDetail(offer, categories);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServiceDetailScreen(data: detail),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get user name from Supabase auth
     final user = Supabase.instance.client.auth.currentUser;
     final fullName = user?.userMetadata?['full_name'] as String? ?? '';
@@ -34,28 +148,35 @@ class HomeScreen extends ConsumerWidget {
       ),
       child: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Greeting — now uses real name
-                _GreetingSection(name: firstName),
-                const SizedBox(height: 16),
-                // Search + Service Center
-                _SearchContainer(onTap: onSearchTap),
-                const SizedBox(height: 16),
-                const _ServiceCenterContainer(),
-                // Suggestions Header
-                const _SuggestionsHeader(),
-                // Suggestions List — temporary static list (will be personalized later)
-                _SuggestionsListStatic(onItemTap: onSuggestionTap),
-                const SizedBox(height: 16),
-                // Offers horizontal list
-                const _OffersSection(),
-                const SizedBox(height: 16),
-              ],
+        child: RefreshIndicator(
+          color: const Color(0xFFFF5D2E),
+          onRefresh: _onRefresh,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Greeting
+                  _GreetingSection(name: firstName),
+                  const SizedBox(height: 16),
+                  // Search + Emergency Button
+                  _SearchContainer(onSearchTap: widget.onSearchTap),
+                  const SizedBox(height: 16),
+                  // Suggestions Header
+                  _SuggestionsHeader(onSeeAll: widget.onSeeAllServices),
+                  // Suggestions List
+                  _SuggestionsListStatic(onItemTap: _openServiceDetail),
+                  const SizedBox(height: 16),
+                  // Offers horizontal list from admin
+                  _OffersSection(
+                    ref: ref,
+                    onOfferTap: _openOfferDetail,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
             ),
           ),
         ),
@@ -86,7 +207,145 @@ class _GreetingSection extends StatelessWidget {
   }
 }
 
-// ─── SUGGESTIONS LIST (static for current UI) ───────────────────────────────
+// ─── SEARCH CONTAINER ────────────────────────────────────────────────────────
+
+class _SearchContainer extends StatelessWidget {
+  final VoidCallback? onSearchTap;
+
+  const _SearchContainer({this.onSearchTap});
+
+  Future<void> _callEmergency() async {
+    final uri = Uri(scheme: 'tel', path: '+94112345678');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE7DF),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: onSearchTap,
+                behavior: HitTestBehavior.opaque,
+                child: Row(
+                  children: [
+                    const PhosphorIcon(
+                      PhosphorIconsBold.magnifyingGlass,
+                      size: 24,
+                      color: Colors.black,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Search services',
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // Divider
+            Container(
+              width: 1,
+              height: 24,
+              color: Colors.black.withValues(alpha: 0.2),
+            ),
+            const SizedBox(width: 8),
+            // Emergency button
+            GestureDetector(
+              onTap: _callEmergency,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5D2E),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const PhosphorIcon(
+                      PhosphorIconsFill.warning,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Emergency',
+                      style: GoogleFonts.instrumentSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── SUGGESTIONS HEADER ──────────────────────────────────────────────────────
+
+class _SuggestionsHeader extends StatelessWidget {
+  final VoidCallback? onSeeAll;
+
+  const _SuggestionsHeader({this.onSeeAll});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            'Suggestions',
+            style: GoogleFonts.instrumentSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          GestureDetector(
+            onTap: onSeeAll,
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              'See all',
+              style: GoogleFonts.instrumentSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFFFF5D2E),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── SUGGESTIONS LIST ────────────────────────────────────────────────────────
 
 class _SuggestionsListStatic extends StatelessWidget {
   final ValueChanged<String>? onItemTap;
@@ -131,182 +390,6 @@ class _SuggestionsListStatic extends StatelessWidget {
   }
 }
 
-// ─── SEARCH CONTAINER ────────────────────────────────────────────────────────
-
-class _SearchContainer extends StatelessWidget {
-  final VoidCallback? onTap;
-
-  const _SearchContainer({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFE7DF),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white, width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Row(
-          children: [
-            const PhosphorIcon(
-              PhosphorIconsBold.magnifyingGlass,
-              size: 24,
-              color: Colors.black,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Search services',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            // Divider
-            Container(
-              width: 1,
-              height: 24,
-              color: Colors.black.withValues(alpha: 0.2),
-            ),
-            const SizedBox(width: 8),
-            // Emergency button
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF5D2E),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const PhosphorIcon(
-                    PhosphorIconsFill.warning,
-                    size: 24,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Emergency',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      ),
-    );
-  }
-}
-
-// ─── SERVICE CENTER CONTAINER ────────────────────────────────────────────────
-
-class _ServiceCenterContainer extends StatelessWidget {
-  const _ServiceCenterContainer();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
-      ),
-      padding: const EdgeInsets.all(8),
-      child: Row(
-        children: [
-          // Garage icon container
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFEAE3),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: PhosphorIcon(
-              PhosphorIconsFill.garage,
-              size: 24,
-              color: Colors.black.withValues(alpha: 0.8),
-            ),
-          ),
-          const SizedBox(width: 8),
-          // Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Last service',
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black.withValues(alpha: 0.7),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Auto Miraj-Panadura',
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── SUGGESTIONS HEADER ──────────────────────────────────────────────────────
-
-class _SuggestionsHeader extends StatelessWidget {
-  const _SuggestionsHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Suggestions',
-            style: GoogleFonts.instrumentSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          Text(
-            'See all',
-            style: GoogleFonts.instrumentSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 // ─── SUGGESTION ITEM ─────────────────────────────────────────────────────────
 
 class _SuggestionItem extends StatelessWidget {
@@ -324,6 +407,7 @@ class _SuggestionItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
@@ -340,7 +424,6 @@ class _SuggestionItem extends StatelessWidget {
         padding: const EdgeInsets.only(left: 4, right: 8, top: 4, bottom: 4),
         child: Row(
           children: [
-            // Service icon from assets
             Container(
               width: 48,
               height: 48,
@@ -360,7 +443,6 @@ class _SuggestionItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // Title
             Expanded(
               child: Text(
                 title,
@@ -371,7 +453,6 @@ class _SuggestionItem extends StatelessWidget {
                 ),
               ),
             ),
-            // Caret right
             PhosphorIcon(
               PhosphorIconsBold.caretRight,
               size: 24,
@@ -387,105 +468,201 @@ class _SuggestionItem extends StatelessWidget {
 // ─── OFFERS SECTION ──────────────────────────────────────────────────────────
 
 class _OffersSection extends StatelessWidget {
-  const _OffersSection();
+  final WidgetRef ref;
+  final ValueChanged<OfferModel>? onOfferTap;
+
+  const _OffersSection({required this.ref, this.onOfferTap});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 160,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        clipBehavior: Clip.none,
-        children: const [_OfferCard(), SizedBox(width: 16), _OfferCard()],
+    final offersAsync = ref.watch(activeOffersProvider);
+    return offersAsync.when(
+      loading: () => const SizedBox(
+        height: 160,
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFFFF5D2E)),
+        ),
       ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (offers) {
+        if (offers.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Special Offers',
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    '${offers.length} active',
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFFFF5D2E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 160,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                clipBehavior: Clip.none,
+                itemCount: offers.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemBuilder: (context, index) => _OfferCard(
+                  offer: offers[index],
+                  onTap: () => onOfferTap?.call(offers[index]),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
 class _OfferCard extends StatelessWidget {
-  const _OfferCard();
+  final OfferModel offer;
+  final VoidCallback? onTap;
+
+  const _OfferCard({required this.offer, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 328,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.08),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.hardEdge,
-      child: Stack(
-        children: [
-          // Image Graphic (bottom right with some top padding)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            top: 16,
-            child: Image.asset(
-              'assets/icons/Offer Image Container.png',
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomRight,
+    final discount = offer.formattedDiscount;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 280,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.08),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
-          ),
-          // Content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Offer text
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    'Enjoy 10% off on\nMechanical Repair',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                ),
-                // Book now button
-                Container(
-                  width: 106,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF5D2E),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white, width: 1),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color.fromRGBO(255, 93, 46, 0.5),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
+          ],
+        ),
+        clipBehavior: Clip.hardEdge,
+        child: Stack(
+          children: [
+            Positioned(
+              right: 0,
+              bottom: 0,
+              top: 16,
+              child: Image.asset(
+                'assets/icons/Offer Image Container.png',
+                fit: BoxFit.contain,
+                alignment: Alignment.bottomRight,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (discount.isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFE7DF),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            discount,
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFFFF5D2E),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      Text(
+                        offer.title,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (offer.description != null &&
+                          offer.description!.isNotEmpty &&
+                          discount.isEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          offer.description!,
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 12,
+                            color: Colors.black54,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
                   ),
-                  child: Center(
-                    child: Text(
-                      'Book now',
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                  GestureDetector(
+                    onTap: onTap,
+                    child: Container(
+                      width: 106,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF5D2E),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.white, width: 1),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color.fromRGBO(255, 93, 46, 0.5),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Book now',
+                          style: GoogleFonts.instrumentSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
-
