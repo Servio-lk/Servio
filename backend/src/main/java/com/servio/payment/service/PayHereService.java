@@ -164,8 +164,10 @@ public class PayHereService {
                 log.info("Duplicate payment webhook received for paymentId {}", paymentId);
                 return;
             }
-            if ("CONFIRMED".equals(appointment.getStatus())) {
-                log.info("Appointment {} is already confirmed", appointmentId);
+            if ("CONFIRMED".equals(appointment.getStatus())
+                    || "IN_PROGRESS".equals(appointment.getStatus())
+                    || "COMPLETED".equals(appointment.getStatus())) {
+                log.info("Appointment {} is already past review", appointmentId);
                 return;
             }
 
@@ -183,8 +185,8 @@ public class PayHereService {
                 throw new SecurityException("Payment currency mismatch");
             }
 
-            // Successful payment — confirm the appointment and record payment
-            appointment.setStatus("CONFIRMED");
+            // Payment succeeded. The slot stays held as PENDING until an admin confirms it.
+            appointment.setStatus("PENDING");
             appointmentRepository.save(appointment);
 
             Payment payment = Payment.builder()
@@ -207,7 +209,7 @@ public class PayHereService {
                 "PAYHERE"
             ));
             
-            log.info("PayHere payment CONFIRMED — appointmentId={} paymentId={} method={}",
+            log.info("PayHere payment recorded; appointment {} left PENDING for review — paymentId={} method={}",
                     appointmentId, paymentId, method);
         } else {
             log.info("PayHere notification received — orderId={} statusCode={}", orderId, statusCode);
