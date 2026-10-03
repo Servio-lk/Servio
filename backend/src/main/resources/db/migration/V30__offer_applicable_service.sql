@@ -1,0 +1,1 @@
+ALTER TABLE offers ADD COLUMN IF NOT EXISTS applicable_service VARCHAR(200);

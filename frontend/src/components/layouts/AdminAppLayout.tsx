@@ -87,13 +87,13 @@ function AdminDesktopSidebar() {
 
             {/* Actions & Logout */}
             <div className="p-4 border-t border-black/10 flex flex-col gap-2">
-                <Link
-                    to="/home"
+                <a
+                    href={window.location.port === '8081' ? `${window.location.protocol}//${window.location.hostname}/home` : '/home'}
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
                 >
                     <ExternalLink className="w-5 h-5" />
                     <span className="font-medium">Customer Portal</span>
-                </Link>
+                </a>
                 <button
                     onClick={logout}
                     className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors w-full"
@@ -246,14 +246,14 @@ function AdminMobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
 
                 {/* Actions & Logout */}
                 <div className="p-4 border-t border-black/10 flex flex-col gap-2">
-                    <Link
-                        to="/home"
+                    <a
+                        href={window.location.port === '8081' ? `${window.location.protocol}//${window.location.hostname}/home` : '/home'}
                         onClick={onClose}
                         className="flex items-center gap-3 px-4 py-3 rounded-lg text-black/70 hover:bg-[#fff7f5] transition-colors"
                     >
                         <ExternalLink className="w-5 h-5" />
                         <span className="font-medium">Customer Portal</span>
-                    </Link>
+                    </a>
                     <button
                         onClick={() => {
                             logout();
