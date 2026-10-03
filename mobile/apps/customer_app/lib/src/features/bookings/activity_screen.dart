@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:qr_flutter/qr_flutter.dart';
 import 'appointments_providers.dart';
 import 'package:shared_core/shared_core.dart';
+import 'appointment_detail_screen.dart';
+import '../services/services_providers.dart';
+import '../services/service_detail_screen.dart';
+import '../services/service_detail_resolver.dart';
 
 // ─── SERVICE IMAGE MAPPING (service_type → local asset) ──────────────────────
 
@@ -90,116 +93,10 @@ class ActivityScreen extends ConsumerStatefulWidget {
 }
 
 class _ActivityScreenState extends ConsumerState<ActivityScreen> {
-  void _showAppointmentQr(BuildContext context, AppointmentModel appt) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.black12,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Appointment QR',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Show this at the service center',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 24),
-              QrImageView(
-                data: 'SERVIO-APT-${appt.id}',
-                version: QrVersions.auto,
-                size: 220,
-                backgroundColor: Colors.white,
-                eyeStyle: const QrEyeStyle(
-                  eyeShape: QrEyeShape.square,
-                  color: Colors.black,
-                ),
-                dataModuleStyle: const QrDataModuleStyle(
-                  dataModuleShape: QrDataModuleShape.square,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _statusColor(appt.status).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  appt.statusLabel,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: _statusColor(appt.status),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '#${appt.id}',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                appt.serviceType,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
-                ),
-              ),
-              if (appt.vehicleMake != null) ...[
-                const SizedBox(height: 4),
-                Text(
-                  appt.vehicleDisplay,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 4),
-              Text(
-                '${appt.formattedDate} · ${appt.formattedTime}',
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 14,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        ),
+  void _openAppointmentDetail(BuildContext context, AppointmentModel appt) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AppointmentDetailScreen(appointment: appt),
       ),
     );
   }
@@ -281,7 +178,7 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                               title: 'Ongoing service',
                               appointment: ongoing.first,
                               onTap: () =>
-                                  _showAppointmentQr(context, ongoing.first),
+                                  _openAppointmentDetail(context, ongoing.first),
                             ),
                             const SizedBox(height: 24),
                           ],
@@ -292,14 +189,18 @@ class _ActivityScreenState extends ConsumerState<ActivityScreen> {
                               title: 'Upcoming service',
                               appointment: upcoming.first,
                               onTap: () =>
-                                  _showAppointmentQr(context, upcoming.first),
+                                  _openAppointmentDetail(context, upcoming.first),
                             ),
                             const SizedBox(height: 24),
                           ],
 
                           // ── Past Services ──
                           if (past.isNotEmpty)
-                            _PastServicesSection(appointments: past),
+                            _PastServicesSection(
+                              appointments: past,
+                              onItemTap: (appt) =>
+                                  _openAppointmentDetail(context, appt),
+                            ),
                         ],
                       ),
                     ),
@@ -520,13 +421,13 @@ class _AppointmentCardSection extends StatelessWidget {
                     Row(
                       children: [
                         const PhosphorIcon(
-                          PhosphorIconsRegular.qrCode,
+                          PhosphorIconsBold.arrowRight,
                           size: 16,
                           color: Color(0xFFFF5D2E),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'View QR',
+                          'View Details',
                           style: GoogleFonts.instrumentSans(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -556,12 +457,27 @@ class _AppointmentCardSection extends StatelessWidget {
 
 // ─── PAST SERVICES SECTION ───────────────────────────────────────────────────
 
-class _PastServicesSection extends StatelessWidget {
+class _PastServicesSection extends ConsumerWidget {
   final List<AppointmentModel> appointments;
-  const _PastServicesSection({required this.appointments});
+  final ValueChanged<AppointmentModel>? onItemTap;
+
+  const _PastServicesSection({
+    required this.appointments,
+    this.onItemTap,
+  });
+
+  void _rebook(BuildContext context, WidgetRef ref, String serviceType) {
+    final categories = ref.read(serviceCategoriesProvider).asData?.value;
+    final detail = resolveServiceDetail(serviceType, categories);
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ServiceDetailScreen(data: detail),
+      ),
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -592,7 +508,11 @@ class _PastServicesSection extends StatelessWidget {
             padding: EdgeInsets.only(
               bottom: index < appointments.length - 1 ? 16 : 0,
             ),
-            child: _PastServiceItem(appointment: appointment),
+            child: _PastServiceItem(
+              appointment: appointment,
+              onTap: () => onItemTap?.call(appointment),
+              onRebook: () => _rebook(context, ref, appointment.serviceType),
+            ),
           );
         }),
       ],
@@ -604,150 +524,159 @@ class _PastServicesSection extends StatelessWidget {
 
 class _PastServiceItem extends StatelessWidget {
   final AppointmentModel appointment;
-  const _PastServiceItem({required this.appointment});
+  final VoidCallback? onTap;
+  final VoidCallback? onRebook;
+
+  const _PastServiceItem({
+    required this.appointment,
+    this.onTap,
+    this.onRebook,
+  });
 
   @override
   Widget build(BuildContext context) {
     final iconPath = _iconForService(appointment.serviceType);
 
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(0, 0, 0, 0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE7DF),
-              borderRadius: BorderRadius.circular(4),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: const [
+            BoxShadow(
+              color: Color.fromRGBO(0, 0, 0, 0.04),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
-            child: SizedBox(
-              width: 40,
-              height: 40,
-              child: Image.asset(
-                iconPath,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Center(
-                  child: PhosphorIcon(
-                    PhosphorIconsRegular.car,
-                    size: 24,
-                    color: Color(0xFFFF5D2E),
+          ],
+        ),
+        padding: const EdgeInsets.only(top: 4, bottom: 4, left: 8, right: 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFE7DF),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Image.asset(
+                  iconPath,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) => const Center(
+                    child: PhosphorIcon(
+                      PhosphorIconsRegular.car,
+                      size: 24,
+                      color: Color(0xFFFF5D2E),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  appointment.serviceType,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    appointment.serviceType,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        appointment.formattedDate,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF4B4B4B),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF4B4B4B),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        appointment.formattedTime,
+                        style: GoogleFonts.instrumentSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF4B4B4B),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    appointment.formattedCost,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: onRebook,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFF5D2E),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white, width: 1),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(255, 93, 46, 0.5),
+                      blurRadius: 8,
+                      offset: Offset(0, 4),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Row(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      appointment.formattedDate,
-                      style: GoogleFonts.instrumentSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF4B4B4B),
-                      ),
+                    const PhosphorIcon(
+                      PhosphorIconsBold.arrowClockwise,
+                      size: 16,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 4),
-                    Container(
-                      width: 4,
-                      height: 4,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF4B4B4B),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                     Text(
-                      appointment.formattedTime,
+                      'Rebook',
                       style: GoogleFonts.instrumentSans(
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.w500,
-                        color: const Color(0xFF4B4B4B),
+                        color: Colors.white,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  appointment.formattedCost,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: () {
-              // Handle rebook — navigate to services
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFFF5D2E),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.white, width: 1),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color.fromRGBO(255, 93, 46, 0.5),
-                    blurRadius: 8,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const PhosphorIcon(
-                    PhosphorIconsBold.arrowClockwise,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Rebook',
-                    style: GoogleFonts.instrumentSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

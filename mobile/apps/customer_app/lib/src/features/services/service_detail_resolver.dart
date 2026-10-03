@@ -198,30 +198,38 @@ ServiceDetailData resolveOfferDetail(
 
   final baseDetail = resolveServiceDetail(targetName, categories);
 
-  final priceString = offer.formattedDiscount.isNotEmpty
-      ? 'Special: ${offer.formattedDiscount}'
-      : baseDetail.basePrice;
-
   final description = offer.description?.isNotEmpty == true
       ? offer.description!
       : (offer.subtitle?.isNotEmpty == true
           ? offer.subtitle!
           : baseDetail.description);
 
+  final imagePath = (offer.imageUrl != null && offer.imageUrl!.isNotEmpty)
+      ? offer.imageUrl!
+      : baseDetail.imagePath;
+
   return ServiceDetailData(
     title: offer.title,
-    basePrice: priceString,
+    basePrice: baseDetail.basePrice,
     description: description,
-    imagePath: baseDetail.imagePath,
-    optionsTitle: 'Offer Details',
-    options: [
-      if (offer.promoCode != null && offer.promoCode!.isNotEmpty)
-        ServiceOption(
-          name: 'Promo Code: ${offer.promoCode}',
-          price: offer.formattedDiscount,
-        ),
-      ...baseDetail.options,
-    ],
+    imagePath: imagePath,
+    optionsTitle: baseDetail.optionsTitle,
+    options: baseDetail.options,
+    discountPercentage: offer.discountPercentage ??
+        (offer.discountType?.toUpperCase() == 'PERCENTAGE'
+            ? offer.discountValue
+            : (offer.discountValue != null && offer.discountValue! <= 100
+                ? offer.discountValue
+                : null)),
+    discountAmount: offer.discountAmount ??
+        (offer.discountType?.toUpperCase() == 'FIXED' ||
+                offer.discountType?.toUpperCase() == 'AMOUNT'
+            ? offer.discountValue
+            : (offer.discountValue != null && offer.discountValue! > 100
+                ? offer.discountValue
+                : null)),
+    promoCode: offer.promoCode,
+    discountLabel: offer.formattedDiscount.isNotEmpty ? offer.formattedDiscount : null,
   );
 }
 

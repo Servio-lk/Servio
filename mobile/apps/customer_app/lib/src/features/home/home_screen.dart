@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:phosphoricons_flutter/phosphoricons_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -514,7 +515,7 @@ class _OffersSection extends StatelessWidget {
               ),
             ),
             SizedBox(
-              height: 160,
+              height: 230,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 clipBehavior: Clip.none,
@@ -539,128 +540,271 @@ class _OfferCard extends StatelessWidget {
 
   const _OfferCard({required this.offer, this.onTap});
 
+  String _badgeLabel() {
+    if (offer.formattedDiscount.isNotEmpty) {
+      return offer.formattedDiscount;
+    }
+    final type = offer.discountType?.toUpperCase();
+    final val = offer.discountValue;
+    if (type == 'PERCENTAGE' || type == 'PERCENT') {
+      return '${val?.toStringAsFixed(0) ?? "0"}% OFF';
+    }
+    if (type == 'FIXED_AMOUNT' || type == 'FIXED') {
+      return 'LKR ${val?.toStringAsFixed(0) ?? "0"} OFF';
+    }
+    return 'OFFER';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final discount = offer.formattedDiscount;
+    final discount = _badgeLabel();
+    final hasImageUrl = offer.imageUrl != null && offer.imageUrl!.isNotEmpty;
+    final isExpired = !offer.isActive ||
+        (offer.validUntil != null && offer.validUntil!.isBefore(DateTime.now()));
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: 280,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color.fromRGBO(0, 0, 0, 0.08),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: Stack(
-          children: [
-            Positioned(
-              right: 0,
-              bottom: 0,
-              top: 16,
-              child: Image.asset(
-                'assets/icons/Offer Image Container.png',
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomRight,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      child: Opacity(
+        opacity: isExpired ? 0.6 : 1.0,
+        child: Container(
+          width: 290,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(0, 0, 0, 0.08),
+                blurRadius: 8,
+                offset: Offset(0, 2),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (discount.isNotEmpty) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFE7DF),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            discount,
-                            style: GoogleFonts.instrumentSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFFFF5D2E),
+            ],
+          ),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Banner with Image + Badge
+              SizedBox(
+                height: 105,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Container(color: const Color(0xFFFFF7F5)),
+                    if (hasImageUrl)
+                      Image.network(
+                        offer.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _fallbackOfferImage(),
+                      )
+                    else
+                      _fallbackOfferImage(),
+                    // Badge overlay on top-left
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF5D2E),
+                          borderRadius: BorderRadius.circular(6),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.15),
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                      ],
-                      Text(
-                        offer.title,
-                        style: GoogleFonts.instrumentSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (offer.description != null &&
-                          offer.description!.isNotEmpty &&
-                          discount.isEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          offer.description!,
-                          style: GoogleFonts.instrumentSans(
-                            fontSize: 12,
-                            color: Colors.black54,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                  GestureDetector(
-                    onTap: onTap,
-                    child: Container(
-                      width: 106,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF5D2E),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.white, width: 1),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color.fromRGBO(255, 93, 46, 0.5),
-                            blurRadius: 8,
-                            offset: Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Center(
                         child: Text(
-                          'Book now',
+                          discount,
                           style: GoogleFonts.instrumentSans(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+
+              // Bottom Details
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            offer.title,
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          if (offer.subtitle != null &&
+                              offer.subtitle!.isNotEmpty)
+                            Text(
+                              offer.subtitle!,
+                              style: GoogleFonts.instrumentSans(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black54,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          else if (offer.description != null &&
+                              offer.description!.isNotEmpty)
+                            Text(
+                              offer.description!,
+                              style: GoogleFonts.instrumentSans(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          if (offer.validUntil != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              '${isExpired ? "Expired" : "Valid until"} ${offer.validUntil!.month}/${offer.validUntil!.day}/${offer.validUntil!.year}',
+                              style: GoogleFonts.instrumentSans(
+                                fontSize: 11,
+                                color: Colors.black45,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+
+                      // Actions: Promo Code + Book now
+                      Row(
+                        children: [
+                          if (offer.promoCode != null &&
+                              offer.promoCode!.isNotEmpty) ...[
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  Clipboard.setData(
+                                    ClipboardData(text: offer.promoCode!),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Copied ${offer.promoCode}'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFF7F5),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFFFFE7DF),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          offer.promoCode!,
+                                          style: GoogleFonts.instrumentSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 0.5,
+                                            color: const Color(0xFFFF5D2E),
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const PhosphorIcon(
+                                        PhosphorIconsRegular.copy,
+                                        size: 14,
+                                        color: Color(0xFFFF5D2E),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                          ],
+                          GestureDetector(
+                            onTap: onTap,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFF5D2E),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color.fromRGBO(255, 93, 46, 0.4),
+                                    blurRadius: 6,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Text(
+                                  'Book now',
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _fallbackOfferImage() {
+    return Image.asset(
+      'assets/icons/Offer Image Container.png',
+      fit: BoxFit.contain,
+      alignment: Alignment.centerRight,
+      errorBuilder: (_, __, ___) => Container(
+        color: const Color(0xFFFFE7DF),
+        child: const Center(
+          child: PhosphorIcon(
+            PhosphorIconsBold.tag,
+            size: 32,
+            color: Color(0xFFFF5D2E),
+          ),
         ),
       ),
     );

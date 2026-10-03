@@ -150,7 +150,7 @@ export default function AdminMessages() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] w-full">
+    <div className="flex flex-col text-left h-[calc(100vh-120px)] w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
         <p className="text-gray-500">Communicate with customers and mechanics.</p>
