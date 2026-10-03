@@ -86,13 +86,23 @@ class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
                   ],
                 ),
               ),
-
-              // ── Modern 4-Tab Navigation Bar ───────────────────────────────
-              _buildTabBar(),
             ],
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/jobs/scan-qr'),
+        backgroundColor: const Color(0xFFFF5D2E),
+        elevation: 4,
+        shape: const CircleBorder(),
+        tooltip: 'Scan Appointment QR',
+        child: const PhosphorIcon(
+          PhosphorIconsBold.qrCode,
+          size: 26,
+          color: Colors.white,
+        ),
+      ),
+      bottomNavigationBar: _buildTabBar(),
     );
   }
 

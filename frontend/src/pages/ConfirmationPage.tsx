@@ -274,7 +274,7 @@ export default function ConfirmationPage() {
               </div>
 
               <p className="text-xs text-center text-black/50 max-w-[250px]">
-                Scan this QR code to view your appointment status anytime
+                 Show this QR at the service center
               </p>
 
               {/* Action buttons - Desktop */}

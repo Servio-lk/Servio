@@ -10,6 +10,7 @@ import 'features/auth/mechanic_signup_verify_screen.dart';
 import 'features/auth/mechanic_signup_password_screen.dart';
 import 'features/auth/mechanic_signup_otp_screen.dart';
 import 'features/profile/mechanic_profile_wizard_screen.dart';
+import 'features/jobs/qr_scan_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -61,6 +62,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => WorkerChatScreen(
           appointmentId: int.parse(state.pathParameters['appointmentId']!),
         ),
+      ),
+      GoRoute(
+        path: '/jobs/scan-qr',
+        builder: (context, state) => const QrScanScreen(),
       ),
     ],
   );

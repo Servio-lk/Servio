@@ -53,10 +53,32 @@ export default function AuthCallback() {
           const backendSuccess = await refreshBackendToken();
 
           if (isMounted) {
+            let userRole = 'USER';
+            try {
+              const storedUserJson = localStorage.getItem('user');
+              if (storedUserJson) {
+                const parsed = JSON.parse(storedUserJson);
+                userRole = (parsed.role || 'USER').toUpperCase();
+              }
+            } catch {}
+
             if (backendSuccess) {
               toast.success('Welcome to Servio!');
             }
-            navigate('/home', { replace: true });
+
+            if (userRole === 'ADMIN') {
+              const host = window.location.hostname;
+              const port = window.location.port;
+              const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+
+              if (isCustomerPortOnEc2) {
+                window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+              } else {
+                navigate('/admin', { replace: true });
+              }
+            } else {
+              navigate('/home', { replace: true });
+            }
           }
         } else if (isMounted) {
           toast.error('Authentication failed');

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 import '../../core/utils/email_validator.dart';
 import '../../core/services/supabase_service.dart';
+import '../../core/services/push_notification_service.dart';
 
 class SignInScreen extends StatefulWidget {
   final String? allowedRole;
@@ -175,6 +176,9 @@ class _SignInScreenState extends State<SignInScreen> {
     }
 
     _showSnackBar('Welcome back!', isError: false);
+
+    // Sync device token for push notifications in background
+    PushNotificationService.instance.syncToken();
 
     if (role == 'MECHANIC') {
       context.go('/worker');
