@@ -233,6 +233,9 @@ public class AuthService {
 
         if (resolvedRole != Role.ADMIN) {
             Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
+            if (existingUser.isEmpty() && tokenEmail != null) {
+                existingUser = userRepository.findByEmailIgnoreCase(tokenEmail);
+            }
             if (existingUser.isPresent()) {
                 resolvedRole = existingUser.get().getRole();
                 if (resolvedRole == Role.USER && "MECHANIC".equalsIgnoreCase(request.getRole())) {
@@ -250,11 +253,20 @@ public class AuthService {
         final Role finalRole = resolvedRole;
 
         // Ensure a corresponding backend user exists (appointments require users.id)
+        final String searchEmail = tokenEmail;
         final String normalizedEmail = (tokenEmail != null) ? tokenEmail.trim().toLowerCase() : "";
         final String finalTokenEmail = normalizedEmail.isEmpty() ? tokenEmail : normalizedEmail;
         User backendUser;
         try {
-            backendUser = userRepository.findByEmailIgnoreCase(finalTokenEmail)
+            Optional<User> userOpt = userRepository.findByEmail(searchEmail);
+            if (userOpt.isEmpty() && finalTokenEmail != null && !finalTokenEmail.equals(searchEmail)) {
+                userOpt = userRepository.findByEmail(finalTokenEmail);
+            }
+            if (userOpt.isEmpty() && finalTokenEmail != null) {
+                userOpt = userRepository.findByEmailIgnoreCase(finalTokenEmail);
+            }
+
+            backendUser = userOpt
                     .map(existing -> {
                         boolean changed = false;
                         if (existing.getRole() != finalRole) {
@@ -291,12 +303,17 @@ public class AuthService {
                                     .role(finalRole)
                                     .build());
                         } catch (Exception e) {
-                            return userRepository.findByEmailIgnoreCase(finalTokenEmail)
+                            return userRepository.findByEmail(searchEmail)
+                                    .or(() -> userRepository.findByEmail(finalTokenEmail))
+                                    .or(() -> userRepository.findByEmailIgnoreCase(finalTokenEmail))
                                     .orElseThrow(() -> new RuntimeException("Could not create backend user: " + e.getMessage()));
                         }
                     });
         } catch (Exception ex) {
-            backendUser = userRepository.findByEmailIgnoreCase(finalTokenEmail).orElse(null);
+            backendUser = userRepository.findByEmail(searchEmail)
+                    .or(() -> userRepository.findByEmail(finalTokenEmail))
+                    .or(() -> userRepository.findByEmailIgnoreCase(finalTokenEmail))
+                    .orElse(null);
             if (backendUser == null) {
                 throw new RuntimeException("Failed to find or create backend user: " + ex.getMessage(), ex);
             }
