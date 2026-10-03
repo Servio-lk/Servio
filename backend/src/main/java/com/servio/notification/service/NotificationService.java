@@ -7,6 +7,7 @@ import com.servio.booking.entity.Appointment;
 import com.servio.notification.dto.NotificationDto;
 import com.servio.notification.dto.NotificationRequest;
 import com.servio.notification.entity.Notification;
+import com.servio.auth.entity.Role;
 import com.servio.auth.entity.User;
 import com.servio.notification.repository.NotificationRepository;
 import com.servio.auth.entity.UserNotificationPreference;
@@ -120,11 +121,23 @@ public class NotificationService {
     public void createAppointmentNotification(UUID userId, String appointmentDetails) {
         NotificationRequest request = NotificationRequest.builder()
             .userId(userId)
-            .title("Appointment Confirmation")
-            .message("Your appointment has been confirmed: " + appointmentDetails)
+            .title("Appointment Request Received")
+            .message("Your request has been submitted and is awaiting confirmation: " + appointmentDetails)
             .type("APPOINTMENT")
             .build();
         createNotification(request);
+    }
+
+    private void notifyAdminsOfPendingRequest(Long appointmentId, String details) {
+        for (User admin : userRepository.findByRole(Role.ADMIN)) {
+            createNotification(NotificationRequest.builder()
+                .userId(admin.getId())
+                .title("Appointment awaiting review")
+                .message("Request #" + appointmentId + " needs confirmation: " + details)
+                .type("APPOINTMENT")
+                .actionUrl("/admin/appointments")
+                .build());
+        }
     }
     
     @Transactional
@@ -158,6 +171,7 @@ public class NotificationService {
             if (event.getUserId() != null) {
                 String details = event.getServiceType() + " on " + event.getAppointmentDate();
                 createAppointmentNotification(event.getUserId(), details);
+                notifyAdminsOfPendingRequest(event.getAppointmentId(), details);
             }
         } catch (Exception e) {
             log.error("Failed to process AppointmentCreatedEvent for appointmentId={}: {}", 

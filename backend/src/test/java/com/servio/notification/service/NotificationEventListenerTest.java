@@ -91,7 +91,7 @@ class NotificationEventListenerTest {
         ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);
         verify(notificationRepository, times(1)).save(notificationCaptor.capture());
         Notification saved = notificationCaptor.getValue();
-        assertEquals("Appointment Confirmation", saved.getTitle());
+        assertEquals("Appointment Request Received", saved.getTitle());
         assertTrue(saved.getMessage().contains("Full Service on Sep 15, 2026 at 10:00 AM"));
         assertEquals("APPOINTMENT", saved.getType());
         assertEquals(testUser, saved.getUser());

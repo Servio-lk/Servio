@@ -36,12 +36,24 @@ const PROMO_CATEGORIES = [
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     PENDING: 'bg-yellow-50 text-yellow-700',
-    CONFIRMED: 'bg-blue-50 text-blue-700',
+    CONFIRMED: 'bg-green-50 text-green-700',
     IN_PROGRESS: 'bg-purple-50 text-purple-700',
     COMPLETED: 'bg-green-50 text-green-700',
     CANCELLED: 'bg-red-50 text-red-700',
   };
   return map[status.toUpperCase()] || 'bg-gray-50 text-gray-700';
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: 'Pending Confirmation',
+    CONFIRMED: 'Confirmed',
+    IN_PROGRESS: 'In Progress',
+    COMPLETED: 'Completed',
+    CANCELLED: 'Cancelled',
+    PENDING_PAYMENT: 'Pending Payment',
+  };
+  return labels[status.toUpperCase()] || status.replaceAll('_', ' ');
 }
 
 const emptyVehicle: VehicleRequest = {
@@ -452,7 +464,7 @@ export default function AccountPage() {
                     <span
                       className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusBadge(lastService.status)}`}
                     >
-                      {lastService.status.replace('_', ' ')}
+                      {statusLabel(lastService.status)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

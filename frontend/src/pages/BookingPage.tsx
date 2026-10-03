@@ -280,7 +280,7 @@ export default function BookingPage() {
 
       // Step 2: Handle chosen payment method
       if (paymentMethod === 'cash') {
-        toast.success('Appointment booked successfully!');
+        toast.success('Request submitted. We will confirm your appointment shortly.');
         navigate(`/confirmed/${appointmentId}`, {
           state: {
             originalTotal: subtotal,
@@ -313,7 +313,7 @@ export default function BookingPage() {
 
         // Register callbacks before calling startPayment
         window.payhere.onCompleted = (_orderId: string) => {
-          toast.success('Payment successful! Your appointment is confirmed.');
+          toast.success('Payment received. Your appointment request is under review.');
           navigate(`/confirmed/${appointmentId}`, {
             state: {
               originalTotal: subtotal,
@@ -809,6 +809,10 @@ export default function BookingPage() {
                   )}
                 </div>
 
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+                  This slot is held temporarily until the service center confirms your request.
+                </p>
+
                 <button
                   onClick={handleBook}
                   disabled={isBooking}
@@ -816,7 +820,7 @@ export default function BookingPage() {
                 >
                   {isBooking
                     ? (paymentMethod === 'payhere' ? 'Processing...' : 'Booking...')
-                    : (paymentMethod === 'payhere' ? 'Pay Now' : 'Confirm Booking')}
+                    : (paymentMethod === 'payhere' ? 'Pay Now' : 'Request Appointment')}
                 </button>
 
                 <button
@@ -841,6 +845,9 @@ export default function BookingPage() {
             </button>
           ) : (
             <>
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+                This slot is held temporarily until the service center confirms your request.
+              </p>
               <button
                 onClick={handleBook}
                 disabled={isBooking}
@@ -848,7 +855,7 @@ export default function BookingPage() {
               >
                 {isBooking
                   ? (paymentMethod === 'payhere' ? 'Processing...' : 'Booking...')
-                  : (paymentMethod === 'payhere' ? 'Pay Now' : 'Confirm Booking')}
+                  : (paymentMethod === 'payhere' ? 'Pay Now' : 'Request Appointment')}
               </button>
               <button
                 onClick={() => navigate(-1)}
