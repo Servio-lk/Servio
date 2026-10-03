@@ -1,14 +1,32 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { Search, ChevronRight, Grid, List as ListIcon } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { apiService } from '@/services/api';
 
 export default function ServicesPage() {
+  const location = useLocation();
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const desktopSearchInputRef = useRef<HTMLInputElement>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [categories, setCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (location.state && (location.state as any).focusSearch) {
+      // Focus on mobile if mobile input is visible, else desktop input
+      const timer = setTimeout(() => {
+        if (window.innerWidth < 1024) {
+          mobileSearchInputRef.current?.focus();
+        } else {
+          desktopSearchInputRef.current?.focus();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -62,6 +80,7 @@ export default function ServicesPage() {
           <div className="bg-[#ffe7df] border border-white rounded-2xl p-2 flex items-center gap-2">
             <Search className="w-6 h-6 text-black/80" />
             <input
+              ref={mobileSearchInputRef}
               type="text"
               placeholder="Search services"
               value={searchQuery}
@@ -97,6 +116,7 @@ export default function ServicesPage() {
             <div className="flex-1 bg-[#ffe7df] border border-white rounded-2xl p-3 flex items-center gap-2">
               <Search className="w-6 h-6" />
               <input
+                ref={desktopSearchInputRef}
                 type="text"
                 placeholder="Search services"
                 value={searchQuery}

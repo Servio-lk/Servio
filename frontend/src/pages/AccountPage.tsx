@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   User, Car, Plus, Pencil, Trash2, Clock,
   Phone, MapPin, Mail, ChevronDown, ChevronUp, X, Save,
@@ -26,6 +26,13 @@ const SERVICE_CENTER = {
   ],
 };
 
+const PROMO_CATEGORIES = [
+  { id: '', label: 'All Offers' },
+  { id: 'NEW_USER', label: 'New User' },
+  { id: 'LIMITED_TIME', label: 'Limited Time' },
+  { id: 'SEASONAL', label: 'Seasonal' },
+];
+
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     PENDING: 'bg-yellow-50 text-yellow-700',
@@ -47,6 +54,8 @@ const emptyVehicle: VehicleRequest = {
 
 export default function AccountPage() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Vehicles
   const [vehicles, setVehicles] = useState<VehicleDto[]>([]);
@@ -65,6 +74,7 @@ export default function AccountPage() {
   // Offers / promotions
   const [offers, setOffers] = useState<Offer[]>([]);
   const [offersLoading, setOffersLoading] = useState(true);
+  const [promoCategory, setPromoCategory] = useState('');
 
   // Collapsible sections
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -76,6 +86,23 @@ export default function AccountPage() {
   });
   const toggle = (key: string) =>
     setOpenSections((p) => ({ ...p, [key]: !p[key] }));
+
+  // Auto-expand and scroll to promotions if accessed via #promotions
+  useEffect(() => {
+    if (location.hash === '#promotions') {
+      setOpenSections((p) => ({ ...p, promotions: true }));
+      setTimeout(() => {
+        const el = document.getElementById('promotions-section');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 150);
+    }
+  }, [location.hash]);
+
+  const applyPromoCode = (code: string) => {
+    sessionStorage.setItem('servio.promoCode', code);
+    toast.success(`${code} will be applied at booking`);
+    navigate('/services');
+  };
 
   // Fetch data on mount
   useEffect(() => {
@@ -199,9 +226,11 @@ export default function AccountPage() {
   const SectionHeader = ({
     title,
     sectionKey,
+    badge,
   }: {
     title: string;
     sectionKey: string;
+    badge?: React.ReactNode;
   }) => (
     <button
       onClick={() => toggle(sectionKey)}
@@ -209,6 +238,7 @@ export default function AccountPage() {
     >
       <div className="flex items-center gap-3">
         <h2 className="text-base font-semibold text-black">{title}</h2>
+        {badge}
       </div>
       {openSections[sectionKey] ? (
         <ChevronUp className="w-5 h-5 text-black/40" />
@@ -228,7 +258,7 @@ export default function AccountPage() {
           <SectionHeader title="Profile" sectionKey="profile" />
           {openSections.profile && (
             <div className="pb-5 flex flex-col gap-4">
-              <div className="flex items-center gap-4">
+              <div className="flex text-left items-center gap-4">
                 <div className="w-16 h-16 bg-[#ffe7df] rounded-full flex items-center justify-center">
                   <User className="w-8 h-8 text-[#ff5d2e]" />
                 </div>
@@ -268,11 +298,11 @@ export default function AccountPage() {
           {openSections.vehicles && (
             <div className="pb-5 flex flex-col gap-3">
               {vehiclesLoading ? (
-                <p className="text-sm text-black/40 text-center py-4">
+                <p className="text-sm text-black/40 text-left py-4">
                   Loading vehicles…
                 </p>
               ) : vehicles.length === 0 ? (
-                <p className="text-sm text-black/40 text-center py-4">
+                <p className="text-sm text-black/40 text-left py-4">
                   No vehicles added yet
                 </p>
               ) : (
@@ -406,11 +436,11 @@ export default function AccountPage() {
           {openSections.lastService && (
             <div className="pb-5">
               {serviceLoading ? (
-                <p className="text-sm text-black/40 text-center py-4">
+                <p className="text-sm text-black/40 text-left py-4">
                   Loading…
                 </p>
               ) : !lastService ? (
-                <p className="text-sm text-black/40 text-center py-4">
+                <p className="text-sm text-black/40 text-left py-4">
                   No past services found
                 </p>
               ) : (
@@ -499,38 +529,66 @@ export default function AccountPage() {
         </div>
 
         {/* ── PROMOTIONS & OFFERS ── */}
-        <div className="bg-white rounded-2xl shadow-sm px-5">
+        <div id="promotions-section" className="bg-white rounded-2xl shadow-sm px-5 transition-all">
           <SectionHeader
             title="Promotions & Offers"
             sectionKey="promotions"
+            badge={
+              offers.length > 0 ? (
+                <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-[#ffe7df] text-[#ff5d2e]">
+                  {offers.filter((o) => !o.expired).length} active
+                </span>
+              ) : null
+            }
           />
           {openSections.promotions && (
-            <div className="pb-5">
+            <div className="pb-5 flex flex-col gap-4">
+              {/* Category Filter Chips */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {PROMO_CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setPromoCategory(c.id)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      promoCategory === c.id
+                        ? 'bg-[#ff5d2e] text-white shadow-xs'
+                        : 'bg-[#fff7f5] text-black/70 hover:bg-[#ffe7df]'
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+
               {offersLoading ? (
-                <p className="text-sm text-black/40 text-center py-4">
+                <p className="text-sm text-black/40 text-left py-4">
                   Loading offers…
                 </p>
-              ) : offers.length === 0 ? (
-                <p className="text-sm text-black/40 text-center py-4">
-                  No active promotions right now
+              ) : offers.filter((o) => !o.expired && (!promoCategory || (o as any).category === promoCategory || o.discountType === promoCategory)).length === 0 ? (
+                <p className="text-sm text-black/40 text-left py-4">
+                  No active promotions in this category right now
                 </p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {offers.map((offer) => (
-                    <OfferCard
-                      key={offer.id}
-                      id={offer.id}
-                      title={offer.title}
-                      subtitle={offer.subtitle}
-                      description={offer.description}
-                      discountType={offer.discountType}
-                      discountValue={offer.discountValue}
-                      imageUrl={offer.imageUrl}
-                      promoCode={offer.promoCode}
-                      validUntil={offer.validUntil}
-                      expired={offer.expired}
-                    />
-                  ))}
+                  {offers
+                    .filter((o) => !o.expired && (!promoCategory || (o as any).category === promoCategory || o.discountType === promoCategory))
+                    .map((offer) => (
+                      <OfferCard
+                        key={offer.id}
+                        id={offer.id}
+                        title={offer.title}
+                        subtitle={offer.subtitle}
+                        description={offer.description}
+                        discountType={offer.discountType}
+                        discountValue={offer.discountValue}
+                        imageUrl={offer.imageUrl}
+                        promoCode={offer.promoCode}
+                        validUntil={offer.validUntil}
+                        expired={offer.expired}
+                        onApply={applyPromoCode}
+                      />
+                    ))}
                 </div>
               )}
             </div>
