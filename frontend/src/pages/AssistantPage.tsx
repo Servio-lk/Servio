@@ -118,14 +118,11 @@ export default function AssistantPage() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-black/5 bg-gradient-to-r from-white via-[#fff9f7] to-[#fff3ef] px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ff5d2e] text-white shadow-md shadow-[#ff5d2e]/25">
-              <Robot className="h-6 w-6" weight="fill" />
-            </div>
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold text-black">Servio AI Assistant</h1>
               </div>
-              <p className="text-xs text-black/55">
+              <p className="text-xs text-left text-black/55">
                 Vehicle lookups, service advice & automated appointment booking
               </p>
             </div>
@@ -155,7 +152,7 @@ export default function AssistantPage() {
 
                 <div className="space-y-1.5">
                   <div
-                    className={`rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-line shadow-xs ${
+                    className={`rounded-2xl text-left px-4 py-3 text-sm leading-relaxed whitespace-pre-line shadow-xs ${
                       isUser
                         ? 'bg-[#ff5d2e] text-white rounded-tr-xs font-medium'
                         : 'bg-[#f8f9fa] text-black/90 rounded-tl-xs border border-black/5'

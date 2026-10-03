@@ -3,10 +3,33 @@ import { apiFetch } from './apiFetch';
 export const getApiBaseUrl = () => {
   let envApi = import.meta.env.VITE_API_URL;
 
-  // Ignore hardcoded localhost env vars if we are deployed on a real domain
+  const host = window.location.hostname;
+  const port = window.location.port;
+
+  // On EC2 / production Nginx, ports 80, 8081, 443, or empty default ports
+  // reverse-proxy /api directly to the backend. Always use same-origin /api!
+  const isNginxOrProdPort = port === '80' || port === '8081' || port === '443' || port === '';
+  const isViteDev = port === '5173' || port === '3000';
+  const isLocalHost = host === 'localhost' || host === '127.0.0.1';
+  const isPrivateIp = /^192\.168\./.test(host) || /^10\./.test(host) || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host);
+
+  // When actively developing with Vite dev server (on desktop or mobile via LAN IP)
+  if (isViteDev) {
+    return `${window.location.protocol}//${host}:3001/api`;
+  }
+
+  // When deployed on EC2 (ports 80, 8081, 443, or domain/public IP)
+  if (isNginxOrProdPort && !isLocalHost) {
+    return `${window.location.origin}/api`;
+  }
+
+  // Local development fallback
+  if (isLocalHost || isPrivateIp) {
+    return `${window.location.protocol}//${host}:3001/api`;
+  }
+
+  // Ignore hardcoded localhost env vars if deployed on a real domain
   const isLocalEnvApi = envApi && (envApi.includes('localhost') || envApi.includes('127.0.0.1'));
-  const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-  
   if (isLocalEnvApi && !isLocalHost) {
     envApi = undefined;
   } else if (envApi && envApi.startsWith('http://') && window.location.protocol === 'https:') {
@@ -16,12 +39,6 @@ export const getApiBaseUrl = () => {
   // If explicitly configured and safe, always use it.
   if (envApi) {
     return envApi;
-  }
-
-  // In local dev, use same host on port 3001.
-  const host = window.location.hostname;
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return `http://${host}:3001/api`;
   }
 
   // Non-local without explicit config: use same origin + /api path
