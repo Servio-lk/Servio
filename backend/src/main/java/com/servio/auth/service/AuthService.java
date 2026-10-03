@@ -233,6 +233,9 @@ public class AuthService {
 
         if (resolvedRole != Role.ADMIN) {
             Optional<User> existingUser = userRepository.findByEmail(tokenEmail);
+            if (existingUser.isEmpty() && tokenEmail != null) {
+                existingUser = userRepository.findByEmailIgnoreCase(tokenEmail);
+            }
             if (existingUser.isPresent()) {
                 resolvedRole = existingUser.get().getRole();
                 if (resolvedRole == Role.USER && "MECHANIC".equalsIgnoreCase(request.getRole())) {
@@ -250,37 +253,71 @@ public class AuthService {
         final Role finalRole = resolvedRole;
 
         // Ensure a corresponding backend user exists (appointments require users.id)
-        final String finalTokenEmail = tokenEmail;
-        User backendUser = userRepository.findByEmail(finalTokenEmail)
-                .map(existing -> {
-                    boolean changed = false;
-                    if (existing.getRole() != finalRole) {
-                        existing.setRole(finalRole);
-                        changed = true;
-                    }
-                    if (request.getPhone() != null && !request.getPhone().isBlank()
-                            && (existing.getPhone() == null || existing.getPhone().isBlank())) {
-                        existing.setPhone(request.getPhone().trim());
-                        changed = true;
-                    }
-                    if (finalDisplayName != null && !finalDisplayName.isBlank()
-                            && (existing.getFullName() == null || existing.getFullName().isBlank())) {
-                        existing.setFullName(finalDisplayName.trim());
-                        changed = true;
-                    }
-                    if (changed) {
-                        User saved = userRepository.save(existing);
-                        return saved != null ? saved : existing;
-                    }
-                    return existing;
-                })
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
-                        .email(finalTokenEmail)
-                        .phone(request.getPhone())
-                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                        .role(finalRole)
-                        .build()));
+        final String searchEmail = tokenEmail;
+        final String normalizedEmail = (tokenEmail != null) ? tokenEmail.trim().toLowerCase() : "";
+        final String finalTokenEmail = normalizedEmail.isEmpty() ? tokenEmail : normalizedEmail;
+        User backendUser;
+        try {
+            Optional<User> userOpt = userRepository.findByEmail(searchEmail);
+            if (userOpt.isEmpty() && finalTokenEmail != null && !finalTokenEmail.equals(searchEmail)) {
+                userOpt = userRepository.findByEmail(finalTokenEmail);
+            }
+            if (userOpt.isEmpty() && finalTokenEmail != null) {
+                userOpt = userRepository.findByEmailIgnoreCase(finalTokenEmail);
+            }
+
+            backendUser = userOpt
+                    .map(existing -> {
+                        boolean changed = false;
+                        if (existing.getRole() != finalRole) {
+                            existing.setRole(finalRole);
+                            changed = true;
+                        }
+                        if (request.getPhone() != null && !request.getPhone().isBlank()
+                                && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                            existing.setPhone(request.getPhone().trim());
+                            changed = true;
+                        }
+                        if (finalDisplayName != null && !finalDisplayName.isBlank()
+                                && (existing.getFullName() == null || existing.getFullName().isBlank())) {
+                            existing.setFullName(finalDisplayName.trim());
+                            changed = true;
+                        }
+                        if (changed) {
+                            try {
+                                User saved = userRepository.save(existing);
+                                return saved != null ? saved : existing;
+                            } catch (Exception e) {
+                                return existing;
+                            }
+                        }
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        try {
+                            return userRepository.save(User.builder()
+                                    .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
+                                    .email(finalTokenEmail)
+                                    .phone(request.getPhone())
+                                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                                    .role(finalRole)
+                                    .build());
+                        } catch (Exception e) {
+                            return userRepository.findByEmail(searchEmail)
+                                    .or(() -> userRepository.findByEmail(finalTokenEmail))
+                                    .or(() -> userRepository.findByEmailIgnoreCase(finalTokenEmail))
+                                    .orElseThrow(() -> new RuntimeException("Could not create backend user: " + e.getMessage()));
+                        }
+                    });
+        } catch (Exception ex) {
+            backendUser = userRepository.findByEmail(searchEmail)
+                    .or(() -> userRepository.findByEmail(finalTokenEmail))
+                    .or(() -> userRepository.findByEmailIgnoreCase(finalTokenEmail))
+                    .orElse(null);
+            if (backendUser == null) {
+                throw new RuntimeException("Failed to find or create backend user: " + ex.getMessage(), ex);
+            }
+        }
 
         // If user is a mechanic, ensure corresponding Mechanic entity exists
         if (finalRole == Role.MECHANIC) {
@@ -301,6 +338,14 @@ public class AuthService {
                                     existing.setPhone(request.getPhone().trim());
                                     changed = true;
                                 }
+                                if (Boolean.FALSE.equals(existing.getIsActive())) {
+                                    existing.setIsActive(true);
+                                    changed = true;
+                                }
+                                if (existing.getVerificationStatus() == null || existing.getVerificationStatus() == MechanicVerificationStatus.INCOMPLETE) {
+                                    existing.setVerificationStatus(MechanicVerificationStatus.VERIFIED);
+                                    changed = true;
+                                }
                                 if (changed) {
                                     mechanicRepository.save(existing);
                                 }
@@ -311,8 +356,8 @@ public class AuthService {
                                     .phone(request.getPhone() != null ? request.getPhone() : "")
                                     .specialization(spec)
                                     .status(MechanicStatus.AVAILABLE)
-                                    .isActive(false)
-                                    .verificationStatus(MechanicVerificationStatus.INCOMPLETE)
+                                    .isActive(true)
+                                    .verificationStatus(MechanicVerificationStatus.VERIFIED)
                                     .build())
                     );
         }

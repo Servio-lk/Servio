@@ -322,8 +322,8 @@ public class NotificationService {
     private NotificationDto convertToDto(Notification notification) {
         return NotificationDto.builder()
             .id(notification.getId())
-            .userId(notification.getUser().getId())
-            .userName(notification.getUser().getFullName())
+            .userId(notification.getUser() != null ? notification.getUser().getId() : null)
+            .userName(notification.getUser() != null ? notification.getUser().getFullName() : null)
             .title(notification.getTitle())
             .message(notification.getMessage())
             .type(notification.getType())

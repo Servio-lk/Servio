@@ -189,14 +189,6 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     color: Colors.black,
                   ),
                 ),
-                Text(
-                  'Powered by Gemini',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF059669),
-                  ),
-                ),
               ],
             ),
           ],

@@ -121,7 +121,8 @@ export function AuthOnboardingCarousel() {
                   <img
                     src={slide.image}
                     alt={slide.title.replace("\n", " ")}
-                    className="relative z-10 w-auto max-w-[90%] object-contain transition-transform duration-500 hover:scale-105"
+                    draggable={false}
+                    className="relative z-10 w-auto max-w-[90%] object-contain  select-none transition-transform duration-500"
                   />
                 </div>
 

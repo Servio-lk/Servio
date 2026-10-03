@@ -14,10 +14,9 @@ class SupabaseConfig {
       if (missing.isNotEmpty) {
         throw StateError(
           'Missing required environment configuration: ${missing.join(', ')}.\n'
-          'Please pass your environment variables when running the app:\n'
-          '  - Flutter CLI: flutter run --dart-define-from-file=../../.env\n'
-          '  - Android Studio: Select "Customer App" from the Run Configurations dropdown\n'
-          '  - VS Code: Run using the "Customer App" launch configuration\n'
+          '  - Flutter CLI (from app dir): flutter run --dart-define-from-file=../../../.env\n'
+          '  - Flutter CLI (from root dir): flutter run --target mobile/apps/mechanic_app/lib/main.dart --dart-define-from-file=.env\n'
+          '  - VS Code / Android Studio: Run using predefined launch configuration (passes root .env)\n'
           'Refer to your project .env or .env.example for required values.',
         );
       }

@@ -20,3 +20,4 @@ export 'src/models/notification_model.dart';
 export 'src/core/security/secure_local_storage.dart';
 export 'src/shared/signup_widgets.dart';
 export 'src/core/services/push_notification_service.dart';
+export 'src/utils/service_icon_helper.dart';

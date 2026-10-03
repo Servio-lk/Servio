@@ -41,6 +41,8 @@ public class RepairMessage {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = java.time.LocalDateTime.now(java.time.ZoneOffset.UTC);
+        }
     }
 }
