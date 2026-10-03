@@ -253,6 +253,11 @@ interface RepairConversationDto {
   repairId: number;
   realtimeChannel: string;
   isReadOnly: boolean;
+  appointmentId?: number;
+  customerName?: string;
+  vehicleInfo?: string;
+  lastMessage?: string;
+  unreadCount?: number;
 }
 
 interface RepairMessageDto {
@@ -599,6 +604,30 @@ class ApiService {
       body: JSON.stringify({ body }),
     });
     return this.handleResponse<RepairMessageDto>(response);
+  }
+
+  async markRepairMessagesAsRead(repairId: number): Promise<ApiResponse<void>> {
+    const response = await apiFetch(`${API_BASE_URL}/repairs/${repairId}/messages/read`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<void>(response);
+  }
+
+  async getAdminConversations(): Promise<ApiResponse<RepairConversationDto[]>> {
+    const response = await apiFetch(`${API_BASE_URL}/admin/conversations`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<RepairConversationDto[]>(response);
+  }
+
+  async getUnreadChatCount(): Promise<ApiResponse<{ count: number }>> {
+    const response = await apiFetch(`${API_BASE_URL}/chat/unread`, {
+      method: 'GET',
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ count: number }>(response);
   }
 
   /**
