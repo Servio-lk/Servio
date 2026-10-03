@@ -301,6 +301,14 @@ public class AuthService {
                                     existing.setPhone(request.getPhone().trim());
                                     changed = true;
                                 }
+                                if (Boolean.FALSE.equals(existing.getIsActive())) {
+                                    existing.setIsActive(true);
+                                    changed = true;
+                                }
+                                if (existing.getVerificationStatus() == null || existing.getVerificationStatus() == MechanicVerificationStatus.INCOMPLETE) {
+                                    existing.setVerificationStatus(MechanicVerificationStatus.VERIFIED);
+                                    changed = true;
+                                }
                                 if (changed) {
                                     mechanicRepository.save(existing);
                                 }
@@ -311,8 +319,8 @@ public class AuthService {
                                     .phone(request.getPhone() != null ? request.getPhone() : "")
                                     .specialization(spec)
                                     .status(MechanicStatus.AVAILABLE)
-                                    .isActive(false)
-                                    .verificationStatus(MechanicVerificationStatus.INCOMPLETE)
+                                    .isActive(true)
+                                    .verificationStatus(MechanicVerificationStatus.VERIFIED)
                                     .build())
                     );
         }

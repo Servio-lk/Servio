@@ -17,6 +17,7 @@ import com.servio.admin.repository.MechanicRepository;
 import com.servio.auth.repository.ProfileRepository;
 import com.servio.repair.entity.RepairConversationMember;
 
+import com.servio.auth.entity.Profile;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -44,7 +46,11 @@ public class RepairChatService {
         return conversationRepository.findByRepairJobId(repairId)
                 .orElseGet(() -> {
                     RepairJob repairJob = repairJobRepository.findById(repairId)
-                            .orElseThrow(() -> new RuntimeException("Repair job not found"));
+                            .orElseGet(() -> repairJobRepository.findFirstByAppointmentId(repairId)
+                                    .orElseGet(() -> repairJobService.getOrCreateRepairJobForAppointment(repairId)));
+                    if (repairJob == null) {
+                        throw new RuntimeException("Repair job not found");
+                    }
                     RepairConversation conversation = conversationRepository.save(RepairConversation.builder()
                             .repairJob(repairJob)
                             .isReadOnly(isClosed(repairJob))
@@ -78,8 +84,7 @@ public class RepairChatService {
     }
 
     public RepairConversationDto getConversationByAppointment(Long appointmentId, Authentication authentication) {
-        RepairJob repairJob = repairJobRepository.findFirstByAppointmentId(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Repair chat is not available for this appointment yet"));
+        RepairJob repairJob = repairJobService.getOrCreateRepairJobForAppointment(appointmentId);
         RepairConversation conversation = getOrCreateConversation(repairJob.getId());
         requireReadAccess(conversation, authentication);
         return toConversationDto(conversation);
@@ -191,29 +196,70 @@ public class RepairChatService {
     }
 
     private void requireReadAccess(RepairConversation conversation, Authentication authentication) {
-        if (isAdmin(authentication) || ownsRepair(conversation, authentication)
+        if (isAdmin(authentication) || isMechanic(authentication) || ownsRepair(conversation, authentication)
                 || memberRepository.existsByConversationIdAndMemberUserIdAndCanWriteTrue(
                 conversation.getId(), authentication.getName())) {
+            ensureMechanicEnrolled(conversation, authentication);
             return;
         }
         throw new RuntimeException("You do not have access to this repair conversation");
     }
 
     private void requireWriteAccess(RepairConversation conversation, Authentication authentication) {
-        if (isAdmin(authentication) || ownsRepair(conversation, authentication)
+        if (isAdmin(authentication) || isMechanic(authentication) || ownsRepair(conversation, authentication)
                 || memberRepository.existsByConversationIdAndMemberUserIdAndCanWriteTrue(
                 conversation.getId(), authentication.getName())) {
+            ensureMechanicEnrolled(conversation, authentication);
             return;
         }
         throw new RuntimeException("You cannot send messages in this repair conversation");
     }
 
+    private void ensureMechanicEnrolled(RepairConversation conversation, Authentication authentication) {
+        if (!isMechanic(authentication) || authentication == null || authentication.getName() == null) {
+            return;
+        }
+        String userId = authentication.getName();
+        boolean alreadyMember = memberRepository.findByConversationId(conversation.getId()).stream()
+                .anyMatch(m -> userId.equalsIgnoreCase(m.getMemberUserId()));
+        if (!alreadyMember) {
+            Long mechanicId = null;
+            try {
+                UUID userUuid = UUID.fromString(userId);
+                String email = profileRepository.findById(userUuid)
+                        .map(Profile::getEmail)
+                        .orElse(null);
+                if (email != null) {
+                    mechanicId = mechanicRepository.findByEmailIgnoreCase(email)
+                            .map(Mechanic::getId)
+                            .orElse(null);
+                }
+            } catch (Exception ignored) {
+            }
+
+            ensureMember(
+                    conversation,
+                    ConversationMemberRole.MECHANIC,
+                    "user:" + userId,
+                    userId,
+                    mechanicId,
+                    true
+            );
+        }
+    }
+
     private boolean ownsRepair(RepairConversation conversation, Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return false;
+        }
+        String authName = authentication.getName().trim();
         if (conversation.getRepairJob().getUser() != null) {
-            return conversation.getRepairJob().getUser().getId().toString().equals(authentication.getName());
+            String uid = conversation.getRepairJob().getUser().getId().toString();
+            if (uid.equalsIgnoreCase(authName)) return true;
         }
         if (conversation.getRepairJob().getAppointment() != null && conversation.getRepairJob().getAppointment().getUser() != null) {
-            return conversation.getRepairJob().getAppointment().getUser().getId().toString().equals(authentication.getName());
+            String uid = conversation.getRepairJob().getAppointment().getUser().getId().toString();
+            if (uid.equalsIgnoreCase(authName)) return true;
         }
         return false;
     }
@@ -228,13 +274,70 @@ public class RepairChatService {
     }
 
     private boolean isAdmin(Authentication authentication) {
-        return authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ADMIN".equals(a.getAuthority()));
+        if (authentication == null) {
+            return false;
+        }
+        boolean hasAdminAuth = authentication.getAuthorities().stream()
+                .anyMatch(a -> "ADMIN".equalsIgnoreCase(a.getAuthority())
+                        || "ROLE_ADMIN".equalsIgnoreCase(a.getAuthority()));
+        if (hasAdminAuth) {
+            return true;
+        }
+        String userId = authentication.getName();
+        if (userId != null && !userId.isBlank()) {
+            try {
+                UUID userUuid = UUID.fromString(userId);
+                Profile profile = profileRepository.findById(userUuid).orElse(null);
+                if (profile != null && Boolean.TRUE.equals(profile.getIsAdmin())) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
+    }
+
+    private boolean isMechanic(Authentication authentication) {
+        if (authentication == null) {
+            return false;
+        }
+        boolean hasAuthority = authentication.getAuthorities().stream()
+                .anyMatch(a -> "MECHANIC".equalsIgnoreCase(a.getAuthority())
+                        || "ROLE_MECHANIC".equalsIgnoreCase(a.getAuthority())
+                        || "STAFF".equalsIgnoreCase(a.getAuthority()));
+        if (hasAuthority) {
+            return true;
+        }
+        String userId = authentication.getName();
+        if (userId != null && !userId.isBlank()) {
+            try {
+                UUID userUuid = UUID.fromString(userId);
+                Profile profile = profileRepository.findById(userUuid).orElse(null);
+                if (profile != null) {
+                    if ("MECHANIC".equalsIgnoreCase(profile.getRole())
+                            || "STAFF".equalsIgnoreCase(profile.getRole())
+                            || Boolean.TRUE.equals(profile.getIsAdmin())) {
+                        return true;
+                    }
+                    if (profile.getEmail() != null && mechanicRepository.findByEmailIgnoreCase(profile.getEmail()).isPresent()) {
+                        return true;
+                    }
+                }
+            } catch (Exception ignored) {
+                if (mechanicRepository.findByEmailIgnoreCase(userId).isPresent()) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private String resolveSenderRole(RepairConversation conversation, Authentication authentication) {
         if (isAdmin(authentication)) {
             return "ADMIN";
+        }
+        if (isMechanic(authentication)) {
+            return "MECHANIC";
         }
         if (ownsRepair(conversation, authentication)) {
             return "CLIENT";

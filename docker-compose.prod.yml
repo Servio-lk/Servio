@@ -51,9 +51,15 @@ services:
       # Google Gemini AI Assistant
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      # Firebase Cloud Messaging
+      - FIREBASE_SERVICE_ACCOUNT_PATH=${FIREBASE_SERVICE_ACCOUNT_PATH:-}
+      - FIREBASE_CREDENTIALS_JSON=${FIREBASE_CREDENTIALS_JSON:-}
       - PORT=${BACKEND_PORT:-3001}
     ports:
       - "${BACKEND_PORT:-3001}:3001"
+    volumes:
+      - ./firebase-adminsdk.json:/app/firebase-adminsdk.json:ro
+      - ./firebase-adminsdk.json:/home/ubuntu/firebase-adminsdk.json:ro
     mem_limit: 700m
     memswap_limit: 1g
     security_opt:
@@ -83,6 +89,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/health || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
     mem_limit: 64m
     security_opt:
       - no-new-privileges:true

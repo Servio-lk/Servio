@@ -35,6 +35,7 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
   Timer? _pollingTimer;
   supa.RealtimeChannel? _realtimeChannel;
   int? _repairId;
+  int? _conversationId;
   bool _loading = true;
   bool _sending = false;
   String? _error;
@@ -78,7 +79,11 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
         _linkedJob = matchingJob;
       });
 
-      // Fetch conversation associated with this appointment
+      int? resolvedRepairId;
+      int? resolvedConvId;
+      String? resolvedChannel;
+
+      // 1. Try REST appointment conversation endpoint
       try {
         final convResponse = await _apiClient.get<RepairConversationModel>(
           '/appointments/${widget.appointmentId}/conversation',
@@ -88,23 +93,83 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
 
         final conversation = convResponse.data;
         if (conversation != null) {
-          final repairId = conversation.repairJobId;
-          setState(() => _repairId = repairId);
-          await _fetchMessages(repairId, isInitialLoad: true);
-          _setupRealtimeChannel(repairId, conversation.id, conversation.realtimeChannel);
-          _startPolling(repairId);
-          return;
+          resolvedRepairId = conversation.repairJobId;
+          resolvedConvId = conversation.id;
+          resolvedChannel = conversation.realtimeChannel;
         }
       } catch (convError) {
         debugPrint('REST conversation fetch failed: $convError');
       }
 
-      // If backend REST conversation not yet initialized, use appointmentId as repairId
-      _repairId = widget.appointmentId;
-      await _fetchMessages(widget.appointmentId, isInitialLoad: true);
-      _setupRealtimeChannel(widget.appointmentId, null, null);
-      _startPolling(widget.appointmentId);
-      setState(() => _loading = false);
+      // 2. Direct Supabase fallback if REST didn't provide conversation
+      if (resolvedRepairId == null) {
+        final supaClient = SupabaseService().safeClient;
+        if (supaClient != null) {
+          try {
+            final jobRows = await supaClient
+                .from('repair_jobs')
+                .select('id')
+                .eq('appointment_id', widget.appointmentId)
+                .limit(1);
+
+            if (jobRows.isNotEmpty) {
+              resolvedRepairId = (jobRows.first['id'] as num?)?.toInt();
+            } else {
+              final newJob = await supaClient.from('repair_jobs').insert({
+                'appointment_id': widget.appointmentId,
+                'title': matchingJob?.serviceType ?? 'Vehicle Service',
+                'status': 'IN_PROGRESS',
+              }).select('id').maybeSingle();
+              if (newJob != null) {
+                resolvedRepairId = (newJob['id'] as num?)?.toInt();
+              }
+            }
+
+            if (resolvedRepairId != null) {
+              final convRows = await supaClient
+                  .from('repair_conversations')
+                  .select('id')
+                  .eq('repair_job_id', resolvedRepairId)
+                  .limit(1);
+
+              if (convRows.isNotEmpty) {
+                resolvedConvId = (convRows.first['id'] as num?)?.toInt();
+              } else {
+                final newConv = await supaClient.from('repair_conversations').insert({
+                  'repair_job_id': resolvedRepairId,
+                  'is_read_only': false,
+                }).select('id').maybeSingle();
+                if (newConv != null) {
+                  resolvedConvId = (newConv['id'] as num?)?.toInt();
+                }
+              }
+
+              final currentUser = supaClient.auth.currentUser;
+              if (currentUser != null && resolvedConvId != null) {
+                final memberRef = 'user:${currentUser.id}';
+                await supaClient.from('repair_conversation_members').upsert({
+                  'conversation_id': resolvedConvId,
+                  'role': 'MECHANIC',
+                  'member_ref': memberRef,
+                  'member_user_id': currentUser.id,
+                  'can_write': true,
+                }, onConflict: 'conversation_id,role,member_ref');
+              }
+            }
+          } catch (supaErr) {
+            debugPrint('Supabase direct conversation lookup fallback: $supaErr');
+          }
+        }
+      }
+
+      final activeRepairId = resolvedRepairId ?? widget.appointmentId;
+      _repairId = activeRepairId;
+      _conversationId = resolvedConvId;
+
+      await _fetchMessages(activeRepairId, isInitialLoad: true);
+      _setupRealtimeChannel(activeRepairId, resolvedConvId, resolvedChannel);
+      _startPolling(activeRepairId);
+      if (mounted) setState(() => _loading = false);
     } catch (e) {
       debugPrint('Error loading conversation: $e');
       setState(() {
@@ -167,20 +232,88 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
 
   Future<void> _fetchMessages(int repairId, {bool isInitialLoad = false}) async {
     try {
-      final msgResponse = await _apiClient.get<List<RepairMessageModel>>(
-        '/repairs/$repairId/messages',
-        fromJson: (data) {
-          if (data is List) {
-            return data
-                .map((e) =>
-                    RepairMessageModel.fromJson(e as Map<String, dynamic>))
-                .toList();
-          }
-          return <RepairMessageModel>[];
-        },
-      );
+      List<RepairMessageModel>? messages;
 
-      final fetched = msgResponse.data ?? <RepairMessageModel>[];
+      // Level 1: Try REST /repairs/$repairId/messages
+      try {
+        final msgResponse = await _apiClient.get<List<RepairMessageModel>>(
+          '/repairs/$repairId/messages',
+          fromJson: (data) {
+            if (data is List) {
+              return data
+                  .map((e) =>
+                      RepairMessageModel.fromJson(e as Map<String, dynamic>))
+                  .toList();
+            }
+            return <RepairMessageModel>[];
+          },
+        );
+        if (msgResponse.data != null) {
+          messages = msgResponse.data;
+        }
+      } catch (_) {
+        // Fallback to Level 2
+      }
+
+      // Level 2: Try REST /appointments/${widget.appointmentId}/messages
+      if (messages == null) {
+        try {
+          final msgResponse = await _apiClient.get<List<RepairMessageModel>>(
+            '/appointments/${widget.appointmentId}/messages',
+            fromJson: (data) {
+              if (data is List) {
+                return data
+                    .map((e) =>
+                        RepairMessageModel.fromJson(e as Map<String, dynamic>))
+                    .toList();
+              }
+              return <RepairMessageModel>[];
+            },
+          );
+          if (msgResponse.data != null) {
+            messages = msgResponse.data;
+          }
+        } catch (_) {
+          // Fallback to Level 3
+        }
+      }
+
+      // Level 3: Direct Supabase Database Fallback
+      if (messages == null) {
+        final supaClient = SupabaseService().safeClient;
+        if (supaClient != null) {
+          try {
+            dynamic raw;
+            if (_conversationId != null) {
+              raw = await supaClient
+                  .from('repair_messages')
+                  .select()
+                  .or('conversation_id.eq.$_conversationId,repair_job_id.eq.$repairId')
+                  .order('created_at', ascending: true);
+            } else {
+              raw = await supaClient
+                  .from('repair_messages')
+                  .select()
+                  .eq('repair_job_id', repairId)
+                  .order('created_at', ascending: true);
+            }
+            if (raw is List) {
+              messages = raw
+                  .map((e) =>
+                      RepairMessageModel.fromJson(e as Map<String, dynamic>))
+                  .toList();
+            }
+          } catch (supaErr) {
+            debugPrint('Direct Supabase message fetch fallback: $supaErr');
+          }
+        }
+      }
+
+      if (messages == null) {
+        throw Exception('All message fetch sources failed');
+      }
+
+      final fetched = messages;
 
       if (mounted) {
         final previousCount = _messages.length;
@@ -235,16 +368,71 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
       );
     } catch (_) {}
 
+    bool sent = false;
+
+    // Level 1: Try REST /repairs/$repairId/messages
     try {
       await _apiClient.post<RepairMessageModel>(
         '/repairs/$repairId/messages',
         body: {'body': body},
       );
+      sent = true;
     } catch (e) {
-      debugPrint('REST message send error: $e');
-    } finally {
-      if (mounted) setState(() => _sending = false);
+      // Try Level 2
     }
+
+    // Level 2: Try REST /appointments/${widget.appointmentId}/messages
+    if (!sent) {
+      try {
+        await _apiClient.post<RepairMessageModel>(
+          '/appointments/${widget.appointmentId}/messages',
+          body: {'body': body},
+        );
+        sent = true;
+      } catch (e2) {
+        // Try Level 3
+      }
+    }
+
+    // Level 3: Direct Supabase Database Fallback
+    if (!sent) {
+      final supaClient = SupabaseService().safeClient;
+      if (supaClient != null) {
+        try {
+          final currentUser = supaClient.auth.currentUser;
+          final senderId = currentUser?.id ?? 'mechanic';
+
+          int? convId = _conversationId;
+          if (convId == null) {
+            final convRow = await supaClient
+                .from('repair_conversations')
+                .select('id')
+                .eq('repair_job_id', repairId)
+                .maybeSingle();
+            if (convRow != null) {
+              convId = (convRow['id'] as num?)?.toInt();
+              _conversationId = convId;
+            }
+          }
+
+          if (convId != null) {
+            await supaClient.from('repair_messages').insert({
+              'conversation_id': convId,
+              'repair_job_id': repairId,
+              'sender_id': senderId,
+              'sender_role': 'MECHANIC',
+              'body': body,
+              'created_at': DateTime.now().toIso8601String(),
+            });
+            sent = true;
+          }
+        } catch (supaErr) {
+          debugPrint('Direct Supabase message insert fallback: $supaErr');
+        }
+      }
+    }
+
+    if (mounted) setState(() => _sending = false);
   }
 
   Future<void> _captureServicePhoto(ImageSource source) async {
@@ -348,12 +536,12 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
           children: [
             CircleAvatar(
               radius: 18,
-              backgroundColor: const Color(0xFFFFECE5),
+              backgroundColor: ServiceIconHelper.getServiceColors(_linkedJob?.serviceType).background,
               child: Text(
                 clientName.isNotEmpty ? clientName[0].toUpperCase() : 'C',
                 style: GoogleFonts.instrumentSans(
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFFFF5D2E),
+                  color: ServiceIconHelper.getServiceColors(_linkedJob?.serviceType).primary,
                 ),
               ),
             ),
@@ -461,6 +649,90 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
               ],
             ),
           ),
+
+          // Persistent Client & Service Details Banner
+          if (_linkedJob != null)
+            InkWell(
+              onTap: () => ClientJobDetailsSheet.show(context, job: _linkedJob!),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFAFAFA),
+                  border: Border(bottom: BorderSide(color: Color(0xFFE5E5E5), width: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: ServiceIconHelper.getServiceColors(_linkedJob!.serviceType).background,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        ServiceIconHelper.getPhosphorIcon(_linkedJob!.serviceType),
+                        size: 16,
+                        color: ServiceIconHelper.getServiceColors(_linkedJob!.serviceType).primary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  _linkedJob!.serviceType,
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: _linkedJob!.status.toUpperCase() == 'IN_PROGRESS'
+                                      ? const Color(0xFFFEF3C7)
+                                      : const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  _linkedJob!.status.replaceAll('_', ' '),
+                                  style: GoogleFonts.instrumentSans(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w700,
+                                    color: _linkedJob!.status.toUpperCase() == 'IN_PROGRESS'
+                                        ? const Color(0xFFB45309)
+                                        : const Color(0xFF15803D),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${_linkedJob!.vehicleDisplay} • ${_linkedJob!.plateDisplay} • ${_linkedJob!.formattedDate}',
+                            style: GoogleFonts.instrumentSans(
+                              fontSize: 11,
+                              color: Colors.black54,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const PhosphorIcon(PhosphorIconsRegular.caretRight, size: 14, color: Colors.black38),
+                  ],
+                ),
+              ),
+            ),
 
           if (_error != null)
             Container(

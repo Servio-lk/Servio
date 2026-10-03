@@ -32,11 +32,15 @@ function normalizeRealtimeMessage(row: any): RepairMessageDto {
 export default function MessagesPage() {
   const { appointmentId } = useParams<{ appointmentId?: string }>();
 
-  if (appointmentId) {
-    return <AppointmentChat appointmentId={Number(appointmentId)} />;
-  }
-
-  return <MessagesList />;
+  return (
+    <AppLayout>
+      {appointmentId ? (
+        <AppointmentChat appointmentId={Number(appointmentId)} />
+      ) : (
+        <MessagesList />
+      )}
+    </AppLayout>
+  );
 }
 
 function MessagesList() {
@@ -63,8 +67,7 @@ function MessagesList() {
   }, []);
 
   return (
-    <AppLayout>
-      <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6">
         <div>
           <h1 className="text-2xl lg:text-3xl font-semibold text-black">Messages</h1>
           <p className="mt-1 text-sm text-black/60">Chat with your service team about confirmed appointments.</p>
@@ -138,7 +141,6 @@ function MessagesList() {
           <span className="text-sm font-semibold tracking-wide">AI Assistant</span>
         </Link>
       </div>
-    </AppLayout>
   );
 }
 
@@ -171,6 +173,32 @@ function AppointmentChat({ appointmentId }: { appointmentId: number }) {
   useEffect(() => {
     loadChat();
   }, [loadChat]);
+
+  // Polling fallback every 4 seconds to guarantee real-time updates even if WebSocket drops
+  useEffect(() => {
+    if (!conversation?.repairId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await apiService.getRepairMessages(conversation.repairId);
+        const data = response.data;
+        if (data && data.length > 0) {
+          setMessages((current) => {
+            const existingIds = new Set(current.map((m) => m.id));
+            const newOnes = data.filter((m) => !existingIds.has(m.id));
+            if (newOnes.length === 0) return current;
+            return [...current, ...newOnes].sort(
+              (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+            );
+          });
+        }
+      } catch {
+        // silent polling catch
+      }
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [conversation?.repairId]);
 
   useEffect(() => {
     if (!conversation?.conversationId) return;
@@ -218,13 +246,12 @@ function AppointmentChat({ appointmentId }: { appointmentId: number }) {
   };
 
   return (
-    <AppLayout>
-      <div className="flex h-[calc(100vh-150px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
-        <div className="border-b border-black/5 p-4">
-          <Link to="/messages" className="text-sm font-medium text-[#ff5d2e] hover:underline">
-            Back to messages
-          </Link>
-          <div className="mt-2 flex items-center gap-3">
+    <div className="flex h-[calc(100vh-150px)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm">
+      <div className="border-b border-black/5 p-4">
+        <Link to="/messages" className="text-sm font-medium text-[#ff5d2e] hover:underline">
+          Back to messages
+        </Link>
+        <div className="mt-2 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ffe7df] text-[#ff5d2e]">
               <ChatCircleDots className="h-6 w-6" weight="duotone" />
             </div>
@@ -306,6 +333,5 @@ function AppointmentChat({ appointmentId }: { appointmentId: number }) {
           </div>
         </div>
       </div>
-    </AppLayout>
   );
 }
