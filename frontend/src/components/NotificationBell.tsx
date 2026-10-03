@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, X } from 'lucide-react';
+import { Bell, CheckCheck, Trash2, X } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import type { NotificationDto } from '@/services/api';
 
@@ -36,36 +36,41 @@ function NotificationItem({
 }) {
   const body = (
     <div
-      className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
+      className={`flex flex-col items-start gap-2 p-3 rounded-lg transition-colors ${
         notification.isRead ? 'bg-white' : 'bg-[#fff7f5]'
       }`}
     >
+      <div className='flex items-center justify-between w-full gap-2'>
       {/* Type badge */}
-      <div className={`mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${typeColor(notification.type)}`}>
-        {notification.type}
+      <div className="flex items-center gap-2">
+        <div className={`mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${typeColor(notification.type)}`}>
+          {notification.type}
+        </div>
+        <p className="text-[10px] text-black/40 mt-1">{timeAgo(notification.createdAt)}</p>
+        {/* Mark read button */}
+      
       </div>
-
+      {!notification.isRead && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onRead(notification.id);
+                }}
+                className="shrink-0 p-1 rounded hover:bg-black/5 transition-colors mt-0.5"
+                title="Mark as read"
+              >
+                <CheckCheck className="w-3.5 h-3.5 text-[#ff5d2e]" />
+              </button>
+            )}
+      </div>
       {/* Content */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-black leading-snug">{notification.title}</p>
         <p className="text-xs text-black/60 mt-0.5 leading-snug">{notification.message}</p>
-        <p className="text-[10px] text-black/40 mt-1">{timeAgo(notification.createdAt)}</p>
       </div>
 
-      {/* Mark read button */}
-      {!notification.isRead && (
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onRead(notification.id);
-          }}
-          className="shrink-0 p-1 rounded hover:bg-black/5 transition-colors mt-0.5"
-          title="Mark as read"
-        >
-          <Check className="w-3.5 h-3.5 text-[#ff5d2e]" />
-        </button>
-      )}
+      
     </div>
   );
 
@@ -131,7 +136,7 @@ export function NotificationBell() {
       {open && (
         <div
           ref={panelRef}
-          className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-black/5 z-50 flex flex-col overflow-hidden"
+          className="absolute right-0 top-full mt-2 w-80 lg:w-100 bg-white rounded-2xl shadow-xl border border-black/5 z-50 flex flex-col overflow-hidden"
           style={{ maxHeight: '480px' }}
         >
           {/* Header */}
@@ -175,7 +180,7 @@ export function NotificationBell() {
           </div>
 
           {/* List */}
-          <div className="overflow-y-auto flex-1 p-2 flex flex-col gap-1">
+          <div className="overflow-y-auto flex-1 p-2 text-left flex flex-col gap-1">
             {isLoading ? (
               <div className="py-8 text-center text-sm text-black/40">Loading…</div>
             ) : notifications.length === 0 ? (

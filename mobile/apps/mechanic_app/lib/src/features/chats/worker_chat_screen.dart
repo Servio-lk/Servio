@@ -179,6 +179,63 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
     }
   }
 
+  void _setMessages(List<RepairMessageModel> incoming) {
+    final map = <int, RepairMessageModel>{};
+    for (final m in incoming) {
+      map[m.id] = m;
+    }
+    final list = map.values.toList();
+    list.sort((a, b) {
+      final cmp = a.createdAt.compareTo(b.createdAt);
+      if (cmp != 0) return cmp;
+      return a.id.compareTo(b.id);
+    });
+    _messages = list;
+  }
+
+  void _upsertMessage(RepairMessageModel incoming) {
+    final existingIndex = _messages.indexWhere((m) =>
+        m.id == incoming.id ||
+        (m.id > 1000000000000 &&
+            m.body == incoming.body &&
+            m.senderRole == incoming.senderRole &&
+            m.createdAt.difference(incoming.createdAt).abs().inSeconds < 10));
+
+    if (existingIndex >= 0) {
+      _messages[existingIndex] = incoming;
+    } else {
+      _messages.add(incoming);
+    }
+    _messages.sort((a, b) {
+      final cmp = a.createdAt.compareTo(b.createdAt);
+      if (cmp != 0) return cmp;
+      return a.id.compareTo(b.id);
+    });
+  }
+
+  Future<void> _markIncomingAsRead(int repairId, int? conversationId) async {
+    final supaClient = SupabaseService().safeClient;
+    if (supaClient == null) return;
+    try {
+      final nowUtc = DateTime.now().toUtc().toIso8601String();
+      if (conversationId != null) {
+        await supaClient
+            .from('repair_messages')
+            .update({'read_at': nowUtc})
+            .eq('conversation_id', conversationId)
+            .neq('sender_role', 'MECHANIC')
+            .isFilter('read_at', null);
+      } else {
+        await supaClient
+            .from('repair_messages')
+            .update({'read_at': nowUtc})
+            .eq('repair_job_id', repairId)
+            .neq('sender_role', 'MECHANIC')
+            .isFilter('read_at', null);
+      }
+    } catch (_) {}
+  }
+
   void _setupRealtimeChannel(int repairId, int? conversationId, String? customChannel) {
     final supaClient = SupabaseService().safeClient;
     if (supaClient == null) return;
@@ -191,7 +248,7 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
 
       _realtimeChannel = supaClient.channel(channelName)
         ..onPostgresChanges(
-          event: supa.PostgresChangeEvent.insert,
+          event: supa.PostgresChangeEvent.all,
           schema: 'public',
           table: 'repair_messages',
           filter: supa.PostgresChangeFilter(
@@ -203,11 +260,12 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
             if (mounted) {
               try {
                 final incoming = RepairMessageModel.fromJson(payload.newRecord);
-                if (!_messages.any((m) => m.id == incoming.id)) {
-                  setState(() {
-                    _messages = [..._messages, incoming];
-                  });
-                  _scrollToBottom();
+                setState(() {
+                  _upsertMessage(incoming);
+                });
+                _scrollToBottom();
+                if (!incoming.isMechanic) {
+                  _markIncomingAsRead(repairId, conversationId);
                 }
               } catch (e) {
                 debugPrint('Error parsing incoming realtime message: $e');
@@ -318,7 +376,7 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
       if (mounted) {
         final previousCount = _messages.length;
         setState(() {
-          _messages = fetched;
+          _setMessages(fetched);
           _loading = false;
           _error = null;
         });
@@ -327,6 +385,7 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
           _scrollToBottom();
         }
       }
+      _markIncomingAsRead(repairId, _conversationId);
     } catch (e) {
       debugPrint('Error fetching messages: $e');
       if (mounted && isInitialLoad && _messages.isEmpty) {
@@ -351,11 +410,12 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
       senderRole: 'MECHANIC',
       body: body,
       createdAt: DateTime.now(),
+      readAt: null,
     );
 
-    // Optimistic UI update
+    // Optimistic UI update with sorting
     setState(() {
-      _messages = [..._messages, tempMsg];
+      _upsertMessage(tempMsg);
     });
     if (customText == null) _messageController.clear();
     _scrollToBottom();
@@ -422,7 +482,8 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
               'sender_id': senderId,
               'sender_role': 'MECHANIC',
               'body': body,
-              'created_at': DateTime.now().toIso8601String(),
+              'read_at': null,
+              'created_at': DateTime.now().toUtc().toIso8601String(),
             });
             sent = true;
           }
@@ -949,11 +1010,7 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
                 ),
                 if (isMe) ...[
                   const SizedBox(width: 4),
-                  const PhosphorIcon(
-                    PhosphorIconsBold.checks,
-                    size: 14,
-                    color: Color(0xFF2563EB), // WhatsApp blue double tick
-                  ),
+                  _buildMessageStatusIcon(message),
                 ],
               ],
             ),
@@ -963,10 +1020,39 @@ class _WorkerChatScreenState extends ConsumerState<WorkerChatScreen> {
     );
   }
 
+  Widget _buildMessageStatusIcon(RepairMessageModel message) {
+    // If optimistic temporary message (id > 1000000000000) or still sending:
+    final isOptimistic = message.id > 1000000000000;
+    if (isOptimistic) {
+      return const PhosphorIcon(
+        PhosphorIconsRegular.clock,
+        size: 13,
+        color: Colors.black38,
+      );
+    }
+
+    if (message.readAt != null) {
+      // Customer has read the message: double blue ticks
+      return const PhosphorIcon(
+        PhosphorIconsBold.checks,
+        size: 14,
+        color: Color(0xFF34B7F1), // WhatsApp blue double tick
+      );
+    }
+
+    // Delivered / sent, but not yet read: grey double ticks
+    return const PhosphorIcon(
+      PhosphorIconsBold.checks,
+      size: 14,
+      color: Colors.black38, // WhatsApp grey double tick
+    );
+  }
+
   String _formatTime(DateTime dt) {
-    final h = dt.hour > 12 ? dt.hour - 12 : (dt.hour == 0 ? 12 : dt.hour);
-    final m = dt.minute.toString().padLeft(2, '0');
-    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    final local = dt.toLocal();
+    final h = local.hour > 12 ? local.hour - 12 : (local.hour == 0 ? 12 : local.hour);
+    final m = local.minute.toString().padLeft(2, '0');
+    final period = local.hour >= 12 ? 'PM' : 'AM';
     return '$h:$m $period';
   }
 }
