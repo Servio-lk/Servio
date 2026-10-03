@@ -27,6 +27,10 @@ class PushNotificationService {
   String? _fcmToken;
   ApiClient? _apiClient;
 
+  static final StreamController<RemoteMessage> _messageStreamController =
+      StreamController<RemoteMessage>.broadcast();
+  static Stream<RemoteMessage> get onMessageStream => _messageStreamController.stream;
+
   String? get fcmToken => _fcmToken;
   bool get isInitialized => _initialized;
 
@@ -121,6 +125,7 @@ class PushNotificationService {
 
       // 6. Foreground notifications display
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _messageStreamController.add(message);
         final notification = message.notification;
         final android = message.notification?.android;
 
@@ -151,6 +156,7 @@ class PushNotificationService {
 
       // 7. Handle app opening from notification
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _messageStreamController.add(message);
         if (onNotificationTap != null) {
           onNotificationTap(message);
         }

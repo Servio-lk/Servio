@@ -14,6 +14,7 @@ import com.servio.common.event.RepairStatusChangedEvent;
 import com.servio.common.exception.ConflictException;
 import com.servio.common.exception.ResourceNotFoundException;
 import com.servio.notification.service.AppointmentEventPublisher;
+import com.servio.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,6 +57,8 @@ class AppointmentServiceTest {
     private AppointmentEventPublisher eventPublisher;
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
+    @Mock
+    private PaymentRepository paymentRepository;
     @Mock
     private Authentication authentication;
 

@@ -52,7 +52,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityException(DataIntegrityViolationException ex, HttpServletRequest request) {
-        return buildErrorResponse(new ConflictException("This time slot is already booked. Please choose another time."), HttpStatus.CONFLICT, request);
+        String uri = request != null ? request.getRequestURI() : "";
+        if (uri != null && uri.contains("appointment")) {
+            return buildErrorResponse(new ConflictException("This time slot is already booked. Please choose another time."), HttpStatus.CONFLICT, request);
+        }
+        return buildErrorResponse(new ConflictException("Database conflict or duplicate record occurred"), HttpStatus.CONFLICT, request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

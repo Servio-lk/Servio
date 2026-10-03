@@ -1,12 +1,14 @@
 import { Link, useLocation, Outlet } from 'react-router-dom';
-import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User, Package, ReceiptText, Wrench, ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { Home, List, Tag, Calendar, CalendarDays, Users, LogOut, Menu, X, Bell, User, Package, ReceiptText, Wrench, ExternalLink, MessageCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/services/api';
 import LogoImage from '/ServioLogo.png';
 
 // Admin Tab bar items for both mobile and desktop
 const adminNavItems = [
     { icon: Home, label: 'Dashboard', path: '/admin' },
+    { icon: MessageCircle, label: 'Messages', path: '/admin/messages' },
     { icon: List, label: 'Services', path: '/admin/services' },
     { icon: Tag, label: 'Offers', path: '/admin/offers' },
     { icon: Calendar, label: 'Appointments', path: '/admin/appointments' },
@@ -17,9 +19,31 @@ const adminNavItems = [
     { icon: CalendarDays, label: 'Calendar', path: '/admin/calendar' },
 ];
 
+function useUnreadCount() {
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+        const fetchUnread = async () => {
+            try {
+                const res = await apiService.getUnreadChatCount();
+                setUnreadCount(res.data?.count || 0);
+            } catch (e) {
+                // Ignore
+            }
+        };
+
+        fetchUnread();
+        const interval = setInterval(fetchUnread, 30000); // Poll every 30s
+        return () => clearInterval(interval);
+    }, []);
+
+    return unreadCount;
+}
+
 function AdminDesktopSidebar() {
     const location = useLocation();
     const { logout } = useAuth();
+    const unreadCount = useUnreadCount();
 
     return (
         <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
@@ -40,13 +64,20 @@ function AdminDesktopSidebar() {
                             <li key={item.path}>
                                 <Link
                                     to={item.path}
-                                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                                    className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isActive
                                         ? 'bg-[#ffe7df] text-[#ff5d2e]'
                                         : 'text-black/70 hover:bg-[#fff7f5]'
                                         }`}
                                 >
-                                    <item.icon className="w-5 h-5" />
-                                    <span className="font-medium">{item.label}</span>
+                                    <div className="flex items-center gap-3">
+                                        <item.icon className="w-5 h-5" />
+                                        <span className="font-medium">{item.label}</span>
+                                    </div>
+                                    {item.label === 'Messages' && unreadCount > 0 && (
+                                        <span className="bg-[#ff5d2e] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                            {unreadCount}
+                                        </span>
+                                    )}
                                 </Link>
                             </li>
                         );
@@ -77,6 +108,7 @@ function AdminDesktopSidebar() {
 
 function AdminDesktopHeader() {
     const { user } = useAuth();
+    const unreadCount = useUnreadCount();
 
     return (
         <header className="hidden lg:flex items-center justify-between h-16 px-6 bg-white border-b border-black/10 fixed top-0 left-64 right-0 z-10">
@@ -85,6 +117,12 @@ function AdminDesktopHeader() {
 
             {/* Actions */}
             <div className="flex items-center gap-4">
+                <Link to="/admin/messages" className="relative p-2 hover:bg-[#fff7f5] rounded-lg transition-colors">
+                    <MessageCircle className="w-5 h-5 text-black/70" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#ff5d2e] border-2 border-white rounded-full" />
+                    )}
+                </Link>
                 <button className="relative p-2 hover:bg-[#fff7f5] rounded-lg transition-colors">
                     <Bell className="w-5 h-5 text-black/70" />
                     <span className="absolute top-1 right-1 w-2 h-2 bg-[#ff5d2e] rounded-full" />
@@ -103,6 +141,8 @@ function AdminDesktopHeader() {
 }
 
 function AdminMobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
+    const unreadCount = useUnreadCount();
+    
     return (
         <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-white border-b border-black/10 sticky top-0 z-20">
             <button
@@ -113,8 +153,16 @@ function AdminMobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
                 <Menu className="w-6 h-6" />
             </button>
             <h1 className="text-xl font-bold text-[#ff5d2e]">Servio Admin</h1>
-            <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-[#ff5d2e]" />
+            <div className="flex items-center gap-3">
+                <Link to="/admin/messages" className="relative p-2 -mr-1 hover:bg-[#fff7f5] rounded-lg transition-colors">
+                    <MessageCircle className="w-5 h-5 text-black/70" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#ff5d2e] border-2 border-white rounded-full" />
+                    )}
+                </Link>
+                <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-[#ff5d2e]" />
+                </div>
             </div>
         </header>
     );
@@ -123,6 +171,7 @@ function AdminMobileHeader({ onMenuOpen }: { onMenuOpen: () => void }) {
 function AdminMobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
     const location = useLocation();
     const { user, logout } = useAuth();
+    const unreadCount = useUnreadCount();
 
     if (!isOpen) return null;
 
@@ -174,13 +223,20 @@ function AdminMobileMenu({ isOpen, onClose }: { isOpen: boolean; onClose: () => 
                                     <Link
                                         to={item.path}
                                         onClick={onClose}
-                                        className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                                        className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${isActive
                                             ? 'bg-[#ffe7df] text-[#ff5d2e]'
                                             : 'text-black/70 hover:bg-[#fff7f5]'
                                             }`}
                                     >
-                                        <item.icon className="w-5 h-5" />
-                                        <span className="font-medium">{item.label}</span>
+                                        <div className="flex items-center gap-3">
+                                            <item.icon className="w-5 h-5" />
+                                            <span className="font-medium">{item.label}</span>
+                                        </div>
+                                        {item.label === 'Messages' && unreadCount > 0 && (
+                                            <span className="bg-[#ff5d2e] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                                {unreadCount}
+                                            </span>
+                                        )}
                                     </Link>
                                 </li>
                             );

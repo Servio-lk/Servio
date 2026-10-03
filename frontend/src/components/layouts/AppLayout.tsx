@@ -1,13 +1,35 @@
 import { Link, useLocation } from 'react-router-dom';
 import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiService } from '@/services/api';
 import LogoImage from '/ServioLogo.png';
 import { NotificationBell } from '@/components/NotificationBell';
 
 interface AppLayoutProps {
   children: ReactNode;
   showNav?: boolean;
+}
+
+function useUnreadCount() {
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+      const fetchUnread = async () => {
+          try {
+              const res = await apiService.getUnreadChatCount();
+              setUnreadCount(res.data?.count || 0);
+          } catch (e) {
+              // Ignore
+          }
+      };
+
+      fetchUnread();
+      const interval = setInterval(fetchUnread, 30000); // Poll every 30s
+      return () => clearInterval(interval);
+  }, []);
+
+  return unreadCount;
 }
 
 // Navigation items for desktop sidebar
@@ -31,6 +53,7 @@ const mobileNavItems = [
 function DesktopSidebar() {
   const location = useLocation();
   const { logout, isAdmin } = useAuth();
+  const unreadCount = useUnreadCount();
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-black/10 h-screen fixed left-0 top-0">
@@ -49,14 +72,21 @@ function DesktopSidebar() {
               <li key={item.path}>
                 <Link
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                  className={`flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-[#ffe7df] text-[#ff5d2e]'
                       : 'text-black/70 hover:bg-[#fff7f5]'
                   }`}
                 >
-                  <item.icon className="w-5 h-5" weight={isActive ? 'fill' : 'regular'} />
-                  <span className="font-medium">{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5" weight={isActive ? 'fill' : 'regular'} />
+                    <span className="font-medium">{item.label}</span>
+                  </div>
+                  {item.label === 'Messages' && unreadCount > 0 && (
+                      <span className="bg-[#ff5d2e] text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                          {unreadCount}
+                      </span>
+                  )}
                 </Link>
               </li>
             );
@@ -117,6 +147,12 @@ function DesktopHeader() {
             <span>Admin Portal</span>
           </Link>
         )}
+        <Link to="/messages" className="relative p-2 hover:bg-[#fff7f5] rounded-lg transition-colors">
+            <ChatCircleDots className="w-6 h-6 text-black/70" weight="regular" />
+            {useUnreadCount() > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#ff5d2e] border-2 border-white rounded-full" />
+            )}
+        </Link>
         <NotificationBell />
         <div className="flex items-center gap-1 px-3 py-2 rounded-lg">
           <Link
@@ -153,6 +189,12 @@ function MobileHeader() {
             <span>Admin</span>
           </Link>
         )}
+        <Link to="/messages" className="relative p-2 -mr-1 hover:bg-[#fff7f5] rounded-lg transition-colors">
+            <ChatCircleDots className="w-6 h-6 text-black/70" weight="regular" />
+            {useUnreadCount() > 0 && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-[#ff5d2e] border-2 border-white rounded-full" />
+            )}
+        </Link>
         <NotificationBell />
         <Link to="/account">
           <div className="w-8 h-8 bg-[#ffe7df] rounded-full flex items-center justify-center">
@@ -167,6 +209,7 @@ function MobileHeader() {
 // Mobile bottom tab bar
 function MobileTabBar() {
   const location = useLocation();
+  const unreadCount = useUnreadCount();
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 safe-area-pb z-20">
@@ -178,12 +221,19 @@ function MobileTabBar() {
             <Link
               key={item.path}
               to={item.path}
-              className="flex flex-col items-center gap-1 px-4 py-2"
+              className="flex flex-col items-center gap-1 px-4 py-2 relative"
             >
-              <item.icon
-                className={`w-6 h-6 ${isActive ? 'text-black' : 'text-black/50'}`}
-                weight={isActive ? 'fill' : 'regular'}
-              />
+              <div className="relative">
+                <item.icon
+                  className={`w-6 h-6 ${isActive ? 'text-black' : 'text-black/50'}`}
+                  weight={isActive ? 'fill' : 'regular'}
+                />
+                {item.label === 'Messages' && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-2 bg-[#ff5d2e] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </div>
               <span
                 className={`text-xs ${
                   isActive ? 'font-semibold text-black' : 'font-medium text-black/50'

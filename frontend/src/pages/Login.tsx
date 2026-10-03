@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +41,8 @@ function EmailInput({
     <div className="w-full">
       <Input
         type="email"
+        name="email"
+        autoComplete="username"
         value={value}
         onChange={onChange}
         placeholder="Email"
@@ -63,6 +65,8 @@ function PasswordInput({
     <div className="w-full relative">
       <Input
         type={showPassword ? "text" : "password"}
+        name="password"
+        autoComplete="current-password"
         value={value}
         onChange={onChange}
         placeholder="Password"
@@ -85,14 +89,14 @@ function PasswordInput({
 }
 
 
-function LoginButton({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+function LoginButton({ busy }: { busy?: boolean }) {
   return (
     <Button
-      onClick={onClick}
-      disabled={disabled}
-      className="w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] disabled:opacity-50 disabled:cursor-not-allowed"
+      type="submit"
+      aria-busy={busy}
+      className={`w-full h-10 md:h-11 lg:h-12 bg-[#FF5D2E] hover:bg-[#FF5D2E]/90 text-white font-semibold text-sm md:text-base rounded-lg shadow-[0px_4px_8px_0px_rgba(255,93,46,0.5)] ${busy ? "opacity-50 pointer-events-none" : ""}`}
     >
-      {disabled ? "Logging in..." : "Log In"}
+      {busy ? "Logging in..." : "Log In"}
     </Button>
   );
 }
@@ -221,6 +225,55 @@ function LanguageSelector() {
   );
 }
 
+async function offerToSavePassword(email: string, password: string) {
+  const PasswordCredential = (window as unknown as {
+    PasswordCredential?: new (data: { id: string; password: string; name?: string }) => Credential;
+  }).PasswordCredential;
+
+  if (PasswordCredential && navigator.credentials?.store) {
+    try {
+      await navigator.credentials.store(
+        new PasswordCredential({ id: email, password, name: email }),
+      );
+    } catch {
+      // The user dismissed the prompt, or this browser will not store it.
+    }
+    return;
+  }
+
+  // Safari records a password when it sees a real form post, which the login
+  // handler cancels so the page can stay in the app.
+  const frame = document.createElement("iframe");
+  frame.name = "servio-password-save";
+  frame.hidden = true;
+  const form = document.createElement("form");
+  form.method = "post";
+  form.action = "/login";
+  form.target = frame.name;
+  form.autoComplete = "on";
+
+  const emailInput = document.createElement("input");
+  emailInput.type = "email";
+  emailInput.name = "email";
+  emailInput.setAttribute("autocomplete", "username");
+  emailInput.value = email;
+
+  const passwordInput = document.createElement("input");
+  passwordInput.type = "password";
+  passwordInput.name = "password";
+  passwordInput.setAttribute("autocomplete", "current-password");
+  passwordInput.value = password;
+
+  form.append(emailInput, passwordInput);
+  document.body.append(frame, form);
+  form.submit();
+  window.setTimeout(() => {
+    form.remove();
+    frame.remove();
+  }, 1500);
+  await new Promise((resolve) => window.setTimeout(resolve, 400));
+}
+
 function LoginForm() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -229,18 +282,30 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const submitting = useRef(false);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (submitting.current) return;
+
+    const data = new FormData(e.currentTarget);
+    const submittedEmail = (email || String(data.get("email") || "")).trim();
+    const submittedPassword = password || String(data.get("password") || "");
+
+    if (!submittedEmail || !submittedPassword) {
       toast.error("Please fill in all fields");
       return;
     }
 
+    submitting.current = true;
     setLoading(true);
     setError("");
 
     try {
-      const { user, session, error } = await supabaseAuth.signIn({ email, password });
+      const { user, session, error } = await supabaseAuth.signIn({
+        email: submittedEmail,
+        password: submittedPassword,
+      });
 
       if (error) {
         throw new Error(error.message);
@@ -250,8 +315,8 @@ function LoginForm() {
         // Map Supabase user to our User interface
         const userData = {
           id: user.id,
-          fullName: user.user_metadata?.full_name || email.split('@')[0],
-          email: user.email || email,
+          fullName: user.user_metadata?.full_name || submittedEmail.split('@')[0],
+          email: user.email || submittedEmail,
           phone: user.user_metadata?.phone || null,
           role: 'USER',
         };
@@ -273,24 +338,24 @@ function LoginForm() {
           }
         } catch {}
 
-        toast.success("Welcome back!");
-
-        if (userRole === 'ADMIN') {
-          // If on EC2 customer port (port 80 or empty with public hostname), redirect to admin portal on port 8081
-          const host = window.location.hostname;
-          const port = window.location.port;
-          const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
-
-          if (isCustomerPortOnEc2) {
-            window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+          toast.success("Welcome back!");
+          toast.success("Welcome back!");
+          await offerToSavePassword(submittedEmail, submittedPassword);
+          
+          if (userRole === 'ADMIN') {
+            const host = window.location.hostname;
+            const port = window.location.port;
+            const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+          
+            if (isCustomerPortOnEc2) {
+              window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+            } else {
+              navigate('/admin', { replace: true });
+            }
           } else {
-            navigate('/admin', { replace: true });
+            const from = (location.state as any)?.from?.pathname;
+            navigate(from && from !== '/login' ? from : '/home', { replace: true });
           }
-        } else {
-          // Regular customer destination
-          const from = (location.state as any)?.from?.pathname;
-          navigate(from && from !== '/login' ? from : '/home', { replace: true });
-        }
       }
     } catch (err: any) {
       console.error("Login error:", err);
@@ -298,6 +363,7 @@ function LoginForm() {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
+      submitting.current = false;
       setLoading(false);
     }
   };
@@ -339,12 +405,19 @@ function LoginForm() {
           </div>
         )}
 
-        <div className="flex flex-col gap-3 md:gap-4 mt-4 md:mt-6 lg:mt-8">
-          <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} />
-          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
-
-        <LoginButton onClick={handleLogin} disabled={loading} />
+        <form
+          method="post"
+          action="/login"
+          autoComplete="on"
+          onSubmit={handleLogin}
+          className="flex flex-col gap-3 md:gap-4 lg:gap-6 mt-4 md:mt-6 lg:mt-8"
+        >
+          <div className="flex flex-col gap-3 md:gap-4">
+            <EmailInput value={email} onChange={(e) => setEmail(e.target.value)} />
+            <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} />
+          </div>
+          <LoginButton busy={loading} />
+        </form>
         <ForgotPassword />
 
         <OrDivider />

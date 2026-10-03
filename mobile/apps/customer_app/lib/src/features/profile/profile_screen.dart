@@ -226,6 +226,137 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  void _showEditNameDialog() {
+    final controller =
+        TextEditingController(text: _fullName == 'User' ? '' : _fullName);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Edit Name',
+          style: GoogleFonts.instrumentSans(fontWeight: FontWeight.w600),
+        ),
+        content: TextField(
+          controller: controller,
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: 'Full Name',
+            labelStyle: GoogleFonts.instrumentSans(),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFFF5D2E)),
+            ),
+          ),
+          style: GoogleFonts.instrumentSans(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.instrumentSans(color: const Color(0xFF4B4B4B)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final name = controller.text.trim();
+              if (name.isEmpty) return;
+              Navigator.of(ctx).pop();
+              try {
+                await Supabase.instance.client.auth.updateUser(
+                  UserAttributes(data: {'full_name': name}),
+                );
+                if (mounted) setState(() {});
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Name updated to $name')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update name: $e')),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Save',
+              style: GoogleFonts.instrumentSans(color: const Color(0xFFFF5D2E)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditPhoneDialog() {
+    final controller =
+        TextEditingController(text: _phone == 'Not set' ? '' : _phone);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          'Edit Phone Number',
+          style: GoogleFonts.instrumentSans(fontWeight: FontWeight.w600),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: InputDecoration(
+            labelText: 'Phone Number',
+            labelStyle: GoogleFonts.instrumentSans(),
+            hintText: '+94 7X XXX XXXX',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFFF5D2E)),
+            ),
+          ),
+          style: GoogleFonts.instrumentSans(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.instrumentSans(color: const Color(0xFF4B4B4B)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              final phone = controller.text.trim();
+              if (phone.isEmpty) return;
+              Navigator.of(ctx).pop();
+              try {
+                await Supabase.instance.client.auth.updateUser(
+                  UserAttributes(data: {'phone': phone}),
+                );
+                if (mounted) setState(() {});
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Phone number updated to $phone')),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update phone: $e')),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Save',
+              style: GoogleFonts.instrumentSans(color: const Color(0xFFFF5D2E)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final userId = _user?.id;
@@ -264,6 +395,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   fullName: _fullName,
                   email: _email,
                   initials: _initials,
+                  onTap: _showEditNameDialog,
                 ),
                 const SizedBox(height: 24),
 
@@ -278,8 +410,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
                 // ── Personal Details ──
                 _PersonalDetailsSection(
+                  fullName: _fullName,
                   phone: _phone,
                   email: _email,
+                  onEditName: _showEditNameDialog,
+                  onEditPhone: _showEditPhoneDialog,
                   onChangeEmail: _showChangeEmailDialog,
                   onResetPassword: _showResetPasswordDialog,
                 ),
@@ -327,75 +462,82 @@ class _ProfileCard extends StatelessWidget {
   final String fullName;
   final String email;
   final String initials;
+  final VoidCallback? onTap;
+
   const _ProfileCard({
     required this.fullName,
     required this.email,
     required this.initials,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFFFFE7DF),
-            ),
-            child: Center(
-              child: Text(
-                initials,
-                style: GoogleFonts.instrumentSans(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFFFF5D2E),
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFFFE7DF), width: 1),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFFFE7DF),
+              ),
+              child: Center(
+                child: Text(
+                  initials,
+                  style: GoogleFonts.instrumentSans(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFFFF5D2E),
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  fullName,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    fullName,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  email,
-                  style: GoogleFonts.instrumentSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF4B4B4B),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: GoogleFonts.instrumentSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF4B4B4B),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Opacity(
-            opacity: 0.5,
-            child: PhosphorIcon(
-              PhosphorIconsBold.caretRight,
-              size: 16,
-              color: Colors.black,
+            const Opacity(
+              opacity: 0.5,
+              child: PhosphorIcon(
+                PhosphorIconsBold.caretRight,
+                size: 16,
+                color: Colors.black,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -836,14 +978,20 @@ class _SectionDivider extends StatelessWidget {
 // ─── PERSONAL DETAILS SECTION ────────────────────────────────────────────────
 
 class _PersonalDetailsSection extends StatelessWidget {
+  final String fullName;
   final String phone;
   final String email;
+  final VoidCallback onEditName;
+  final VoidCallback onEditPhone;
   final VoidCallback onChangeEmail;
   final VoidCallback onResetPassword;
 
   const _PersonalDetailsSection({
+    required this.fullName,
     required this.phone,
     required this.email,
+    required this.onEditName,
+    required this.onEditPhone,
     required this.onChangeEmail,
     required this.onResetPassword,
   });
@@ -863,10 +1011,17 @@ class _PersonalDetailsSection extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         _InfoRow(
+          icon: PhosphorIconsRegular.user,
+          label: 'Full Name',
+          value: fullName,
+          onTap: onEditName,
+        ),
+        const SizedBox(height: 4),
+        _InfoRow(
           icon: PhosphorIconsRegular.phone,
           label: 'Phone',
           value: phone,
-          onTap: () {},
+          onTap: onEditPhone,
         ),
         const SizedBox(height: 4),
         _InfoRow(

@@ -104,7 +104,8 @@ public class TransactionalEventIsolationAdversarialTest {
                 jdbcTemplate,
                 entityManager,
                 eventPublisher,
-                applicationEventPublisher
+                applicationEventPublisher,
+                paymentRepository
         );
 
         adminAppointmentService = new AdminAppointmentService(

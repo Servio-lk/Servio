@@ -9,6 +9,30 @@ import { apiService } from '@/services/api';
 import type { AppointmentDto } from '@/services/api';
 import { toast } from 'sonner';
 
+function formatPaymentMethod(method?: string | null) {
+  if (!method) return 'Cash';
+  const value = method.toLowerCase();
+  if (value === 'cash') return 'Cash';
+  if (value === 'payhere' || value === 'card' || value.includes('card')) return 'Card';
+  return method.replaceAll('_', ' ');
+}
+
+function appointmentEnd(start: Date, notes?: string | null) {
+  const match = notes?.match(/(\d{1,2}):(\d{2})\s*(AM|PM)\s*-\s*(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+  if (!match) {
+    return new Date(start.getTime() + 30 * 60 * 1000);
+  }
+
+  let hour = Number(match[4]) % 12;
+  if (match[6].toUpperCase() === 'PM') hour += 12;
+  const end = new Date(start);
+  end.setHours(hour, Number(match[5]), 0, 0);
+  if (end.getTime() <= start.getTime()) {
+    end.setDate(end.getDate() + 1);
+  }
+  return end;
+}
+
 export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -18,6 +42,7 @@ export default function ConfirmationPage() {
     originalTotal?: number;
     discount?: number;
     offerName?: string | null;
+    paymentMethod?: string | null;
   } | null;
   
   const [appointment, setAppointment] = useState<AppointmentDto | null>(null);
@@ -76,7 +101,7 @@ export default function ConfirmationPage() {
       return;
     }
 
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const end = appointmentEnd(start, appointment.notes);
     const toGoogleDate = (date: Date) =>
       date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 
@@ -184,7 +209,7 @@ export default function ConfirmationPage() {
     time: time,
     vehicle: vehicleDisplay,
     phone: user?.phone || appointment.userEmail || 'N/A',
-    paymentMethod: 'Cash',
+    paymentMethod: formatPaymentMethod(appointment.paymentMethod || breakdown?.paymentMethod),
     total: appointment.estimatedCost || 0,
     status: appointment.status,
     location: appointment.location || 'Service Center',

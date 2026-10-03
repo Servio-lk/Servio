@@ -53,8 +53,9 @@ class ServicesRepository {
     }
   }
 
-  /// Fetches active promotional offers via GET /api/services/offers.
+  /// Fetches active promotional offers via GET /api/services/offers or direct Supabase query.
   Future<List<OfferModel>> getActiveOffers() async {
+    // 1. Try primary REST endpoint /services/offers
     try {
       final response = await _apiClient.get<List<OfferModel>>(
         '/services/offers',
@@ -68,11 +69,61 @@ class ServicesRepository {
         },
       );
 
-      return response.data ?? <OfferModel>[];
+      final offers = response.data ?? <OfferModel>[];
+      if (offers.isNotEmpty) {
+        return offers;
+      }
     } catch (e) {
-      debugPrint('Error fetching active offers from backend: $e');
-      return <OfferModel>[];
+      debugPrint('Error fetching active offers from /services/offers: $e');
     }
+
+    // 2. Try alternate REST endpoint /offers
+    try {
+      final response = await _apiClient.get<List<OfferModel>>(
+        '/offers',
+        fromJson: (data) {
+          if (data is List) {
+            return data
+                .map((e) => OfferModel.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+          return <OfferModel>[];
+        },
+      );
+
+      final offers = response.data ?? <OfferModel>[];
+      if (offers.isNotEmpty) {
+        return offers;
+      }
+    } catch (e) {
+      debugPrint('Error fetching active offers from /offers: $e');
+    }
+
+    // 3. Fallback directly to Supabase table 'offers'
+    try {
+      final supaClient = SupabaseService().safeClient;
+      if (supaClient != null) {
+        final rows = await supaClient
+            .from('offers')
+            .select()
+            .or('is_active.is.null,is_active.eq.true')
+            .order('created_at', ascending: false);
+
+        if (rows.isNotEmpty) {
+          final now = DateTime.now();
+          final list = rows
+              .map((e) => OfferModel.fromJson(e))
+              .where((o) => o.isActive && (o.validUntil == null || o.validUntil!.isAfter(now)))
+              .toList();
+          debugPrint('🟢 Loaded ${list.length} offers directly from Supabase');
+          return list;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching offers from Supabase fallback: $e');
+    }
+
+    return <OfferModel>[];
   }
 
   /// Searches services by query string via GET /api/services/search?q=...
