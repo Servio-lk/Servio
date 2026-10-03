@@ -34,7 +34,6 @@ The system is built as an **authoritative modular monolith** backend with unifie
 │  │  • admin         (Mechanics, service bays, walk-in customers)         │  │
 │  │  • catalog       (Service packages, tiered pricing, promotional items)│  │
 │  │  • notification  (Decoupled @Async transactional event listeners)     │  │
-│  │  • agent         (Google Gemini AI assistant with persistent history) │  │
 │  │  • common        (AOP audit logging, Bucket4j rate limiting, Actuator)│  │
 │  └──────────────────────────────────┬────────────────────────────────────┘  │
 │                                     │                                       │
@@ -131,7 +130,6 @@ Open `.env` and configure your database and third-party service credentials:
 - **Supabase**: `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_JWT_SECRET`
 - **PayHere**: `PAYHERE_MERCHANT_ID`, `PAYHERE_MERCHANT_SECRET`, `PAYHERE_SANDBOX`
 - **Cloudinary**: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-- **Gemini AI**: `GEMINI_API_KEY`, `GEMINI_MODEL`
 
 ---
 

@@ -24,7 +24,6 @@ import ConfirmationPage from './pages/ConfirmationPage'
 import AppointmentStatusPage from './pages/AppointmentStatusPage'
 import AccountPage from './pages/AccountPage'
 import AccountSettingsPage from './pages/AccountSettingsPage'
-import AssistantPage from './pages/AssistantPage'
 
 // Lazy-loaded Admin Layout & Pages
 const AdminAppLayout = lazy(() => import('@/components/layouts/AdminAppLayout'))
@@ -127,14 +126,6 @@ function App() {
             element={
               <AuthGuard>
                 <MessagesPage />
-              </AuthGuard>
-            }
-          />
-          <Route
-            path="/assistant"
-            element={
-              <AuthGuard>
-                <AssistantPage />
               </AuthGuard>
             }
           />

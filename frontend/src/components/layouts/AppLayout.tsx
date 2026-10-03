@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, ShieldCheck } from '@phosphor-icons/react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiService } from '@/services/api';
@@ -38,10 +38,9 @@ const desktopNavItems = [
   { icon: List, label: 'Services', path: '/services' },
   { icon: ClipboardText, label: 'Activity', path: '/activity' },
   { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
-  { icon: Robot, label: 'AI Assistant', path: '/assistant' },
 ];
 
-// Navigation items for mobile bottom tab bar (clean 4 tabs; AI Assistant is a FAB on Messages screen)
+// Navigation items for mobile bottom tab bar
 const mobileNavItems = [
   { icon: House, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
