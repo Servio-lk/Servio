@@ -19,6 +19,20 @@ export interface SignInData {
   password: string
 }
 
+function getAuthRedirectUrl(path: string): string {
+  const envUrl = (import.meta.env.VITE_SITE_URL || import.meta.env.VITE_FRONTEND_URL || '').trim();
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  let baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  if (envUrl && (!envUrl.includes('localhost') || isLocalHost)) {
+    baseUrl = envUrl;
+  }
+
+  const cleanBase = baseUrl.replace(/\/+$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  return `${cleanBase}${cleanPath}`;
+}
+
 class SupabaseAuthService {
   // Get current user
   async getCurrentUser(): Promise<User | null> {
@@ -100,12 +114,13 @@ class SupabaseAuthService {
     }
   }
 
+
   // Sign in with Google
   async signInWithGoogle(): Promise<{ error: AuthError | null }> {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthRedirectUrl('/auth/callback'),
       },
     })
     return { error }
@@ -116,7 +131,8 @@ class SupabaseAuthService {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: getAuthRedirectUrl('/auth/callback'),
+        scopes: 'email,public_profile',
       },
     })
     return { error }
@@ -131,7 +147,7 @@ class SupabaseAuthService {
   // Reset password
   async resetPassword(email: string): Promise<{ error: AuthError | null }> {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getAuthRedirectUrl('/reset-password'),
     })
     return { error }
   }

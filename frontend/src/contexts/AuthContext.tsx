@@ -28,6 +28,8 @@ const getApiBaseUrl = () => {
   return `${window.location.origin}/api`;
 };
 
+let inFlightExchangePromise: Promise<any> | null = null;
+
 async function exchangeSupabaseToken(payload: {
   accessToken: string;
   email: string;
@@ -35,29 +37,39 @@ async function exchangeSupabaseToken(payload: {
   phone: string;
   role: string;
 }) {
-  const apiBase = getApiBaseUrl();
-  try {
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(`${apiBase}/auth/supabase-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    window.clearTimeout(timeoutId);
-
-    const data = await response.json();
-    if (data?.success && data?.data?.token) {
-      return data;
-    }
-    return null;
-  } catch {
-    return null;
+  if (inFlightExchangePromise) {
+    return inFlightExchangePromise;
   }
+
+  const apiBase = getApiBaseUrl();
+  inFlightExchangePromise = (async () => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(`${apiBase}/auth/supabase-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      window.clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (data?.success && data?.data?.token) {
+        return data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  })().finally(() => {
+    inFlightExchangePromise = null;
+  });
+
+  return inFlightExchangePromise;
 }
 
 interface User {
@@ -84,11 +96,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function mapSupabaseUser(supabaseUser: SupabaseUser): User {
+  const meta = supabaseUser.user_metadata || {};
+  const email = supabaseUser.email ||
+                meta.email ||
+                `${supabaseUser.id}@oauth.servio.local`;
   return {
     id: supabaseUser.id,
-    fullName: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
-    email: supabaseUser.email || '',
-    phone: supabaseUser.user_metadata?.phone || null,
+    fullName: meta.full_name || meta.name || supabaseUser.email?.split('@')[0] || 'User',
+    email,
+    phone: meta.phone || null,
     role: 'USER', // The authoritative role is fetched from the backend via syncBackendToken
   };
 }
@@ -145,15 +161,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshBackendToken = useCallback(async (): Promise<boolean> => {
     try {
-      const { session: freshSession } = await supabaseAuth.refreshSession();
-      if (!freshSession?.access_token) return false;
+      let currentSession = await supabaseAuth.getCurrentSession();
+      if (!currentSession?.access_token) {
+        const { session: freshSession } = await supabaseAuth.refreshSession();
+        currentSession = freshSession;
+      }
+      if (!currentSession?.access_token) return false;
 
       const data = await exchangeSupabaseToken({
-        accessToken: freshSession.access_token,
-        email: freshSession.user.email || '',
-        fullName: freshSession.user.user_metadata?.full_name || '',
-        phone: freshSession.user.user_metadata?.phone || '',
-        role: freshSession.user.user_metadata?.role || 'USER',
+        accessToken: currentSession.access_token,
+        email: currentSession.user.email || '',
+        fullName: currentSession.user.user_metadata?.full_name || '',
+        phone: currentSession.user.user_metadata?.phone || '',
+        role: currentSession.user.user_metadata?.role || 'USER',
       });
 
       if (data?.success) {
@@ -162,6 +182,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         if (data.data?.user) {
           localStorage.setItem('user', JSON.stringify(data.data.user));
+          const backendRole = data.data.user.role?.toUpperCase();
+          const backendId = data.data.user.id ? String(data.data.user.id) : undefined;
+          setUser(prev => {
+            if (!prev) return prev;
+            const nextUser = {
+              ...prev,
+              id: backendId || prev.id,
+              role: backendRole || prev.role,
+            };
+            userRef.current = nextUser;
+            return nextUser;
+          });
         }
         setIsBackendTokenReady(true);
         console.log('[Auth] Backend token refreshed successfully');
@@ -255,12 +287,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const accessToken = session.access_token;
       if (attemptedTokenExchange.current.has(accessToken)) {
-        setIsBackendTokenReady(true);
         return;
       }
 
       attemptedTokenExchange.current.add(accessToken);
-      setIsBackendTokenReady(true);
 
       try {
         console.log('[Auth] Exchanging Supabase token for backend token...');
@@ -279,20 +309,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (data.data?.user) {
             localStorage.setItem('user', JSON.stringify(data.data.user));
-            // Update the user role from backend response (authoritative source —
-            // the backend checks profiles.is_admin / profiles.role in the DB)
             const backendRole = data.data.user.role?.toUpperCase();
-            if (backendRole && backendRole !== user.role) {
-              setUser(prev => {
-                if (!prev) return prev;
-                const nextUser = { ...prev, role: backendRole };
-                userRef.current = nextUser;
-                return nextUser;
-              });
-            }
+            const backendId = data.data.user.id ? String(data.data.user.id) : undefined;
+            setUser(prev => {
+              if (!prev) return prev;
+              const nextUser = {
+                ...prev,
+                id: backendId || prev.id,
+                role: backendRole || prev.role,
+              };
+              userRef.current = nextUser;
+              return nextUser;
+            });
           }
+          setIsBackendTokenReady(true);
           console.log('[Auth] Backend token stored successfully');
         } else {
+          setIsBackendTokenReady(false);
           console.warn('[Auth] supabase-login did not return a token');
         }
       } catch (error) {
@@ -304,17 +337,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     syncBackendToken();
   }, [session, user, isBackendTokenReady]);
 
-  const login = (userData: User, userSession: Session) => {
+  const login = useCallback((userData: User, userSession: Session) => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     userRef.current = userData;
     sessionRef.current = userSession;
     setUser(userData);
     setSession(userSession);
     setSupabaseUser(userSession.user);
     setIsBackendTokenReady(false);
-    attemptedTokenExchange.current.clear();
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabaseAuth.signOut();
     try {
       await fetch(`${getApiBaseUrl()}/auth/logout`, { method: 'POST', credentials: 'include' });
@@ -330,7 +364,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('user');
     setIsBackendTokenReady(false);
     attemptedTokenExchange.current.clear();
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

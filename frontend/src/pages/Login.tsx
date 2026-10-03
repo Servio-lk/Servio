@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { supabaseAuth } from "@/services/supabaseAuth";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "/ServioLogo.png";
-import GarageImage from "@/assets/images/Garage image.png";
+import { AuthOnboardingCarousel } from "@/components/auth/AuthOnboardingCarousel";
 
 
 function LoginLogo() {
@@ -338,19 +338,15 @@ export default function Login() {
   return (
     <div className="flex h-screen w-full bg-white overflow-hidden fixed inset-0">
       {/* Left side - Form */}
-      <div className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
+      <div className="flex-1 flex  items-center justify-center p-4 sm:p-6 md:p-8 overflow-hidden">
         <div className="w-full h-full flex items-center justify-center py-4 ">
           <LoginForm />
         </div>
       </div>
 
-      {/* Right side - Image */}
+      {/* Right side - Onboarding Carousel */}
       <div className="hidden lg:block w-[500px] xl:w-[690px] h-full relative">
-        <img
-          src={GarageImage}
-          alt="Garage"
-          className="w-full h-full object-cover"
-        />
+        <AuthOnboardingCarousel />
       </div>
     </div>
   );
