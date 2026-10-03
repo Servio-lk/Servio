@@ -238,6 +238,74 @@ public class AppointmentService {
         return dto;
     }
 
+    /**
+     * Scans an appointment QR code presented by a customer, validates it, and marks the service IN_PROGRESS.
+     * Supports:
+     * - Web URL: "http(s)://.../appointment/{id}"
+     * - Mobile App: "SERVIO-APT-{id}"
+     * - Plain ID: "{id}"
+     */
+    @Transactional
+    public AppointmentDto checkInWithQr(String rawQr, Authentication authentication) {
+        Long appointmentId = parseAppointmentId(rawQr);
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with ID: " + appointmentId));
+
+        if ("COMPLETED".equalsIgnoreCase(appointment.getStatus())) {
+            throw new ConflictException("Appointment #" + appointmentId + " is already completed.");
+        }
+        if ("CANCELLED".equalsIgnoreCase(appointment.getStatus())) {
+            throw new ConflictException("Appointment #" + appointmentId + " was cancelled.");
+        }
+        if ("IN_PROGRESS".equalsIgnoreCase(appointment.getStatus())) {
+            // Service already started - return current state cleanly
+            return convertToDto(appointment);
+        }
+
+        // Transition to IN_PROGRESS
+        appointment.setStatus("IN_PROGRESS");
+        appointment = appointmentRepository.save(appointment);
+        AppointmentDto dto = convertToDto(appointment);
+        eventPublisher.publish("UPDATED", dto);
+
+        if (appointment.getUser() != null) {
+            String statusMsg = "Your " + appointment.getServiceType() + " service has started.";
+            applicationEventPublisher.publishEvent(new com.servio.common.event.RepairStatusChangedEvent(
+                this,
+                appointment.getId(),
+                appointment.getUser().getId(),
+                "IN_PROGRESS",
+                statusMsg
+            ));
+        }
+
+        return dto;
+    }
+
+    public static Long parseAppointmentId(String rawQr) {
+        if (rawQr == null || rawQr.isBlank()) {
+            throw new IllegalArgumentException("QR payload is empty");
+        }
+        String trimmed = rawQr.trim();
+        // Match web URL: e.g. "https://servio.lk/appointment/42" or "http://localhost:5173/appointment/42"
+        java.util.regex.Matcher urlMatcher = java.util.regex.Pattern.compile(".*/appointment/(\\d+).*").matcher(trimmed);
+        if (urlMatcher.matches()) {
+            return Long.parseLong(urlMatcher.group(1));
+        }
+        // Match Flutter Customer App prefix: "SERVIO-APT-42"
+        if (trimmed.toUpperCase().startsWith("SERVIO-APT-")) {
+            String idPart = trimmed.substring("SERVIO-APT-".length()).trim();
+            if (idPart.matches("^\\d+$")) {
+                return Long.parseLong(idPart);
+            }
+        }
+        // Match plain numeric ID: "42"
+        if (trimmed.matches("^\\d+$")) {
+            return Long.parseLong(trimmed);
+        }
+        throw new IllegalArgumentException("Unrecognized appointment QR format: " + rawQr);
+    }
+
     @Transactional
     public void deleteAppointment(Long id) {
         appointmentRepository.deleteById(id);

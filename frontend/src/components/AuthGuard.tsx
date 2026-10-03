@@ -30,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 }
 
 export function GuestGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -45,6 +45,16 @@ export function GuestGuard({ children }: AuthGuardProps) {
   }
 
   if (isAuthenticated) {
+    if (isAdmin) {
+      const host = window.location.hostname;
+      const port = window.location.port;
+      const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+      if (isCustomerPortOnEc2) {
+        window.location.href = `${window.location.protocol}//${host}:8081/admin`;
+        return null;
+      }
+      return <Navigate to="/admin" replace />;
+    }
     const from = location.state?.from?.pathname || '/home';
     return <Navigate to={from} replace />;
   }

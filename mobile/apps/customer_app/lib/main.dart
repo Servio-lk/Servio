@@ -23,5 +23,8 @@ Future<void> main() async {
     ),
   );
 
+  // Initialize Push Notifications (handles FCM tokens & local banners defensively)
+  await PushNotificationService.instance.initialize();
+
   runApp(const ProviderScope(child: ServioApp()));
 }

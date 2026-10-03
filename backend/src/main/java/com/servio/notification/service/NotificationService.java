@@ -27,20 +27,47 @@ import com.servio.common.event.OfferPublishedEvent;
 import com.servio.common.event.PaymentCompletedEvent;
 import com.servio.common.event.RepairStatusChangedEvent;
 
+import com.servio.notification.dto.DeviceTokenRequest;
+import com.servio.notification.entity.DeviceToken;
+import com.servio.notification.repository.DeviceTokenRepository;
+
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    @Lazy
     private final AppointmentEventPublisher eventPublisher;
     private final UserNotificationPreferenceRepository preferenceRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
+
+    @Autowired
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            @Lazy AppointmentEventPublisher eventPublisher,
+            UserNotificationPreferenceRepository preferenceRepository,
+            DeviceTokenRepository deviceTokenRepository
+    ) {
+        this.notificationRepository = notificationRepository;
+        this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
+        this.preferenceRepository = preferenceRepository;
+        this.deviceTokenRepository = deviceTokenRepository;
+    }
+
+    public NotificationService(
+            NotificationRepository notificationRepository,
+            UserRepository userRepository,
+            AppointmentEventPublisher eventPublisher,
+            UserNotificationPreferenceRepository preferenceRepository
+    ) {
+        this(notificationRepository, userRepository, eventPublisher, preferenceRepository, null);
+    }
 
     @Autowired(required = false)
     private List<NotificationChannel> extraChannels = List.of();
@@ -315,5 +342,40 @@ public class NotificationService {
         return preferenceRepository.findById(userId)
                 .map(prefs -> !Boolean.FALSE.equals(prefs.getPushNotifications()))
                 .orElse(true);
+    }
+
+    @Transactional
+    public void registerDeviceToken(UUID userId, DeviceTokenRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        deviceTokenRepository.findByToken(request.getToken())
+                .ifPresentOrElse(
+                        existing -> {
+                            existing.setUser(user);
+                            if (request.getDeviceType() != null) {
+                                existing.setDeviceType(request.getDeviceType());
+                            }
+                            deviceTokenRepository.save(existing);
+                            log.info("Updated FCM device token for user: {}", userId);
+                        },
+                        () -> {
+                            DeviceToken deviceToken = DeviceToken.builder()
+                                    .user(user)
+                                    .token(request.getToken())
+                                    .deviceType(request.getDeviceType() != null ? request.getDeviceType() : "ANDROID")
+                                    .build();
+                            deviceTokenRepository.save(deviceToken);
+                            log.info("Registered new FCM device token for user: {}", userId);
+                        }
+                );
+    }
+
+    @Transactional
+    public void unregisterDeviceToken(String token) {
+        if (token != null && !token.trim().isEmpty()) {
+            deviceTokenRepository.deleteByToken(token.trim());
+            log.info("Unregistered FCM device token");
+        }
     }
 }

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { Link, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { Navigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface AdminGuardProps {
@@ -35,12 +35,12 @@ export function AdminGuard({ children }: AdminGuardProps) {
         </div>
         <h1 className="text-2xl font-bold text-gray-900">Access Denied</h1>
         <p className="text-gray-600 max-w-md">You do not have administrative privileges to access the Servio Admin Portal.</p>
-        <Link
-          to="/home"
+        <a
+          href={window.location.port === '8081' ? `${window.location.protocol}//${window.location.hostname}/home` : '/home'}
           className="mt-2 inline-flex items-center justify-center px-5 py-2.5 bg-[#ff5d2e] hover:bg-[#e04d22] text-white font-medium rounded-lg transition-colors shadow-sm"
         >
           Return to Customer Portal
-        </Link>
+        </a>
       </div>
     );
   }

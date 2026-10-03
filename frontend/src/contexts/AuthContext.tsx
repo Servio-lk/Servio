@@ -162,9 +162,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySessionState = useCallback((nextSession: Session, forceUserUpdate = false) => {
     const nextUser = mapSupabaseUser(nextSession.user);
+
+    // Retrieve cached backend user information (authoritative role and id)
+    let savedRole: string | undefined = undefined;
+    let savedId: string | undefined = undefined;
+
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (
+          parsed.supabaseId === nextSession.user.id ||
+          (parsed.email && parsed.email.toLowerCase() === nextSession.user.email?.toLowerCase()) ||
+          String(parsed.id) === String(userRef.current?.id)
+        ) {
+          savedRole = parsed.role;
+          savedId = parsed.id ? String(parsed.id) : undefined;
+        }
+      }
+    } catch {}
+
     const current = userRef.current;
-    if (current?.id === nextUser.id && current.role && current.role.toUpperCase() === 'ADMIN') {
-      nextUser.role = current.role;
+    if (current && (
+      current.id === nextUser.id ||
+      (current.email && current.email.toLowerCase() === nextUser.email?.toLowerCase())
+    )) {
+      if (current.role) savedRole = current.role;
+      if (current.id) savedId = current.id;
+    }
+
+    if (savedRole) {
+      nextUser.role = savedRole.toUpperCase();
+    }
+    if (savedId) {
+      nextUser.id = savedId;
     }
 
     sessionRef.current = nextSession;
@@ -252,6 +283,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentSession = await supabaseAuth.getCurrentSession();
         if (currentSession) {
           applySessionState(currentSession);
+          const token = localStorage.getItem('token');
+          const storedUser = localStorage.getItem('user');
+          if (token && storedUser) {
+            setIsBackendTokenReady(true);
+            backendTokenReadyRef.current = true;
+          }
         }
       } catch (error) {
         console.error('Error initializing auth:', error);

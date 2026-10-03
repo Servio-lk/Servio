@@ -46,6 +46,7 @@ dependencies:
   gotrue: ^2.18.0
   phosphoricons_flutter: ^1.0.0
   qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.4
   http: ^1.2.0
   image_picker: ^1.1.2
 
