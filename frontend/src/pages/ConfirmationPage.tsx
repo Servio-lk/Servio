@@ -67,6 +67,34 @@ export default function ConfirmationPage() {
     }
   };
 
+  const addToCalendar = () => {
+    if (!appointment) return;
+
+    const start = new Date(appointment.appointmentDate);
+    if (Number.isNaN(start.getTime())) {
+      toast.error('Could not add this appointment to your calendar');
+      return;
+    }
+
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const toGoogleDate = (date: Date) =>
+      date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+    const params = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `Servio — ${appointment.serviceType}`,
+      dates: `${toGoogleDate(start)}/${toGoogleDate(end)}`,
+      details: `Appointment #APT-${appointment.id.toString().padStart(6, '0')}`,
+      location: appointment.location || 'Service Center',
+    });
+
+    window.open(
+      `https://calendar.google.com/calendar/render?${params.toString()}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+  };
+
   useEffect(() => {
     const fetchAppointment = async () => {
       if (!id) {
@@ -318,7 +346,11 @@ export default function ConfirmationPage() {
                     Message your service team
                   </Link>
                 )}
-                <button className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black hover:bg-[#fff7f5] transition-colors">
+                <button
+                  type="button"
+                  onClick={addToCalendar}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black hover:bg-[#fff7f5] transition-colors"
+                >
                   <Calendar className="w-5 h-5" />
                   Add to Calendar
                 </button>
@@ -351,7 +383,14 @@ export default function ConfirmationPage() {
               Message your service team
             </Link>
           )}
-
+          <button
+            type="button"
+            onClick={addToCalendar}
+            className="w-full flex items-center justify-center gap-2 py-3 bg-white border border-[#ffe7df] rounded-xl font-medium text-black"
+          >
+            <Calendar className="w-5 h-5" />
+            Add to Calendar
+          </button>
           <Link
             to="/activity"
             className="w-full flex items-center justify-center gap-2 py-3 bg-[#ff5d2e] text-white rounded-xl font-medium shadow-[0px_4px_8px_0px_rgba(255,93,46,0.3)]"
