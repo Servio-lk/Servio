@@ -176,6 +176,7 @@ public class ServiceService {
         response.setValidUntil(offer.getValidUntil());
         response.setPromoCode(offer.getPromoCode());
         response.setCategory(offer.getCategory());
+        response.setApplicableService(offer.getApplicableService());
         response.setValidFrom(offer.getValidFrom());
         response.setExpired(offer.getValidUntil() != null && offer.getValidUntil().isBefore(LocalDateTime.now()));
         return response;
