@@ -286,6 +286,7 @@ export default function BookingPage() {
             originalTotal: subtotal,
             discount: orderDetails.discount,
             offerName: appliedOffer?.title ?? null,
+            paymentMethod,
           },
         });
       } else {
@@ -319,6 +320,7 @@ export default function BookingPage() {
               originalTotal: subtotal,
               discount: orderDetails.discount,
               offerName: appliedOffer?.title ?? null,
+              paymentMethod,
             },
           });
         };
