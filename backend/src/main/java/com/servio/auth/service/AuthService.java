@@ -250,37 +250,57 @@ public class AuthService {
         final Role finalRole = resolvedRole;
 
         // Ensure a corresponding backend user exists (appointments require users.id)
-        final String finalTokenEmail = tokenEmail;
-        User backendUser = userRepository.findByEmail(finalTokenEmail)
-                .map(existing -> {
-                    boolean changed = false;
-                    if (existing.getRole() != finalRole) {
-                        existing.setRole(finalRole);
-                        changed = true;
-                    }
-                    if (request.getPhone() != null && !request.getPhone().isBlank()
-                            && (existing.getPhone() == null || existing.getPhone().isBlank())) {
-                        existing.setPhone(request.getPhone().trim());
-                        changed = true;
-                    }
-                    if (finalDisplayName != null && !finalDisplayName.isBlank()
-                            && (existing.getFullName() == null || existing.getFullName().isBlank())) {
-                        existing.setFullName(finalDisplayName.trim());
-                        changed = true;
-                    }
-                    if (changed) {
-                        User saved = userRepository.save(existing);
-                        return saved != null ? saved : existing;
-                    }
-                    return existing;
-                })
-                .orElseGet(() -> userRepository.save(User.builder()
-                        .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
-                        .email(finalTokenEmail)
-                        .phone(request.getPhone())
-                        .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                        .role(finalRole)
-                        .build()));
+        final String normalizedEmail = (tokenEmail != null) ? tokenEmail.trim().toLowerCase() : "";
+        final String finalTokenEmail = normalizedEmail.isEmpty() ? tokenEmail : normalizedEmail;
+        User backendUser;
+        try {
+            backendUser = userRepository.findByEmailIgnoreCase(finalTokenEmail)
+                    .map(existing -> {
+                        boolean changed = false;
+                        if (existing.getRole() != finalRole) {
+                            existing.setRole(finalRole);
+                            changed = true;
+                        }
+                        if (request.getPhone() != null && !request.getPhone().isBlank()
+                                && (existing.getPhone() == null || existing.getPhone().isBlank())) {
+                            existing.setPhone(request.getPhone().trim());
+                            changed = true;
+                        }
+                        if (finalDisplayName != null && !finalDisplayName.isBlank()
+                                && (existing.getFullName() == null || existing.getFullName().isBlank())) {
+                            existing.setFullName(finalDisplayName.trim());
+                            changed = true;
+                        }
+                        if (changed) {
+                            try {
+                                User saved = userRepository.save(existing);
+                                return saved != null ? saved : existing;
+                            } catch (Exception e) {
+                                return existing;
+                            }
+                        }
+                        return existing;
+                    })
+                    .orElseGet(() -> {
+                        try {
+                            return userRepository.save(User.builder()
+                                    .fullName(finalDisplayName != null && !finalDisplayName.isBlank() ? finalDisplayName : "User")
+                                    .email(finalTokenEmail)
+                                    .phone(request.getPhone())
+                                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                                    .role(finalRole)
+                                    .build());
+                        } catch (Exception e) {
+                            return userRepository.findByEmailIgnoreCase(finalTokenEmail)
+                                    .orElseThrow(() -> new RuntimeException("Could not create backend user: " + e.getMessage()));
+                        }
+                    });
+        } catch (Exception ex) {
+            backendUser = userRepository.findByEmailIgnoreCase(finalTokenEmail).orElse(null);
+            if (backendUser == null) {
+                throw new RuntimeException("Failed to find or create backend user: " + ex.getMessage(), ex);
+            }
+        }
 
         // If user is a mechanic, ensure corresponding Mechanic entity exists
         if (finalRole == Role.MECHANIC) {

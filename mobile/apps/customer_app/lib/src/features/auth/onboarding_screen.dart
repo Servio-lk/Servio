@@ -1,9 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show User;
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthChangeEvent, AuthState, User;
 import 'package:shared_core/shared_core.dart';
 
 // ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   // ── Page state ──────────────────────────────────────────────────────────
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -47,8 +48,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
+  StreamSubscription<AuthState>? _authSubscription;
   bool _isPasswordVisible = false;
   bool _isLoading = false;
+  bool _isAwaitingOAuth = false;
 
   // ── Constants ───────────────────────────────────────────────────────────
   static const _primaryColor = Color(0xFFFF5D2E);
@@ -87,6 +90,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
@@ -108,15 +112,54 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             curve: Curves.easeOutCubic,
           ),
         );
+
+    _authSubscription = _supabaseService.authStateChanges.listen((data) async {
+      final session = data.session;
+      if (data.event == AuthChangeEvent.signedIn && session?.user != null) {
+        if (mounted) {
+          setState(() {
+            _isLoading = true;
+            _isAwaitingOAuth = false;
+          });
+          await _routeSignedInUser(session!.user);
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
     _pageController.dispose();
     _signInController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isAwaitingOAuth) {
+      Future.delayed(const Duration(milliseconds: 800), () async {
+        if (!mounted) return;
+        final user = _supabaseService.currentUser;
+        if (user != null) {
+          setState(() {
+            _isLoading = true;
+            _isAwaitingOAuth = false;
+          });
+          await _routeSignedInUser(user);
+        } else {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+              _isAwaitingOAuth = false;
+            });
+          }
+        }
+      });
+    }
   }
 
   // ======================================================================
@@ -199,46 +242,55 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _handleGoogleSignIn() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isAwaitingOAuth = true;
+    });
     try {
       final success = await _supabaseService.signInWithGoogle();
-      if (success && mounted) {
-        _showSnackBar('Signed in with Google!', isError: false);
-        final user = _supabaseService.currentUser;
-        if (user != null) {
-          await _routeSignedInUser(user);
-        } else {
-          context.go('/home');
-        }
-      } else if (mounted) {
-        _showSnackBar('Google sign-in cancelled or failed.');
+      if (!success && mounted) {
+        setState(() {
+          _isLoading = false;
+          _isAwaitingOAuth = false;
+        });
+        _showSnackBar('Could not launch Google sign-in.');
       }
+      // Note: If success is true, the system browser opened.
+      // We do NOT navigate to /home here! The authStateChanges stream or
+      // resumed lifecycle hook will handle the incoming session safely.
     } catch (e) {
-      if (mounted) _showSnackBar('Failed to sign in with Google.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isAwaitingOAuth = false;
+        });
+        _showSnackBar('Failed to sign in with Google: $e');
+      }
     }
   }
 
   Future<void> _handleFacebookSignIn() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _isAwaitingOAuth = true;
+    });
     try {
       final success = await _supabaseService.signInWithFacebook();
-      if (success && mounted) {
-        _showSnackBar('Signed in with Facebook!', isError: false);
-        final user = _supabaseService.currentUser;
-        if (user != null) {
-          await _routeSignedInUser(user);
-        } else {
-          context.go('/home');
-        }
-      } else if (mounted) {
-        _showSnackBar('Facebook sign-in cancelled or failed.');
+      if (!success && mounted) {
+        setState(() {
+          _isLoading = false;
+          _isAwaitingOAuth = false;
+        });
+        _showSnackBar('Could not launch Facebook sign-in.');
       }
     } catch (e) {
-      if (mounted) _showSnackBar('Failed to sign in with Facebook.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isAwaitingOAuth = false;
+        });
+        _showSnackBar('Failed to sign in with Facebook: $e');
+      }
     }
   }
 
@@ -262,10 +314,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _routeSignedInUser(User user) async {
+    try {
+      await _supabaseService.syncWithBackend();
+    } catch (e) {
+      debugPrint('Backend sync error in _routeSignedInUser: $e');
+    }
+
     final profile = await _supabaseService.getUserProfile(user.id);
     final role = await _supabaseService.resolveUserRole(user, profile: profile);
 
     if (!mounted) return;
+
+    _showSnackBar('Welcome back!', isError: false);
+
+    // Sync device token for push notifications in background
+    PushNotificationService.instance.syncToken();
 
     if (role == 'MECHANIC') {
       context.go('/worker');

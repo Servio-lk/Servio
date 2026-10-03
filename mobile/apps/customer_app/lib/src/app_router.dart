@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,9 +14,25 @@ import 'shared/main_navigation_screen.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    onException: (context, state, router) {
+      final uri = state.uri;
+      final uriStr = uri.toString();
+      if (uriStr.contains('login-callback') ||
+          uri.scheme == 'io.supabase.servio' ||
+          uri.scheme == 'servio') {
+        // Intercepted and handled by supabase_flutter deep link handler.
+        return;
+      }
+      debugPrint('GoRouter unhandled exception for ${state.uri}: ${state.error}');
+      router.go('/splash');
+    },
     routes: [
       GoRoute(
         path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/login-callback',
         builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
