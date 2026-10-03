@@ -144,10 +144,10 @@ export default function AccountSettingsPage() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto px-4 py-6 flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-black">Account settings</h1>
+      <div className="max-w-2xl text-left px-4 py-6 flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold text-black text-left">Account settings</h1>
         {loading ? (
-          <p className="text-black/50">Loading settings...</p>
+          <p className="text-black/50 text-left">Loading settings...</p>
         ) : (
           <>
             <section className="bg-white rounded-2xl shadow-sm p-5 flex flex-col gap-3">

@@ -159,18 +159,37 @@ public class AuthService {
                     com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     @SuppressWarnings("unchecked")
                     Map<String, Object> claims = mapper.readValue(payloadBytes, Map.class);
-                    supabaseUserId = (String) claims.get("sub");
-                    tokenEmail = (String) claims.get("email");
+                    if (supabaseUserId == null) {
+                        supabaseUserId = (String) claims.get("sub");
+                    }
+                    if (tokenEmail == null) {
+                        tokenEmail = (String) claims.get("email");
+                        if (tokenEmail == null && claims.get("user_metadata") instanceof Map) {
+                            @SuppressWarnings("unchecked")
+                            Map<String, Object> meta = (Map<String, Object>) claims.get("user_metadata");
+                            tokenEmail = (String) meta.get("email");
+                        }
+                    }
                 }
             } catch (Exception ignored) {
             }
         }
 
-        if (supabaseUserId == null || tokenEmail == null) {
-            throw new IllegalArgumentException("Invalid Supabase token: cannot extract user id or email");
+        if (supabaseUserId == null) {
+            throw new IllegalArgumentException("Invalid Supabase token: cannot extract user id");
         }
 
-        if (!tokenEmail.equalsIgnoreCase(request.getEmail())) {
+        if (tokenEmail == null || tokenEmail.isBlank()) {
+            if (request.getEmail() != null && !request.getEmail().isBlank()) {
+                tokenEmail = request.getEmail().trim();
+            } else {
+                tokenEmail = supabaseUserId + "@oauth.servio.local";
+            }
+        }
+
+        if (request.getEmail() != null && !request.getEmail().isBlank()
+                && !tokenEmail.equalsIgnoreCase(request.getEmail())
+                && !tokenEmail.endsWith("@oauth.servio.local")) {
             throw new IllegalArgumentException(
                     "Token email mismatch: expected " + request.getEmail() + " but got " + tokenEmail);
         }
@@ -178,7 +197,9 @@ public class AuthService {
         // Local profiles often miss the Supabase row. Check that row, then Supabase
         // auth metadata and the remote profiles table, then the existing backend user.
         Role resolvedRole = Role.USER;
-        String displayName = request.getFullName();
+        String displayName = (request.getFullName() != null && !request.getFullName().isBlank())
+                ? request.getFullName().trim()
+                : "User";
         try {
             UUID profileId = UUID.fromString(supabaseUserId);
             Profile profile = profileRepository.findById(profileId).orElse(null);

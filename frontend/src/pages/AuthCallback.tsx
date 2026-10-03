@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabaseAuth } from '@/services/supabaseAuth';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,47 +7,75 @@ import { toast } from 'sonner';
 export default function AuthCallback() {
   const navigate = useNavigate();
   const { login, refreshBackendToken } = useAuth();
+  const processedRef = useRef(false);
 
   useEffect(() => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+
+    let isMounted = true;
+
     const handleCallback = async () => {
       try {
-        const session = await supabaseAuth.getCurrentSession();
+        // Give Supabase time to parse the OAuth hash fragments if not immediate
+        let session = await supabaseAuth.getCurrentSession();
+        if (!session) {
+          for (let i = 0; i < 5; i++) {
+            await new Promise(resolve => setTimeout(resolve, 200));
+            session = await supabaseAuth.getCurrentSession();
+            if (session) break;
+          }
+        }
 
-        if (session && session.user) {
-          // Map Supabase user to our User interface
+        if (session && session.user && isMounted) {
+          // Map Supabase user to our User interface with safe fallback for Facebook accounts without email
+          const userMeta = session.user.user_metadata || {};
+          const email = session.user.email ||
+                       userMeta.email ||
+                       `${session.user.id}@oauth.servio.local`;
+
+          const fullName = userMeta.full_name ||
+                          userMeta.name ||
+                          session.user.email?.split('@')[0] ||
+                          'User';
+
           const userData = {
             id: session.user.id,
-            fullName: session.user.user_metadata?.full_name ||
-                     session.user.user_metadata?.name ||
-                     session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            phone: session.user.user_metadata?.phone || null,
+            fullName,
+            email,
+            phone: userMeta.phone || null,
             role: 'USER',
           };
 
           login(userData, session);
 
-          const backendTokenReady = await refreshBackendToken();
-          if (!backendTokenReady) {
-            throw new Error('Backend session could not be initialized');
+          // Attempt backend token exchange with the established session
+          const backendSuccess = await refreshBackendToken();
+
+          if (isMounted) {
+            if (backendSuccess) {
+              toast.success('Welcome to Servio!');
+            }
+            navigate('/home', { replace: true });
           }
-
-          toast.success('Welcome to Servio!');
-
-          // Redirect to home (ignore admin role for customer frontend)
-          navigate('/home');
-        } else {
+        } else if (isMounted) {
           toast.error('Authentication failed');
-          navigate('/login');
+          navigate('/login', { replace: true });
         }
       } catch (error) {
         console.error('Auth callback error:', error);
-        toast.error('Authentication failed');
-        navigate('/login');
+        if (isMounted) {
+          toast.error('Authentication failed');
+          navigate('/login', { replace: true });
+        }
       }
     };
 
     handleCallback();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate, login, refreshBackendToken]);
 
   return (

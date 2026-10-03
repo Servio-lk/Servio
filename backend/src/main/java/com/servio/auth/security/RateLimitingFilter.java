@@ -39,18 +39,31 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
+        // Allow CORS preflight requests without consuming rate limit tokens
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         String path = request.getRequestURI();
 
         // Apply rate limit specifically to all /api/auth/** endpoints (e.g. login, signup, supabase-login, etc.)
         if (path.startsWith("/api/auth/") || path.startsWith("/api/agent/") || path.startsWith("/api/payments/payhere/initiate")) {
             String clientIp = extractClientIp(request);
-            Bucket bucket = buckets.computeIfAbsent(clientIp, k -> createNewBucket());
+            Bucket bucket = buckets.computeIfAbsent(clientIp, this::createNewBucket);
 
             if (!bucket.tryConsume(1)) {
                 log.warn("Rate limit exceeded for IP: {} on URI: {}", clientIp, path);
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setHeader("Retry-After", "60");
                 response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+
+                String origin = request.getHeader("Origin");
+                if (origin != null && !origin.isBlank()) {
+                    response.setHeader("Access-Control-Allow-Origin", origin);
+                    response.setHeader("Access-Control-Allow-Credentials", "true");
+                    response.setHeader("Vary", "Origin");
+                }
 
                 ErrorResponse errorResponse = ErrorResponse.builder()
                         .timestamp(LocalDateTime.now())
@@ -69,7 +82,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    private Bucket createNewBucket() {
+    private Bucket createNewBucket(String clientIp) {
         Bandwidth limit = Bandwidth.classic(CAPACITY, Refill.greedy(REFILL_TOKENS, REFILL_DURATION));
         return Bucket.builder().addLimit(limit).build();
     }

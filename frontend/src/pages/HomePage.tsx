@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, Calendar, Warehouse, ChevronRight, Clock, TrendingUp, Star } from 'lucide-react';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ interface RecentService {
 }
 
 export default function HomePage() {
+  const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
   const homeDataLoaded = useRef(false);
@@ -201,13 +202,30 @@ export default function HomePage() {
         </div>
 
         {/* Search Bar */}
-        <div className="bg-[#ffe7df] mx-auto w-full lg:w-1/2 border border-white rounded-2xl p-2 lg:p-3 flex items-center gap-2 lg:gap-3 cursor-pointer hover:bg-[#ffd9cc] transition-colors">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/services', { state: { focusSearch: true } })}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              navigate('/services', { state: { focusSearch: true } });
+            }
+          }}
+          className="bg-[#ffe7df] mx-auto w-full lg:w-1/2 border border-white rounded-2xl p-2 lg:p-3 flex items-center gap-2 lg:gap-3 cursor-pointer hover:bg-[#ffd9cc] transition-colors"
+        >
           <Search className="w-6 h-6" />
           <p className="flex-1 text-base font-semibold text-black">
             Search services
           </p>
           <div className="h-6 w-px bg-black/20 hidden sm:block" />
-          <div className="bg-white rounded-lg px-2 lg:px-3 py-1 lg:py-2 flex items-center gap-1 lg:gap-2">
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/services');
+            }}
+            className="bg-white rounded-lg px-2 lg:px-3 py-1 lg:py-2 flex items-center gap-1 lg:gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
+          >
             <Calendar className="w-5 h-5 lg:w-6 lg:h-6" />
             <span className="text-sm font-semibold text-black">Schedule</span>
           </div>

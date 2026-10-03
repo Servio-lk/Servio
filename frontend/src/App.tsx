@@ -42,7 +42,6 @@ const AdminServiceBays = lazy(() => import('@/pages/admin/ServiceBays'))
 const AdminWalkInCustomers = lazy(() => import('@/pages/admin/WalkInCustomers'))
 
 import './App.css'
-import OffersPage from './pages/OffersPage'
 
 function AdminLoadingFallback() {
   return (
@@ -175,10 +174,7 @@ function App() {
 
           <Route 
             path="/offers" 
-            element={
-              <AuthGuard>
-                <OffersPage />
-              </AuthGuard>} 
+            element={<Navigate to="/account#promotions" replace />} 
           />
 
           <Route

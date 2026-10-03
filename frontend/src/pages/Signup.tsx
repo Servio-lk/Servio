@@ -7,7 +7,7 @@ import { supabaseAuth } from "@/services/supabaseAuth";
 import { apiService } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 import LogoImage from "/ServioLogo.png";
-import GarageImage from "@/assets/images/Garage image.png";
+import { AuthOnboardingCarousel } from "@/components/auth/AuthOnboardingCarousel";
 import { Car, CarFront, Bike, Truck, Bus } from "lucide-react";
 
 // ----------------------------------------------------------------------
@@ -469,13 +469,9 @@ export default function Signup() {
         </div>
       </div>
 
-      {/* Right side - Image */}
+      {/* Right side - Onboarding Carousel */}
       <div className="hidden lg:block w-[500px] xl:w-[690px] h-full relative">
-        <img
-          src={GarageImage}
-          alt="Garage"
-          className="w-full h-full object-cover"
-        />
+        <AuthOnboardingCarousel />
       </div>
     </div>
   );
