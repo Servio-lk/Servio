@@ -11,6 +11,8 @@ import java.util.Optional;
 
 @Repository
 public interface ServiceRepository extends JpaRepository<Service, Long> {
+    long countByIsActiveTrue();
+
     @EntityGraph(attributePaths = {"category"})
     List<Service> findByIsActiveTrueOrderByNameAsc();
     

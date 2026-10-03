@@ -122,6 +122,15 @@ class AdminApiService {
     return response.json();
   }
 
+  async updateOffer(id: number, payload: Record<string, unknown>) {
+    const response = await apiFetch(`${API_BASE_URL}/admin/offers/${id}`, {
+      method: 'PUT',
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  }
+
   async deleteOffer(id: number) {
     const response = await apiFetch(`${API_BASE_URL}/admin/offers/${id}`, {
       method: 'DELETE',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link, useParams } from 'react-router-dom';
+import { useNavigate, Link, useParams, useLocation} from 'react-router-dom';
 import { Car, Phone, Coins, AlertTriangle, Calendar, Download, Share2, Home } from 'lucide-react';
 import { ChatCircleDots } from '@phosphor-icons/react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -13,6 +13,12 @@ export default function ConfirmationPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
+  const location = useLocation();
+  const breakdown = (location.state ?? null) as {
+    originalTotal?: number;
+    discount?: number;
+    offerName?: string | null;
+  } | null;
   
   const [appointment, setAppointment] = useState<AppointmentDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -273,9 +279,23 @@ export default function ConfirmationPage() {
               </div>
 
               {/* Total */}
-              <div className="flex items-center justify-between p-4 bg-[#fff7f5] rounded-lg">
-                <span className="font-semibold text-black">Total Amount</span>
-                <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointmentDisplay.total.toLocaleString()}</span>
+              <div className="flex flex-col gap-2 p-4 bg-[#fff7f5] rounded-lg">
+                {breakdown?.discount ? (
+                  <>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-black/70">Total</span>
+                      <span className="font-medium text-black">LKR {breakdown.originalTotal?.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[#ff5d2e]">{breakdown.offerName} applied</span>
+                      <span className="font-medium text-[#ff5d2e]">-LKR {breakdown.discount.toLocaleString()}</span>
+                    </div>
+                  </>
+                ) : null}
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-black">Total Amount</span>
+                  <span className="text-xl font-bold text-[#ff5d2e]">LKR {appointmentDisplay.total.toLocaleString()}</span>
+                </div>
               </div>
 
               {/* Desktop buttons */}

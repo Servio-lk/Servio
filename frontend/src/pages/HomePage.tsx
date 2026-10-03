@@ -387,6 +387,7 @@ export default function HomePage() {
                       promoCode={offer.promoCode}
                       validUntil={offer.validUntil}
                       expired={offer.expired}
+                      titleHref="/account#promotions"
                     />
                   ))}
                 </div>
