@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck, Tag } from '@phosphor-icons/react';
+import { GearSix, House, List, SignOut, UserCircle, ChatCircleDots, ClipboardText, Robot, ShieldCheck } from '@phosphor-icons/react';
 import { type ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import LogoImage from '/ServioLogo.png';
@@ -10,14 +10,21 @@ interface AppLayoutProps {
   showNav?: boolean;
 }
 
-// Tab bar items for both mobile and desktop
-const navItems = [
+// Navigation items for desktop sidebar
+const desktopNavItems = [
   { icon: House, label: 'Home', path: '/home' },
   { icon: List, label: 'Services', path: '/services' },
   { icon: ClipboardText, label: 'Activity', path: '/activity' },
   { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
   { icon: Robot, label: 'AI Assistant', path: '/assistant' },
-  { icon: Tag, label: 'Offers', path: '/offers' }
+];
+
+// Navigation items for mobile bottom tab bar (clean 4 tabs; AI Assistant is a FAB on Messages screen)
+const mobileNavItems = [
+  { icon: House, label: 'Home', path: '/home' },
+  { icon: List, label: 'Services', path: '/services' },
+  { icon: ClipboardText, label: 'Activity', path: '/activity' },
+  { icon: ChatCircleDots, label: 'Messages', path: '/messages' },
 ];
 
 // Desktop sidebar component
@@ -35,7 +42,7 @@ function DesktopSidebar() {
       {/* Navigation */}
       <nav className="flex-1 p-4">
         <ul className="flex flex-col gap-2">
-          {navItems.map((item) => {
+          {desktopNavItems.map((item) => {
             const isActive = location.pathname === item.path || 
               (item.path !== '/home' && location.pathname.startsWith(item.path));
             return (
@@ -164,7 +171,7 @@ function MobileTabBar() {
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-black/10 safe-area-pb z-20">
       <div className="flex items-center justify-around py-2">
-        {navItems.map((item) => {
+        {mobileNavItems.map((item) => {
           const isActive = location.pathname === item.path || 
             (item.path !== '/home' && location.pathname.startsWith(item.path));
           return (
