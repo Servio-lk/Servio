@@ -5,12 +5,15 @@ import com.servio.auth.repository.UserRepository;
 import com.servio.booking.dto.AppointmentDto;
 import com.servio.booking.entity.Appointment;
 import com.servio.booking.repository.AppointmentRepository;
+import com.servio.catalog.repository.ServiceRepository;
 import com.servio.payment.entity.Payment;
 import com.servio.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -23,10 +26,18 @@ public class AdminDashboardService {
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
+    private final ServiceRepository serviceRepository;
 
     public DashboardStatsDto getDashboardStats() {
         long totalCustomers = userRepository.count();
         long totalAppointments = appointmentRepository.count();
+        long pendingAppointments = appointmentRepository.countByStatus("PENDING");
+        long totalServices = serviceRepository.count();
+        long activeServices = serviceRepository.countByIsActiveTrue();
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        long bookingsToday = appointmentRepository.countBookingsBetween(startOfToday, startOfToday.plusDays(1));
+        BigDecimal unpaidBookings = appointmentRepository.sumUnpaidEstimatedCost();
+        if (unpaidBookings == null) unpaidBookings = BigDecimal.ZERO;
 
         // Payments table is the authoritative revenue source
         BigDecimal totalRevenue = paymentRepository.getTotalRevenue();
@@ -60,6 +71,11 @@ public class AdminDashboardService {
         return DashboardStatsDto.builder()
                 .totalCustomers(totalCustomers)
                 .totalAppointments(totalAppointments)
+                .pendingAppointments(pendingAppointments)
+                .bookingsToday(bookingsToday)
+                .totalServices(totalServices)
+                .activeServices(activeServices)
+                .unpaidBookings(unpaidBookings)
                 .totalRevenue(totalRevenue)
                 .cardRevenue(cardRevenue)
                 .cashRevenue(cashRevenue)

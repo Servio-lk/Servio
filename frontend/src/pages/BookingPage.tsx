@@ -4,7 +4,7 @@ import { Car, Phone, Coins, CreditCard, Calendar, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layouts/AppLayout';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiService } from '@/services/api';
+import { apiService, type Offer } from '@/services/api';
 import { VehicleSelector } from '@/components/VehicleSelector';
 
 const API_BASE_URL = (() => {
@@ -185,13 +185,38 @@ export default function BookingPage() {
   const selectedOption = serviceOptions.find((option: any) => option.id === selectedOptionId)
     || serviceOptions.find((option: any) => option.isDefault)
     || serviceOptions[0];
-  const orderDetails = {
-    service: currentService?.name || '',
-    serviceFee: currentService?.basePrice || 0,
-    optionName: selectedOption?.name || null,
-    optionPrice: selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0,
-    total: (currentService?.basePrice || 0) + (selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0),
-  };
+  const [appliedOffer, setAppliedOffer] = useState<Offer | null>(null);
+
+    useEffect(() => {
+      const code = sessionStorage.getItem('servio.promoCode');
+      if (!code) return;
+      apiService.getOffers().then((res) => {
+        const match = res.data?.find(
+          (offer) => offer.promoCode?.toUpperCase() === code.toUpperCase() && !offer.expired
+        );
+        if (match) setAppliedOffer(match);
+      });
+    }, []);
+    
+    const subtotal =
+      (currentService?.basePrice || 0) +
+      (selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0);
+    
+    const discount = !appliedOffer
+      ? 0
+      : appliedOffer.discountType === 'FIXED_AMOUNT'
+        ? Math.min(appliedOffer.discountValue, subtotal)
+        : Math.round((subtotal * appliedOffer.discountValue) / 100);
+    
+    const orderDetails = {
+      service: currentService?.name || '',
+      serviceFee: currentService?.basePrice || 0,
+      optionName: selectedOption?.name || null,
+      optionPrice: selectedOption ? Number(selectedOption.priceAdjustment || 0) : 0,
+      discount,
+      promoCode: appliedOffer?.promoCode ?? null,
+      total: Math.max(0, subtotal - discount),
+    };
 
   const convertToDateTime = (dateObj: Date, timeSlot: string): string => {
     const appointmentDate = new Date(dateObj);
@@ -251,11 +276,18 @@ export default function BookingPage() {
       }
 
       const appointmentId = response.data.id;
+      sessionStorage.removeItem('servio.promoCode');
 
       // Step 2: Handle chosen payment method
       if (paymentMethod === 'cash') {
         toast.success('Appointment booked successfully!');
-        navigate(`/confirmed/${appointmentId}`);
+        navigate(`/confirmed/${appointmentId}`, {
+          state: {
+            originalTotal: subtotal,
+            discount: orderDetails.discount,
+            offerName: appliedOffer?.title ?? null,
+          },
+        });
       } else {
         // PayHere JS SDK — modal popup, no redirect
         const payRes = await apiService.initiatePayHerePayment(
@@ -282,7 +314,13 @@ export default function BookingPage() {
         // Register callbacks before calling startPayment
         window.payhere.onCompleted = (_orderId: string) => {
           toast.success('Payment successful! Your appointment is confirmed.');
-          navigate(`/confirmed/${appointmentId}`);
+          navigate(`/confirmed/${appointmentId}`, {
+            state: {
+              originalTotal: subtotal,
+              discount: orderDetails.discount,
+              offerName: appliedOffer?.title ?? null,
+            },
+          });
         };
 
         window.payhere.onDismissed = () => {
@@ -490,6 +528,12 @@ export default function BookingPage() {
               <span className="font-medium text-black">+LKR {orderDetails.optionPrice.toLocaleString()}</span>
             </div>
           )}
+          {orderDetails.promoCode && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-[#ff5d2e]">{orderDetails.promoCode} applied</span>
+              <span className="font-medium text-[#ff5d2e]">-LKR {orderDetails.discount.toLocaleString()}</span>
+            </div>
+          )}
           <div className="h-px bg-black/10 my-2" />
           <div className="flex items-center justify-between">
             <span className="font-bold text-black">Total</span>
@@ -690,6 +734,13 @@ export default function BookingPage() {
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {orderDetails.serviceFee.toLocaleString()}</span>
                   </div>
+                  {orderDetails.promoCode && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-[#ff5d2e]">{orderDetails.promoCode} applied</span>
+                      <span className="font-medium text-[#ff5d2e]">-LKR {orderDetails.discount.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="h-px bg-black/10" />
                   {orderDetails.optionName && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-black/70">{orderDetails.optionName}</span>

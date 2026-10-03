@@ -56,12 +56,12 @@ export function OfferCard({
               {promoCode}
             </code>
             <button type="button" disabled={disabled} onClick={copyCode}
-              className="text-sm font-semibold text-[#ff5d2e] disabled:text-black/30">
+              className="text-sm font-semibold text-[#ff5d2e] cursor-pointer hover:underline disabled:text-black/30 disabled:cursor-not-allowed disabled:no-underline">
               Copy
             </button>
             {onApply && (
               <button type="button" disabled={disabled} onClick={() => onApply(promoCode)}
-                className="bg-[#ff5d2e] text-white text-sm font-semibold px-3 py-2 rounded-lg disabled:bg-black/20">
+              className="bg-[#ff5d2e] text-white text-sm font-semibold px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[#e54d1e] disabled:bg-black/20 disabled:cursor-not-allowed disabled:hover:bg-black/20">
                 Apply
               </button>
             )}
