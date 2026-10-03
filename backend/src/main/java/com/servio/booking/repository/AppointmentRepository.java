@@ -35,6 +35,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
         @Query("SELECT COUNT(a) FROM Appointment a WHERE a.status = :status")
         Long countByStatus(@Param("status") String status);
 
+        @Query("SELECT COUNT(a) FROM Appointment a WHERE a.appointmentDate >= :start AND a.appointmentDate < :end AND a.status <> 'CANCELLED'")
+        long countBookingsBetween(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+        @Query("SELECT COALESCE(SUM(a.estimatedCost), 0) FROM Appointment a WHERE a.status IN ('PENDING', 'CONFIRMED', 'IN_PROGRESS') " +
+               "AND NOT EXISTS (SELECT p FROM Payment p WHERE p.appointment = a AND p.paymentStatus = 'COMPLETED')")
+        java.math.BigDecimal sumUnpaidEstimatedCost();
+
         @Query("SELECT DISTINCT a FROM Appointment a LEFT JOIN FETCH a.user LEFT JOIN FETCH a.vehicle ORDER BY a.createdAt DESC")
         List<Appointment> findRecentAppointments();
 

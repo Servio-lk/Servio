@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminApi } from '../../services/adminApi';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import {
-  Package, Calendar, Users, Clock, ArrowUpRight,
+  Package, Calendar, Users, Clock,
   DollarSign, CreditCard, Banknote, AlertCircle, X, CheckCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -13,6 +13,8 @@ export function AdminDashboard() {
     totalServices: 0,
     activeServices: 0,
     pendingAppointments: 0,
+    bookingsToday: 0,
+    unpaidBookings: 0,
     totalCustomers: 0,
     totalRevenue: 0,
     cardRevenue: 0,
@@ -33,7 +35,9 @@ export function AdminDashboard() {
         const data = dashboardRes.data;
         setStats(prev => ({
           ...prev,
-          pendingAppointments: data.totalAppointments || 0,
+          pendingAppointments: data.pendingAppointments || 0,
+          bookingsToday: data.bookingsToday || 0,
+          unpaidBookings: data.unpaidBookings || 0,
           totalCustomers: data.totalCustomers || 0,
           totalServices: data.totalServices || 0,
           activeServices: data.activeServices || 0,
@@ -69,8 +73,9 @@ export function AdminDashboard() {
     {
       name: 'Total Revenue',
       value: `Rs. ${Number(stats.totalRevenue).toLocaleString()}`,
-      change: '+12.5%',
-      trend: 'up',
+      detail: Number(stats.unpaidBookings) > 0
+        ? `Rs. ${Number(stats.unpaidBookings).toLocaleString()} unpaid`
+        : undefined,
       icon: DollarSign,
       color: 'text-[#ff5d2e]',
       bg: 'bg-[#ffe7df]',
@@ -78,8 +83,6 @@ export function AdminDashboard() {
     {
       name: 'Pending Bookings',
       value: stats.pendingAppointments,
-      change: '+4',
-      trend: 'up',
       icon: Calendar,
       color: 'text-blue-600',
       bg: 'bg-blue-50',
@@ -87,8 +90,7 @@ export function AdminDashboard() {
     {
       name: 'Active Services',
       value: stats.activeServices,
-      change: `${stats.totalServices} total`,
-      trend: 'neutral',
+      detail: `${stats.totalServices} total`,
       icon: Package,
       color: 'text-purple-600',
       bg: 'bg-purple-50',
@@ -96,13 +98,24 @@ export function AdminDashboard() {
     {
       name: 'Total Customers',
       value: stats.totalCustomers,
-      change: '+2.4%',
-      trend: 'up',
       icon: Users,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
     },
   ];
+
+  const activityDetail = (appt: any) => {
+    const when = new Date(appt.appointmentDate).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit',
+    });
+    const vehicle = [appt.vehicleMake, appt.vehicleModel].filter(Boolean).join(' ').trim();
+    const fromNotes = typeof appt.notes === 'string'
+      ? appt.notes.match(/Vehicle:\s*([^|]+)/i)?.[1]?.trim()
+      : '';
+    const label = vehicle || fromNotes;
+    return label ? `${when} · ${label}` : when;
+  };
 
   const formatDateTime = (dateString: string) =>
     new Date(dateString).toLocaleString('en-US', {
@@ -182,15 +195,9 @@ export function AdminDashboard() {
                 <div className={`p-3 rounded-lg ${stat.bg}`}>
                   <Icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
-                {stat.trend !== 'neutral' && (
-                  <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-green-50 text-green-700">
-                    <ArrowUpRight className="w-3 h-3" />
-                    {stat.change}
-                  </div>
-                )}
-                {stat.trend === 'neutral' && (
+                {'detail' in stat && stat.detail && (
                   <div className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full bg-gray-50 text-gray-600">
-                    {stat.change}
+                    {stat.detail}
                   </div>
                 )}
               </div>
@@ -224,7 +231,7 @@ export function AdminDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-black/5 shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold text-black">Recent Activity</h2>
-            <button className="text-sm font-semibold text-[#ff5d2e] hover:underline">View All</button>
+            <Link to="/admin/appointments" className="text-sm font-semibold text-[#ff5d2e] hover:underline">View All</Link>
           </div>
 
           <div className="flex flex-col gap-4">
@@ -239,7 +246,7 @@ export function AdminDashboard() {
                       {appt.userName || 'Unknown'} booked <span className="font-bold">{appt.serviceType}</span>
                     </p>
                     <p className="text-xs text-black/50">
-                      {new Date(appt.appointmentDate).toLocaleString()} - {appt.vehicleMake} {appt.vehicleModel}
+                      {activityDetail(appt)}
                     </p>
                   </div>
                   <span className={`px-2 py-1 text-xs font-medium rounded ${appt.status === 'PENDING' ? 'bg-yellow-100 text-yellow-700' :
@@ -262,30 +269,18 @@ export function AdminDashboard() {
         <div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
           <h2 className="text-lg font-bold text-black mb-6">System Status</h2>
 
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-black/70">Database Usage</span>
-                <span className="font-medium text-black">24%</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="bg-green-500 h-2 rounded-full w-1/4"></div>
-              </div>
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-black/70">Bookings today</span>
+              <span className="font-medium text-black">{stats.bookingsToday}</span>
             </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span className="text-black/70">Daily Booking Goal</span>
-                <span className="font-medium text-black">8/12</span>
-              </div>
-              <div className="w-full bg-gray-100 rounded-full h-2">
-                <div className="bg-[#ff5d2e] h-2 rounded-full w-2/3"></div>
-              </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-black/70">Unpaid bookings</span>
+              <span className="font-medium text-black">Rs. {Number(stats.unpaidBookings).toLocaleString()}</span>
             </div>
-
-            <div className="p-4 bg-[#fff7f5] rounded-lg border border-[#ff5d2e]/10 mt-6">
-              <h3 className="text-[#ff5d2e] font-semibold text-sm mb-1">Backup Scheduled</h3>
-              <p className="text-xs text-black/60">Next system backup scheduled for tonight at 02:00 AM.</p>
+            <div className="flex justify-between text-sm">
+              <span className="text-black/70">Collected revenue</span>
+              <span className="font-medium text-black">Rs. {Number(stats.totalRevenue).toLocaleString()}</span>
             </div>
           </div>
         </div>
