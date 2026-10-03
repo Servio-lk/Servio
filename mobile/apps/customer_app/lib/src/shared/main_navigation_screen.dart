@@ -10,7 +10,6 @@ import '../features/services/services_providers.dart';
 import '../features/bookings/activity_screen.dart';
 import '../features/chats/customer_chats_tab_screen.dart';
 import '../features/profile/profile_screen.dart';
-import '../features/assistant/assistant_screen.dart';
 
 class MainNavigationScreen extends ConsumerStatefulWidget {
   final int initialIndex;
@@ -80,23 +79,6 @@ class _MainNavigationScreenState extends ConsumerState<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _selectedIndex, children: _screens),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFFFF5D2E),
-        elevation: 4,
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const AssistantScreen(),
-              fullscreenDialog: true,
-            ),
-          );
-        },
-        child: const PhosphorIcon(
-          PhosphorIconsFill.robot,
-          color: Colors.white,
-          size: 24,
-        ),
-      ),
       bottomNavigationBar: _buildCustomTabBar(),
     );
   }
