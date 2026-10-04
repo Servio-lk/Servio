@@ -39,6 +39,7 @@ public class AdminOfferService {
         offer.setImageUrl(request.getImageUrl());
         offer.setPromoCode(blankToNull(request.getPromoCode()));
         offer.setCategory(blankToNull(request.getCategory()));
+        offer.setApplicableService(blankToNull(request.getApplicableService()));
         offer.setValidFrom(request.getValidFrom());
         offer.setValidUntil(request.getValidUntil());
         offer.setIsActive(request.getIsActive() == null || request.getIsActive());
@@ -79,6 +80,7 @@ public class AdminOfferService {
         if (request.getCategory() != null) {
             offer.setCategory(blankToNull(request.getCategory()));
         }
+        offer.setApplicableService(blankToNull(request.getApplicableService()));
         if (request.getValidFrom() != null) {
             offer.setValidFrom(request.getValidFrom());
         }

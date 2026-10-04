@@ -20,6 +20,7 @@ public class OfferResponse {
     private LocalDateTime validUntil;
     private String promoCode;
     private String category;
+    private String applicableService;
     private LocalDateTime validFrom;
     private Boolean expired;
 }

@@ -12,6 +12,7 @@ const emptyForm = {
   imageUrl: '',
   promoCode: '',
   category: '',
+  applicableService: '',
   validUntil: '',
 };
 
@@ -22,10 +23,14 @@ export function AdminOffers() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [services, setServices] = useState<{ id: number; name: string }[]>([]);
   const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     loadOffers();
+    adminApi.getAllServices()
+      .then((response) => setServices(response.data || []))
+      .catch(() => setServices([]));
   }, []);
 
   const loadOffers = async () => {
@@ -54,6 +59,7 @@ export function AdminOffers() {
     imageUrl: form.imageUrl.trim() || null,
     promoCode: form.promoCode.trim() ? form.promoCode.trim().toUpperCase() : null,
     category: form.category || null,
+    applicableService: form.applicableService || null,
     validUntil: form.validUntil
       ? (form.validUntil.length === 16 ? `${form.validUntil}:00` : form.validUntil)
       : null,
@@ -71,6 +77,7 @@ export function AdminOffers() {
       imageUrl: offer.imageUrl || '',
       promoCode: offer.promoCode || '',
       category: offer.category || '',
+      applicableService: offer.applicableService || '',
       validUntil: offer.validUntil ? String(offer.validUntil).slice(0, 16) : '',
     });
     setShowForm(true);
@@ -175,6 +182,12 @@ export function AdminOffers() {
           </select>
           <input className="border rounded-lg px-3 py-2 text-sm" type="number" min="0" placeholder="Discount value" value={form.discountValue} onChange={(e) => setForm({ ...form, discountValue: e.target.value })} />
           <input className="border rounded-lg px-3 py-2 text-sm" placeholder="Promo code" value={form.promoCode} onChange={(e) => setForm({ ...form, promoCode: e.target.value })} />
+          <select className="border rounded-lg px-3 py-2 text-sm" value={form.applicableService} onChange={(e) => setForm({ ...form, applicableService: e.target.value })}>
+            <option value="">All services</option>
+            {services.map((service) => (
+              <option key={service.id} value={service.name}>{service.name}</option>
+            ))}
+          </select>
           <select className="border rounded-lg px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
             <option value="">No category</option>
             <option value="NEW_USER">New User</option>
@@ -260,7 +273,8 @@ export function AdminOffers() {
                   )}
                   {(offer.promoCode || offer.category) && (
                     <p className="text-xs text-black/50 mb-2">
-                      {offer.category ? offer.category.replace('_', ' ') : 'General'}
+                      {offer.applicableService || 'All services'}
+                      {offer.category ? ` · ${offer.category.replace('_', ' ')}` : ''}
                       {offer.promoCode ? ` · ${offer.promoCode}` : ''}
                     </p>
                   )}
