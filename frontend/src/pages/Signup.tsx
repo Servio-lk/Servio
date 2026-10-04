@@ -169,6 +169,11 @@ export default function Signup() {
       return;
     }
 
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast.error("Password must contain at least one uppercase letter, one lowercase letter, and one number");
+      return;
+    }
+
     setLoading(true);
     try {
       const { user, error } = await supabaseAuth.signUp({

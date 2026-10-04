@@ -282,12 +282,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const currentSession = await supabaseAuth.getCurrentSession();
         if (currentSession) {
-          applySessionState(currentSession);
-          const token = localStorage.getItem('token');
-          const storedUser = localStorage.getItem('user');
-          if (token && storedUser) {
-            setIsBackendTokenReady(true);
-            backendTokenReadyRef.current = true;
+          if (sessionStorage.getItem('recovery_mode') === 'true') {
+            // We are in recovery mode. Don't apply session state as a normal login.
+            console.log('[Auth] Detected recovery mode on initialization');
+          } else {
+            applySessionState(currentSession);
+            const token = localStorage.getItem('token');
+            const storedUser = localStorage.getItem('user');
+            if (token && storedUser) {
+              setIsBackendTokenReady(true);
+              backendTokenReadyRef.current = true;
+            }
           }
         }
       } catch (error) {
@@ -302,7 +307,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: authListener } = supabaseAuth.onAuthStateChange((newSession, authEvent) => {
       setIsLoading(false);
 
+      if (authEvent === 'PASSWORD_RECOVERY') {
+        sessionStorage.setItem('recovery_mode', 'true');
+        // Prevent full login session creation and force route to reset-password
+        if (window.location.pathname !== '/reset-password') {
+          window.location.href = '/reset-password';
+        }
+        return;
+      }
+
+      const isRecovery = sessionStorage.getItem('recovery_mode') === 'true';
+
       if (authEvent === 'SIGNED_OUT' || !newSession) {
+        if (isRecovery) {
+          sessionStorage.removeItem('recovery_mode');
+        }
         sessionRef.current = null;
         userRef.current = null;
         setUser(null);
@@ -313,6 +332,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsBackendTokenReady(false);
         attemptedTokenExchange.current.clear();
         return;
+      }
+
+      if (isRecovery) {
+        // If they navigate away from reset-password while in recovery mode, sign them out
+        if (window.location.pathname !== '/reset-password') {
+          console.log('[Auth] User navigated away from reset-password during recovery. Signing out.');
+          supabaseAuth.signOut();
+        }
+        return; // Do not apply session state
       }
 
       const previousSession = sessionRef.current;
