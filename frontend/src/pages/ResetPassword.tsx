@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
@@ -59,6 +59,8 @@ export default function ResetPassword() {
   const [checkingSession, setCheckingSession] = useState(true);
   const [hasRecoverySession, setHasRecoverySession] = useState(false);
 
+  const isSuccessfulReset = useRef(false);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -84,12 +86,22 @@ export default function ResetPassword() {
 
     return () => {
       isMounted = false;
+      // If unmounting and still in recovery mode (i.e. didn't complete reset successfully)
+      if (!isSuccessfulReset.current && sessionStorage.getItem('recovery_mode') === 'true') {
+        sessionStorage.removeItem('recovery_mode');
+        supabaseAuth.signOut();
+      }
     };
   }, []);
 
   const handleUpdatePassword = async () => {
     if (password.length < 8) {
       toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast.error("Password must contain at least one uppercase letter, one lowercase letter, and one number");
       return;
     }
 
@@ -101,12 +113,31 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
+      const session = await supabaseAuth.getCurrentSession();
+      const role = session?.user?.user_metadata?.role?.toUpperCase() || 'USER';
+
       const { error } = await supabaseAuth.updatePassword(password);
       if (error) throw new Error(error.message);
 
+      isSuccessfulReset.current = true;
       await supabaseAuth.signOut();
+      sessionStorage.removeItem('recovery_mode');
+
       toast.success("Password updated successfully. Please log in with your new password.");
-      navigate("/login", { replace: true });
+      
+      if (role === 'ADMIN') {
+        const host = window.location.hostname;
+        const port = window.location.port;
+        const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+        
+        if (isCustomerPortOnEc2) {
+          window.location.href = `${window.location.protocol}//${host}:8081/login`;
+        } else {
+          navigate("/login", { replace: true });
+        }
+      } else {
+        navigate("/login", { replace: true });
+      }
     } catch (err: any) {
       console.error("Password update error:", err);
       toast.error(err.message || "Failed to update password");
