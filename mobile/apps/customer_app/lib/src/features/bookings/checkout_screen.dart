@@ -17,6 +17,9 @@ class CheckoutScreen extends ConsumerStatefulWidget {
   final String basePriceStr;
   final String? optionName;
   final String? optionPriceStr;
+  final String? discountStr;
+  final String? discountLabel;
+  final String? promoCode;
 
   const CheckoutScreen({
     super.key,
@@ -27,6 +30,9 @@ class CheckoutScreen extends ConsumerStatefulWidget {
     required this.basePriceStr,
     this.optionName,
     this.optionPriceStr,
+    this.discountStr,
+    this.discountLabel,
+    this.promoCode,
   });
 
   @override
@@ -176,6 +182,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           basePriceStr: widget.basePriceStr,
                           optionName: widget.optionName,
                           optionPriceStr: widget.optionPriceStr,
+                          discountStr: widget.discountStr,
+                          discountLabel: widget.discountLabel,
+                          promoCode: widget.promoCode,
                         ),
 
                         const SizedBox(height: 16),
@@ -412,16 +421,28 @@ class _PriceBreakdownSection extends StatelessWidget {
   final String basePriceStr;
   final String? optionName;
   final String? optionPriceStr;
+  final String? discountStr;
+  final String? discountLabel;
+  final String? promoCode;
 
   const _PriceBreakdownSection({
     required this.estimatedCostStr,
     required this.basePriceStr,
     this.optionName,
     this.optionPriceStr,
+    this.discountStr,
+    this.discountLabel,
+    this.promoCode,
   });
 
   @override
   Widget build(BuildContext context) {
+    final discountTitle = discountLabel != null && discountLabel!.isNotEmpty
+        ? 'Discount ($discountLabel)'
+        : (promoCode != null && promoCode!.isNotEmpty
+            ? 'Discount ($promoCode)'
+            : 'Discount');
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -462,6 +483,15 @@ class _PriceBreakdownSection extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                   ],
+                  if (discountStr != null && discountStr!.isNotEmpty) ...[
+                    _PriceLineItem(
+                      label: discountTitle,
+                      amount: discountStr!,
+                      isBoldLabel: false,
+                      amountColor: const Color(0xFFFF5D2E),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
                   _PriceLineItem(
                     label: 'Total',
                     amount: estimatedCostStr,
@@ -481,11 +511,13 @@ class _PriceLineItem extends StatelessWidget {
   final String label;
   final String amount;
   final bool isBoldLabel;
+  final Color? amountColor;
 
   const _PriceLineItem({
     required this.label,
     required this.amount,
     required this.isBoldLabel,
+    this.amountColor,
   });
 
   @override
@@ -514,7 +546,7 @@ class _PriceLineItem extends StatelessWidget {
               style: GoogleFonts.instrumentSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: Colors.black,
+                color: amountColor ?? Colors.black,
               ),
             ),
           ],

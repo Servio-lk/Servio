@@ -14,6 +14,8 @@ import com.servio.common.event.RepairStatusChangedEvent;
 import com.servio.common.exception.ConflictException;
 import com.servio.common.exception.ResourceNotFoundException;
 import com.servio.notification.service.AppointmentEventPublisher;
+import com.servio.payment.entity.Payment;
+import com.servio.payment.repository.PaymentRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -43,6 +45,7 @@ public class AppointmentService {
     private final EntityManager entityManager;
     private final AppointmentEventPublisher eventPublisher;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final PaymentRepository paymentRepository;
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
     public AppointmentDto createAppointment(AppointmentRequest request, Authentication authentication) {
@@ -356,6 +359,17 @@ public class AppointmentService {
                 .collect(Collectors.toList());
     }
 
+    private String latestCompletedPaymentMethod(Long appointmentId) {
+        if (appointmentId == null) {
+            return null;
+        }
+        List<Payment> completedPayments = paymentRepository.findCompletedPaymentsByAppointmentId(appointmentId);
+        if (completedPayments == null || completedPayments.isEmpty()) {
+            return null;
+        }
+        return completedPayments.get(0).getPaymentMethod();
+    }
+
     private AppointmentDto convertToDto(Appointment appointment) {
         if (appointment == null) {
             return null;
@@ -380,6 +394,7 @@ public class AppointmentService {
                 .notes(appointment.getNotes())
                 .estimatedCost(appointment.getEstimatedCost())
                 .actualCost(appointment.getActualCost())
+                .paymentMethod(latestCompletedPaymentMethod(appointment.getId()))
                 .createdAt(appointment.getCreatedAt())
                 .updatedAt(appointment.getUpdatedAt())
                 .build();

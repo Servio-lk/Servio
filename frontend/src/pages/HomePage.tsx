@@ -7,6 +7,7 @@ import { ServiceCard } from '@/components/ServiceCard';
 import { OfferCard } from '@/components/OfferCard';
 import type { ServiceItem, Offer, ServiceProvider, AppointmentDto } from '@/services/api';
 import { apiService } from '@/services/api';
+import { toast } from 'sonner';
 
 interface RecentService {
   id: number;
@@ -18,11 +19,9 @@ interface RecentService {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const firstName = user?.fullName?.split(' ')[0] || 'there';
   const homeDataLoaded = useRef(false);
-
-
 
   const [featuredServices, setFeaturedServices] = useState<ServiceItem[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -30,6 +29,12 @@ export default function HomePage() {
   const [recentServices, setRecentServices] = useState<RecentService[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(true);
   const [loading, setLoading] = useState(true);
+
+  const applyPromoCode = (code: string) => {
+    sessionStorage.setItem('servio.promoCode', code);
+    toast.success(`${code} will be applied at booking`);
+    navigate('/services');
+  };
 
   // Icon mapping - maps service names to icon filenames
   const serviceIcons: Record<string, string> = {
@@ -376,6 +381,7 @@ export default function HomePage() {
                       validUntil={offer.validUntil}
                       expired={offer.expired}
                       titleHref="/account#promotions"
+                      onApply={applyPromoCode}
                     />
                   ))}
                 </div>

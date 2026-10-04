@@ -625,10 +625,6 @@ PAYHERE_NOTIFY_URL=http://<ELASTIC_IP>:3001/api/payments/payhere-notify
 CLOUDINARY_CLOUD_NAME=
 CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
-
-# ---- Google Gemini AI Assistant ----
-GEMINI_API_KEY=your-gemini-api-key
-GEMINI_MODEL=gemini-1.5-flash
 EOF
 ```
 
@@ -958,13 +954,6 @@ aws ec2 authorize-security-group-ingress \
 ### `403 Forbidden: Admin portal is restricted to the admin port`
 - **Cause**: You attempted to open `/admin` while connected to the Customer portal on port `80` (or root domain).
 - **Fix**: Access the admin portal using the dedicated admin port: `http://<ELASTIC_IP>:8081`.
-
-### AI Assistant reports `GEMINI_API_KEY is not configured`
-- **Cause**: `GEMINI_API_KEY` was omitted in `/home/ubuntu/servio/.env`.
-- **Fix**: Add `GEMINI_API_KEY=your-api-key` to `.env` on EC2, then restart the backend:
-```bash
-docker compose -f docker-compose.prod.yml restart backend
-```
 
 ---
 

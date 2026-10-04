@@ -97,6 +97,14 @@ class ServicesScreenController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void clearSearch() {
+    _pendingRequest = const ServicesSearchRequest(
+      query: '',
+      focusKeyboard: false,
+    );
+    notifyListeners();
+  }
+
   ServicesSearchRequest? consumePendingRequest() {
     final request = _pendingRequest;
     _pendingRequest = null;

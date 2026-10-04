@@ -12,11 +12,11 @@ import java.util.List;
 public interface OfferRepository extends JpaRepository<Offer, Long> {
     @Query("""
             SELECT o FROM Offer o
-            WHERE o.isActive = true
-              AND o.validFrom <= :now
+            WHERE (o.isActive IS NULL OR o.isActive = true)
+              AND (o.validFrom IS NULL OR o.validFrom <= :now)
               AND (o.validUntil IS NULL OR o.validUntil >= :now)
               AND (:category IS NULL OR o.category = :category)
-            ORDER BY o.validUntil ASC
+            ORDER BY o.id DESC
             """)
     List<Offer> findActiveOffers(@Param("now") LocalDateTime now, @Param("category") String category);
 }

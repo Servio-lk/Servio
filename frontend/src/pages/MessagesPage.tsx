@@ -6,7 +6,6 @@ import {
   PaperPlaneTilt,
   SpinnerGap,
   Wrench,
-  Robot,
   Checks,
   Drop,
   Disc,
@@ -191,15 +190,6 @@ function MessagesList() {
           <p className="mt-1 text-sm text-black/60">
             Messages appear here once your appointment is confirmed and a mechanic is assigned.
           </p>
-          <div className="mt-5">
-            <Link
-              to="/assistant"
-              className="inline-flex items-center gap-2 rounded-xl bg-[#ff5d2e] px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-[#e04f24] transition-colors"
-            >
-              <Robot className="h-4 w-4" weight="fill" />
-              Ask Servio AI Assistant
-            </Link>
-          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -236,22 +226,6 @@ function MessagesList() {
           ))}
         </div>
       )}
-
-      {/* Mobile AI Assistant FAB */}
-      <Link
-        to="/assistant"
-        className="lg:hidden fixed bottom-20 right-4 z-30 flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-[#ff5d2e] to-[#ff7a50] text-white rounded-full shadow-lg shadow-[#ff5d2e]/35 hover:shadow-xl hover:scale-105 active:scale-95 transition-all"
-        aria-label="Chat with AI Assistant"
-      >
-        <div className="relative flex items-center justify-center">
-          <Robot className="h-5 w-5 text-white" weight="fill" />
-          <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-80" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-          </span>
-        </div>
-        <span className="text-sm font-semibold tracking-wide">AI Assistant</span>
-      </Link>
     </div>
   );
 }

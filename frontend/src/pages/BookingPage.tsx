@@ -186,17 +186,92 @@ export default function BookingPage() {
     || serviceOptions.find((option: any) => option.isDefault)
     || serviceOptions[0];
   const [appliedOffer, setAppliedOffer] = useState<Offer | null>(null);
+  const [promoNotice, setPromoNotice] = useState('');
+  const [promoInput, setPromoInput] = useState(
+    () => sessionStorage.getItem('servio.promoCode') ?? ''
+  );
+  const [promoChecking, setPromoChecking] = useState(false);
 
-    useEffect(() => {
-      const code = sessionStorage.getItem('servio.promoCode');
-      if (!code) return;
-      apiService.getOffers().then((res) => {
-        const match = res.data?.find(
-          (offer) => offer.promoCode?.toUpperCase() === code.toUpperCase() && !offer.expired
+  const offerAppliesTo = (offer: Offer, serviceName: string) => {
+    const target = offer.applicableService?.trim();
+    if (!target) return true;
+    return serviceName.trim().toLowerCase() === target.toLowerCase();
+  };
+
+  const applyPromoCode = async (rawCode: string) => {
+    const code = rawCode.trim().toUpperCase();
+    const serviceName = currentService?.name ?? '';
+    if (!code) {
+      sessionStorage.removeItem('servio.promoCode');
+      setAppliedOffer(null);
+      setPromoNotice('');
+      setPromoInput('');
+      return;
+    }
+    if (!serviceName) return;
+    setPromoChecking(true);
+    try {
+      const res = await apiService.getOffers();
+      const match = res.data?.find(
+        (offer) => offer.promoCode?.toUpperCase() === code && !offer.expired
+      );
+      if (match && offerAppliesTo(match, serviceName)) {
+        const saved = match.promoCode ?? code;
+        sessionStorage.setItem('servio.promoCode', saved);
+        setPromoInput(saved);
+        setAppliedOffer(match);
+        setPromoNotice('');
+      } else {
+        sessionStorage.removeItem('servio.promoCode');
+        setAppliedOffer(null);
+        setPromoInput(code);
+        setPromoNotice(
+          match?.applicableService
+            ? `${match.promoCode} applies to ${match.applicableService} only`
+            : 'That code is not valid for this booking'
         );
-        if (match) setAppliedOffer(match);
-      });
-    }, []);
+      }
+    } catch {
+      setPromoNotice('Could not check that code. Try again.');
+    } finally {
+      setPromoChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    const code = sessionStorage.getItem('servio.promoCode');
+    if (!code) return;
+    setPromoInput(code);
+    void applyPromoCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentService?.name]);
+
+  const promoCodeField = (
+    <div className="flex items-center gap-2">
+      <input
+        type="text"
+        value={promoInput}
+        onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            void applyPromoCode(promoInput);
+          }
+        }}
+        placeholder="Promo code"
+        aria-label="Promo code"
+        className="flex-1 min-w-0 bg-[#fff7f5] rounded-lg px-3 py-2 text-sm font-semibold tracking-wide uppercase outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => void applyPromoCode(promoInput)}
+        disabled={promoChecking}
+        className="shrink-0 bg-[#ff5d2e] text-white text-sm font-semibold px-3 py-2 rounded-lg cursor-pointer transition-colors hover:bg-[#e54d1e] disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {promoChecking ? 'Checking' : 'Apply code'}
+      </button>
+    </div>
+  );
     
     const subtotal =
       (currentService?.basePrice || 0) +
@@ -286,6 +361,7 @@ export default function BookingPage() {
             originalTotal: subtotal,
             discount: orderDetails.discount,
             offerName: appliedOffer?.title ?? null,
+            paymentMethod,
           },
         });
       } else {
@@ -319,6 +395,7 @@ export default function BookingPage() {
               originalTotal: subtotal,
               discount: orderDetails.discount,
               offerName: appliedOffer?.title ?? null,
+              paymentMethod,
             },
           });
         };
@@ -518,6 +595,7 @@ export default function BookingPage() {
       <div className="flex flex-col gap-4">
         <h3 className="text-lg font-semibold text-black">Price Breakdown</h3>
         <div className="flex flex-col gap-2 bg-white rounded-lg p-4">
+          {promoCodeField}
           <div className="flex items-center justify-between text-sm">
             <span className="text-black/70">Service Fee</span>
             <span className="font-medium text-black">+LKR {orderDetails.serviceFee.toLocaleString()}</span>
@@ -533,6 +611,9 @@ export default function BookingPage() {
               <span className="text-[#ff5d2e]">{orderDetails.promoCode} applied</span>
               <span className="font-medium text-[#ff5d2e]">-LKR {orderDetails.discount.toLocaleString()}</span>
             </div>
+          )}
+          {promoNotice && (
+            <p className="text-xs text-black/50">{promoNotice}</p>
           )}
           <div className="h-px bg-black/10 my-2" />
           <div className="flex items-center justify-between">
@@ -730,22 +811,25 @@ export default function BookingPage() {
                 </div>
 
                 <div className="flex flex-col gap-3">
+                  {promoCodeField}
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-black/70">Service Fee</span>
                     <span className="font-medium text-black">LKR {orderDetails.serviceFee.toLocaleString()}</span>
                   </div>
+                  {orderDetails.optionName && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-black/70">{orderDetails.optionName}</span>
+                    <span className="font-medium text-black">LKR {orderDetails.optionPrice.toLocaleString()}</span>
+                  </div>
+                )}
                   {orderDetails.promoCode && (
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-[#ff5d2e]">{orderDetails.promoCode} applied</span>
                       <span className="font-medium text-[#ff5d2e]">-LKR {orderDetails.discount.toLocaleString()}</span>
                     </div>
                   )}
-                  <div className="h-px bg-black/10" />
-                  {orderDetails.optionName && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-black/70">{orderDetails.optionName}</span>
-                      <span className="font-medium text-black">LKR {orderDetails.optionPrice.toLocaleString()}</span>
-                    </div>
+                  {promoNotice && (
+                    <p className="text-xs text-black/50">{promoNotice}</p>
                   )}
                   <div className="h-px bg-black/10" />
                   <div className="flex items-center justify-between">

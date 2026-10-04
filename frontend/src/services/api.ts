@@ -141,6 +141,7 @@ interface Offer {
   validUntil: string;
   promoCode: string | null;
   category: string | null;
+  applicableService: string | null;
   validFrom: string | null;
   expired: boolean;
 }
@@ -230,6 +231,7 @@ interface AppointmentDto {
   notes: string | null;
   estimatedCost: number;
   actualCost: number | null;
+  paymentMethod: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -722,25 +724,7 @@ class ApiService {
     });
     return this.handleResponse<void>(response);
   }
-
-  // AI Agent endpoints
-  async sendAgentMessage(message: string, conversationId?: string): Promise<ApiResponse<AgentChatResponse>> {
-    const response = await apiFetch(`${API_BASE_URL}/agent/chat`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ message, conversationId }),
-    });
-    return this.handleResponse<AgentChatResponse>(response);
-  }
 }
-
-export interface AgentChatResponse {
-  conversationId: string;
-  message: string;
-  toolCallsExecuted: string[];
-  actionData?: any;
-}
-
 
 export interface NotificationDto {
   id: number;
