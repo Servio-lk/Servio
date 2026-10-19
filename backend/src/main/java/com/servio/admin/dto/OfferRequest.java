@@ -38,6 +38,9 @@ public class OfferRequest {
     @Pattern(regexp = "^$|^NEW_USER$|^LIMITED_TIME$|^SEASONAL$", message = "Invalid offer category")
     private String category;
 
+    @Size(max = 200, message = "Applicable service must not exceed 200 characters")
+    private String applicableService;
+
     private LocalDateTime validFrom;
 
     private LocalDateTime validUntil;
@@ -67,6 +70,9 @@ public class OfferRequest {
 
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+
+    public String getApplicableService() { return applicableService; }
+    public void setApplicableService(String applicableService) { this.applicableService = applicableService; }
 
     public LocalDateTime getValidFrom() { return validFrom; }
     public void setValidFrom(LocalDateTime validFrom) { this.validFrom = validFrom; }

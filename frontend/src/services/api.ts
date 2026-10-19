@@ -141,6 +141,7 @@ interface Offer {
   validUntil: string;
   promoCode: string | null;
   category: string | null;
+  applicableService: string | null;
   validFrom: string | null;
   expired: boolean;
 }

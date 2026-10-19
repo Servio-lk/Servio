@@ -41,6 +41,10 @@ public class Offer {
     @Column(length = 30)
     private String category;
 
+    /** Service name this offer discounts. Null means every service. */
+    @Column(name = "applicable_service", length = 200)
+    private String applicableService;
+
     @Column(name = "valid_from")
     private LocalDateTime validFrom;
 

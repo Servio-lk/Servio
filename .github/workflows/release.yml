@@ -1,0 +1,36 @@
+name: Publish GitHub Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    # Trigger only when a PR from a branch starting with release/ is merged into main
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Extract version tag
+        id: release-info
+        run: |
+          VERSION="${GITHUB_HEAD_REF#release/}"
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing version: $VERSION"
+
+      - name: Create and publish GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ steps.release-info.outputs.tag }}"
+          gh release create "$TAG" \
+            --title "Servio $TAG" \
+            --notes-file CHANGELOG.md \
+            --latest
