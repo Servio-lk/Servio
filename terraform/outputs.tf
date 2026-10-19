@@ -35,21 +35,21 @@ output "s3_frontend_bucket" {
 
 output "ses_smtp_host" {
   description = "Amazon SES SMTP Endpoint for Supabase Auth Settings"
-  value       = "email-smtp.${var.aws_region}.amazonaws.com"
+  value       = var.enable_ses ? "email-smtp.${var.aws_region}.amazonaws.com" : "Disabled"
 }
 
 output "ses_smtp_username" {
   description = "Amazon SES SMTP Username (IAM Access Key ID)"
-  value       = aws_iam_access_key.ses_smtp_key.id
+  value       = var.enable_ses ? aws_iam_access_key.ses_smtp_key[0].id : "Disabled"
 }
 
 output "ses_smtp_password" {
   description = "Amazon SES SMTP Derived Password for Supabase Custom SMTP"
-  value       = aws_iam_access_key.ses_smtp_key.ses_smtp_password_v4
+  value       = var.enable_ses ? aws_iam_access_key.ses_smtp_key[0].ses_smtp_password_v4 : "Disabled"
   sensitive   = true
 }
 
 output "github_actions_role_arn" {
   description = "IAM Role ARN to configure in GitHub Secrets (AWS_ROLE_ARN)"
-  value       = aws_iam_role.github_actions.arn
+  value       = var.enable_github_oidc ? aws_iam_role.github_actions[0].arn : "Disabled"
 }

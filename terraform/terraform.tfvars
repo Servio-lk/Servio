@@ -15,7 +15,7 @@ environment = "production"
 instance_type = "t3.micro"
 
 # The name of your existing EC2 Key Pair (created in AWS EC2 Console)
-key_name = "servio-key"
+key_name = "servio-key-new"
 
 # Security: Restrict SSH (port 22) to your specific public IP (e.g., "203.0.113.50/32")
 ssh_allowed_cidr = "0.0.0.0/0"
@@ -26,6 +26,9 @@ admin_allowed_cidr = "0.0.0.0/0"
 # Set to true if deploying frontend to S3 + CloudFront (Option B)
 # Set to false if deploying full-stack Docker on EC2 (Option A)
 enable_s3_cloudfront = true
+
+# Set to true if using Amazon SES for transactional email sending (Brevo is used instead)
+enable_ses = false
 
 # The sender email address to register with Amazon SES for Supabase Auth
 ses_sender_email = "noreply@servio.lk"

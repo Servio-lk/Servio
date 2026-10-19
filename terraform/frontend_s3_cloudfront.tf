@@ -38,6 +38,18 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
   name  = "Managed-CachingOptimized"
 }
 
+# CloudFront Cache Policy (Managed - CachingDisabled) for dynamic API/WS
+data "aws_cloudfront_cache_policy" "caching_disabled" {
+  count = var.enable_s3_cloudfront ? 1 : 0
+  name  = "Managed-CachingDisabled"
+}
+
+# CloudFront Origin Request Policy (Managed - AllViewer) for proxying headers & auth
+data "aws_cloudfront_origin_request_policy" "all_viewer" {
+  count = var.enable_s3_cloudfront ? 1 : 0
+  name  = "Managed-AllViewer"
+}
+
 # CloudFront Distribution for global CDN and automatic HTTPS
 resource "aws_cloudfront_distribution" "frontend" {
   count               = var.enable_s3_cloudfront ? 1 : 0
@@ -46,12 +58,27 @@ resource "aws_cloudfront_distribution" "frontend" {
   default_root_object = "index.html"
   comment             = "Servio Frontend CDN"
 
+  # Origin 1: S3 Bucket for static React SPA assets
   origin {
     domain_name              = aws_s3_bucket.frontend[0].bucket_regional_domain_name
     origin_id                = "servio-s3-origin"
     origin_access_control_id = aws_cloudfront_origin_access_control.frontend_oac[0].id
   }
 
+  # Origin 2: EC2 Host for backend REST API and WebSockets
+  origin {
+    domain_name = aws_eip.servio_eip.public_dns
+    origin_id   = "servio-ec2-backend-origin"
+
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "http-only"
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+
+  # Default behavior: Serve static frontend from S3
   default_cache_behavior {
     target_origin_id       = "servio-s3-origin"
     viewer_protocol_policy = "redirect-to-https"
@@ -59,6 +86,30 @@ resource "aws_cloudfront_distribution" "frontend" {
     cached_methods         = ["GET", "HEAD"]
     cache_policy_id        = data.aws_cloudfront_cache_policy.caching_optimized[0].id
     compress               = true
+  }
+
+  # Dynamic API behavior: Proxy /api/* to EC2 backend
+  ordered_cache_behavior {
+    path_pattern             = "/api/*"
+    target_origin_id         = "servio-ec2-backend-origin"
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled[0].id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer[0].id
+    compress                 = true
+  }
+
+  # Dynamic WebSocket behavior: Proxy /ws/* to EC2 backend
+  ordered_cache_behavior {
+    path_pattern             = "/ws/*"
+    target_origin_id         = "servio-ec2-backend-origin"
+    viewer_protocol_policy   = "redirect-to-https"
+    allowed_methods          = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods           = ["GET", "HEAD"]
+    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled[0].id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer[0].id
+    compress                 = true
   }
 
   # SPA Routing: Redirect 403 & 404 errors to /index.html with HTTP 200

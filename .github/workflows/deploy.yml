@@ -8,7 +8,7 @@ on:
 env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: servio-backend
-  S3_BUCKET: servio-frontend
+  S3_BUCKET: ${{ vars.S3_BUCKET || 'servio-frontend-479365371557' }}
 
 permissions:
   id-token: write
@@ -65,7 +65,7 @@ jobs:
 
       - name: Invalidate CloudFront cache
         env:
-          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID || 'E33XYZAJJ1HOQI' }}
+          DISTRIBUTION_ID: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID || 'E1KFGY3TF00O5' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id "$DISTRIBUTION_ID" \

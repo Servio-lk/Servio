@@ -40,6 +40,18 @@ variable "enable_s3_cloudfront" {
   default     = true
 }
 
+variable "enable_ses" {
+  type        = bool
+  description = "Whether to provision Amazon SES resources for email sending"
+  default     = false
+}
+
+variable "enable_github_oidc" {
+  type        = bool
+  description = "Whether to provision GitHub Actions OIDC provider and role (false when using IAM access keys directly)"
+  default     = false
+}
+
 variable "ses_sender_email" {
   type        = string
   description = "Sender email address to verify in Amazon SES for Supabase Auth transactional emails"

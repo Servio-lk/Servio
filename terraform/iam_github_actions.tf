@@ -1,12 +1,14 @@
 # GitHub Actions OIDC Provider (Allows keyless authentication from GitHub Actions)
 data "tls_certificate" "github" {
-  url = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
+  count = var.enable_github_oidc ? 1 : 0
+  url   = "https://token.actions.githubusercontent.com/.well-known/openid-configuration"
 }
 
 resource "aws_iam_openid_connect_provider" "github" {
+  count           = var.enable_github_oidc ? 1 : 0
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = [data.tls_certificate.github.certificates[0].sha1_fingerprint]
+  thumbprint_list = [data.tls_certificate.github[0].certificates[0].sha1_fingerprint]
 
   lifecycle {
     ignore_changes = [thumbprint_list]
@@ -15,7 +17,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # IAM Role assumed by GitHub Actions
 resource "aws_iam_role" "github_actions" {
-  name = "github-actions-servio-deploy"
+  count = var.enable_github_oidc ? 1 : 0
+  name  = "github-actions-servio-deploy"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -23,7 +26,7 @@ resource "aws_iam_role" "github_actions" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = aws_iam_openid_connect_provider.github.arn
+          Federated = aws_iam_openid_connect_provider.github[0].arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
@@ -45,9 +48,9 @@ resource "aws_iam_role" "github_actions" {
 
 # Policy allowing GitHub Actions to deploy Frontend to S3 and invalidate CloudFront
 resource "aws_iam_role_policy" "github_actions_frontend_deploy" {
-  count = var.enable_s3_cloudfront ? 1 : 0
+  count = (var.enable_s3_cloudfront && var.enable_github_oidc) ? 1 : 0
   name  = "github-actions-frontend-deploy-policy"
-  role  = aws_iam_role.github_actions.id
+  role  = aws_iam_role.github_actions[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"
