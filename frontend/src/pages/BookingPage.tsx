@@ -281,7 +281,7 @@ export default function BookingPage() {
       ? 0
       : appliedOffer.discountType === 'FIXED_AMOUNT'
         ? Math.min(appliedOffer.discountValue, subtotal)
-        : Math.round((subtotal * appliedOffer.discountValue) / 100);
+        : Math.round(subtotal * appliedOffer.discountValue) / 100;
     
     const orderDetails = {
       service: currentService?.name || '',
@@ -327,6 +327,7 @@ export default function BookingPage() {
     }
 
     setIsBooking(true);
+    let createdAppointmentId: number | null = null;
     try {
       // Step 1: Create the appointment (same for both payment methods)
       const appointmentDateTime = convertToDateTime(selectedDateObj.fullDate, selectedTime);
@@ -334,6 +335,9 @@ export default function BookingPage() {
       const optionNote = orderDetails.optionName ? `${orderDetails.optionName} - ` : '';
       const baseNote = `${optionNote}${orderDetails.service} - ${selectedTime}`;
       const appointmentRequest = {
+        serviceId: Number(currentService?.id),
+        optionId: selectedOption ? Number(selectedOption.id) : undefined,
+        promoCode: orderDetails.promoCode ?? undefined,
         serviceType: orderDetails.service,
         appointmentDate: appointmentDateTime,
         location: 'Colombo Service Center',
@@ -351,10 +355,11 @@ export default function BookingPage() {
       }
 
       const appointmentId = response.data.id;
+      createdAppointmentId = appointmentId;
       sessionStorage.removeItem('servio.promoCode');
 
       // Step 2: Handle chosen payment method
-      if (paymentMethod === 'cash') {
+      if (paymentMethod === 'cash' || Number(response.data.estimatedCost) === 0) {
         toast.success('Request submitted. We will confirm your appointment shortly.');
         navigate(`/confirmed/${appointmentId}`, {
           state: {
@@ -372,6 +377,7 @@ export default function BookingPage() {
           serviceId ?? undefined,
         );
         if (!payRes.success || !payRes.data) {
+          await apiService.cancelAppointment(appointmentId).catch(() => {});
           toast.error(payRes.message || 'Failed to initiate PayHere payment');
           setIsBooking(false);
           return;
@@ -437,6 +443,9 @@ export default function BookingPage() {
         return;
       }
     } catch (error: any) {
+      if (createdAppointmentId !== null && paymentMethod === 'payhere') {
+        await apiService.cancelAppointment(createdAppointmentId).catch(() => {});
+      }
       let errorMessage = 'Failed to book appointment. ';
       if (error.message) errorMessage += error.message;
       else errorMessage += 'Please check your connection and try again.';

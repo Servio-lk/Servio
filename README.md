@@ -258,3 +258,5 @@ Executes feature coverage, boundary & concurrency, cross-feature flows, and real
 - [Service Catalog Reference](docs/services_reference.md)
 - [Architecture Implementation Plan](docs/implementation_plan.md)
 
+
+Billing and monthly mechanic payroll setup and workflows: [Billing and payroll guide](docs/BILLING_AND_PAYROLL.md).

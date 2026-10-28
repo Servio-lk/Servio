@@ -37,6 +37,7 @@ public class PayHereService {
     private final AppointmentRepository appointmentRepository;
     private final PaymentRepository paymentRepository;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final com.servio.finance.PaymentAttemptService paymentAttempts;
 
     @Value("${payhere.merchant.id}")
     private String merchantId;
@@ -88,8 +89,8 @@ public class PayHereService {
         BigDecimal amount         = appointment.getEstimatedCost() != null
                 ? appointment.getEstimatedCost() : BigDecimal.ZERO;
         String currency           = request.getCurrency() != null ? request.getCurrency() : "LKR";
-        String orderId            = "ORD-" + appointment.getId();
-        String formattedAmount    = String.format("%.2f", amount.doubleValue());
+        String orderId            = paymentAttempts.reserve(appointment.getId(),amount,currency);
+        String formattedAmount    = com.servio.finance.Money.round(amount).toPlainString();
         String hash               = generateHash(merchantId, orderId, formattedAmount, currency);
 
         String returnUrl  = frontendUrl + "/confirmed/" + appointment.getId();
@@ -145,14 +146,9 @@ public class PayHereService {
             throw new SecurityException("PayHere notification md5sig verification failed");
         }
 
-        // 2. Parse appointmentId from orderId (format: "ORD-{id}")
-        Long appointmentId;
-        try {
-            appointmentId = Long.parseLong(orderId.replace("ORD-", ""));
-        } catch (NumberFormatException e) {
-            log.error("Unrecognised orderId from PayHere: {}", orderId);
-            throw new RuntimeException("Invalid order_id format: " + orderId);
-        }
+        if (!merchantId.equals(merchantIdParam)) throw new SecurityException("Incorrect merchant");
+        var attempt = paymentAttempts.validate(orderId,payhereAmount,payhereCurrency);
+        Long appointmentId = com.servio.finance.FinanceStore.id(attempt,"appointment_id");
 
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found: " + appointmentId));
@@ -164,29 +160,10 @@ public class PayHereService {
                 log.info("Duplicate payment webhook received for paymentId {}", paymentId);
                 return;
             }
-            if ("CONFIRMED".equals(appointment.getStatus())
-                    || "IN_PROGRESS".equals(appointment.getStatus())
-                    || "COMPLETED".equals(appointment.getStatus())) {
-                log.info("Appointment {} is already past review", appointmentId);
-                return;
-            }
-
-            // PAY-01: Amount & Currency Validation
-            BigDecimal expectedAmount = appointment.getEstimatedCost() != null ? appointment.getEstimatedCost() : appointment.getActualCost();
-            if (expectedAmount != null && expectedAmount.compareTo(BigDecimal.ZERO) > 0) {
-                BigDecimal actualAmount = new BigDecimal(payhereAmount);
-                if (expectedAmount.compareTo(actualAmount) != 0) {
-                    log.error("Amount mismatch for orderId {}: expected {}, received {}", orderId, expectedAmount, actualAmount);
-                    throw new SecurityException("Payment amount mismatch");
-                }
-            }
-            if (payhereCurrency != null && !"LKR".equals(payhereCurrency) && !"USD".equals(payhereCurrency)) {
-                log.error("Currency mismatch for orderId {}: expected LKR, received {}", orderId, payhereCurrency);
-                throw new SecurityException("Payment currency mismatch");
-            }
-
-            // Payment succeeded. The slot stays held as PENDING until an admin confirms it.
-            appointment.setStatus("PENDING");
+            if ("COMPLETED".equals(attempt.get("status"))) throw new SecurityException("Checkout was already settled by another transaction");
+            paymentAttempts.complete(orderId,paymentId);
+            // Payment and appointment approval are independent. Late payments do not revive cancellations.
+            if ("PENDING_PAYMENT".equals(appointment.getStatus())) appointment.setStatus("PENDING");
             appointmentRepository.save(appointment);
 
             Payment payment = Payment.builder()
@@ -212,6 +189,7 @@ public class PayHereService {
             log.info("PayHere payment recorded; appointment {} left PENDING for review — paymentId={} method={}",
                     appointmentId, paymentId, method);
         } else {
+            paymentAttempts.failed(orderId,statusCode);
             log.info("PayHere notification received — orderId={} statusCode={}", orderId, statusCode);
         }
     }

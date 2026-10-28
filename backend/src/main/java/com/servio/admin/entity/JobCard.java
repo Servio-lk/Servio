@@ -34,6 +34,9 @@ public class JobCard {
     @JoinColumn(name = "walk_in_customer_id")
     private WalkInCustomer walkInCustomer;
 
+    @Column(name="billing_request_key",length=100,unique=true)
+    private String billingRequestKey;
+
     @Column(nullable = false)
     private String jobNumber; // Unique job card number
 
@@ -82,7 +85,7 @@ public class JobCard {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
         if (jobNumber == null) {
-            jobNumber = "JC-" + System.currentTimeMillis();
+            jobNumber = "JC-" + java.util.UUID.randomUUID();
         }
     }
 

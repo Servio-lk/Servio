@@ -15,7 +15,10 @@ const adminNavItems = [
     { icon: Users, label: 'Customers', path: '/admin/customers' },
     { icon: Wrench, label: 'Staff', path: '/admin/staff' },
     { icon: Package, label: 'Inventory', path: '/admin/inventory' },
+    { icon: Users, label: 'Walk-in customers', path: '/admin/walk-in' },
+    { icon: Wrench, label: 'Job cards', path: '/admin/job-cards' },
     { icon: ReceiptText, label: 'Billing', path: '/admin/billing' },
+    { icon: Users, label: 'Payroll', path: '/admin/payroll' },
     { icon: CalendarDays, label: 'Calendar', path: '/admin/calendar' },
 ];
 

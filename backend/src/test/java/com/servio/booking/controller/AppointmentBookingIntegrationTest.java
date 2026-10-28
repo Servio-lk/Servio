@@ -28,6 +28,8 @@ import static org.mockito.Mockito.*;
 class AppointmentBookingIntegrationTest {
 
     @Mock
+    private com.servio.finance.BookingPricingService bookingPricing;
+    @Mock
     private AppointmentService appointmentService;
     @Mock
     private Authentication authentication;

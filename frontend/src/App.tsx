@@ -35,6 +35,7 @@ const AdminCustomers = lazy(() => import('@/pages/admin/Customers'))
 const AdminCalendar = lazy(() => import('@/pages/admin/AdminCalendar'))
 const AdminInventory = lazy(() => import('@/pages/admin/Inventory'))
 const AdminBilling = lazy(() => import('@/pages/admin/Billing'))
+const AdminPayroll = lazy(() => import('@/pages/admin/Payroll'))
 const AdminMechanics = lazy(() => import('@/pages/admin/Mechanics'))
 const AdminJobCards = lazy(() => import('@/pages/admin/JobCards'))
 const AdminServiceBays = lazy(() => import('@/pages/admin/ServiceBays'))
@@ -197,6 +198,7 @@ function App() {
             <Route path="customers" element={<Suspense fallback={<AdminLoadingFallback />}><AdminCustomers /></Suspense>} />
             <Route path="calendar" element={<Suspense fallback={<AdminLoadingFallback />}><AdminCalendar /></Suspense>} />
             <Route path="inventory" element={<Suspense fallback={<AdminLoadingFallback />}><AdminInventory /></Suspense>} />
+            <Route path="payroll" element={<Suspense fallback={<AdminLoadingFallback />}><AdminPayroll /></Suspense>} />
             <Route path="billing" element={<Suspense fallback={<AdminLoadingFallback />}><AdminBilling /></Suspense>} />
             <Route path="staff" element={<Suspense fallback={<AdminLoadingFallback />}><AdminMechanics /></Suspense>} />
             <Route path="mechanics" element={<Suspense fallback={<AdminLoadingFallback />}><AdminMechanics /></Suspense>} />

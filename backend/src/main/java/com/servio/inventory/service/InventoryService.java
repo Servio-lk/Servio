@@ -96,9 +96,13 @@ public class InventoryService {
 
     @Transactional
     public InventoryItemDto updateStock(Long id, StockUpdateRequest request, String adminUsername) {
-        InventoryItem item = findItemById(id);
+        InventoryItem item = inventoryRepository.findLockedById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Inventory item not found"));
 
         BigDecimal quantity = request.getQuantity();
+        if (quantity == null || ("CONSUME".equalsIgnoreCase(request.getType()) && quantity.signum() <= 0)) {
+            throw new IllegalArgumentException("Stock consumption must be positive");
+        }
         String type = request.getType().toUpperCase();
 
         if (type.equals("CONSUME")) {

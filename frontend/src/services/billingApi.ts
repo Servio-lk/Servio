@@ -1,70 +1,8 @@
-import { apiFetch } from './apiFetch';
-import { API_BASE_URL } from './api';
-
-export interface BillItemRequest {
-  inventoryItemId?: number;
-  description: string;
-  quantity: number;
-  rate: number;
-  amount: number;
-}
-
-export interface BillRequest {
-  customerName: string;
-  customerAddress: string;
-  customerPhone: string;
-  vehicleType: string;
-  vehicleNo: string;
-  paymentMode: string;
-  subTotal: number;
-  discount: number;
-  netTotal: number;
-  currentMeterReading?: string;
-  nextServiceDue?: string;
-  items: BillItemRequest[];
-}
-
-class BillingApiService {
-  private getHeaders(): Record<string, string> {
-    const token = localStorage.getItem('token');
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-    return headers;
-  }
-
-  async createBill(payload: BillRequest) {
-    const response = await apiFetch(`${API_BASE_URL}/admin/bills`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify(payload),
-    });
-    
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to create bill');
-    }
-    return data;
-  }
-
-  async getAllBills() {
-    const response = await apiFetch(`${API_BASE_URL}/admin/bills`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
-
-  async getBillById(id: number) {
-    const response = await apiFetch(`${API_BASE_URL}/admin/bills/${id}`, {
-      method: 'GET',
-      headers: this.getHeaders(),
-    });
-    return response.json();
-  }
-}
-
-export const billingApi = new BillingApiService();
+import { financeApi } from './financeApi';
+import type { Invoice } from './financeApi';
+export interface BillRequest { jobCardId:number; discount:number; }
+export const billingApi={
+  createBill:async(payload:BillRequest)=>({success:true,data:await financeApi.post<Invoice>('/invoices',payload as unknown as Record<string,unknown>)}),
+  getAllBills:async()=>({success:true,data:await financeApi.get<Invoice[]>('/invoices')}),
+  getBillById:async(id:number)=>({success:true,data:await financeApi.get<Invoice>(`/invoices/${id}`)}),
+};

@@ -1,54 +1,23 @@
 package com.servio.payment.controller;
-
 import com.servio.common.dto.ApiResponse;
-import com.servio.admin.dto.BillRequest;
-import com.servio.payment.entity.Bill;
-import com.servio.payment.service.BillService;
+import com.servio.finance.FinanceRequests;
+import com.servio.finance.InvoiceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
+/** Compatibility route; all invoice writes now use the linked billing workflow. */
 @RestController
 @RequestMapping("/api/admin/bills")
+@PreAuthorize("hasAuthority('ADMIN')")
 @RequiredArgsConstructor
 public class BillController {
-    private final BillService billService;
-
-    @PostMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ApiResponse<Bill>> createBill(
-            @Valid @RequestBody BillRequest request,
-            Authentication authentication) {
-        String adminUsername = (authentication != null) ? authentication.getName() : "System";
-        Bill bill = billService.createBill(request, adminUsername);
-        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<Bill>builder()
-                .success(true)
-                .message("Bill created successfully")
-                .data(bill)
-                .build());
+    private final InvoiceService invoices;
+    @PostMapping public Object create(@Valid @RequestBody FinanceRequests.Draft r,Authentication a) {
+        return ApiResponse.success("Draft invoice created",invoices.draft(r,a.getName()));
     }
-
-    @GetMapping
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ApiResponse<List<Bill>>> getAllBills() {
-        return ResponseEntity.ok(ApiResponse.<List<Bill>>builder()
-                .success(true)
-                .data(billService.getAllBills())
-                .build());
-    }
-
-    @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ADMIN')")
-    public ResponseEntity<ApiResponse<Bill>> getBillById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.<Bill>builder()
-                .success(true)
-                .data(billService.getBillById(id))
-                .build());
-    }
+    @GetMapping public Object list() { return ApiResponse.success("Invoices",invoices.invoices()); }
+    @GetMapping("/{id}") public Object get(@PathVariable long id) { return ApiResponse.success("Invoice",invoices.invoice(id)); }
 }

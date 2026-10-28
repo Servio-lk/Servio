@@ -26,6 +26,7 @@ import java.util.List;
 public class AppointmentController {
 
         private final AppointmentService appointmentService;
+        private final com.servio.finance.BookingPricingService bookingPricing;
         private final RepairChatService repairChatService;
 
         @PostMapping
@@ -33,6 +34,7 @@ public class AppointmentController {
         public ResponseEntity<ApiResponse<AppointmentDto>> createAppointment(
                         @Valid @RequestBody AppointmentRequest request,
                         Authentication authentication) {
+                bookingPricing.price(request);
                 AppointmentDto appointment = appointmentService.createAppointment(request, authentication);
                 return ResponseEntity.status(HttpStatus.CREATED)
                                 .body(ApiResponse.<AppointmentDto>builder()

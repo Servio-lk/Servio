@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@org.springframework.transaction.annotation.Transactional
 public class JobCardService {
     private final JobCardRepository jobCardRepository;
     private final AppointmentRepository appointmentRepository;
@@ -55,7 +56,22 @@ public class JobCardService {
                     .orElseThrow(() -> new ResourceNotFoundException("Walk-in customer not found with id: " + dto.getWalkInCustomerId()));
         }
 
+        if (appointment == null && walkIn != null) {
+            appointment = appointmentRepository.save(Appointment.builder()
+                    .serviceType(dto.getServiceType())
+                    .appointmentDate(java.time.LocalDateTime.now())
+                    .status("CONFIRMED")
+                    .location("Workshop")
+                    .notes("Walk-in customer: " + walkIn.getFullName())
+                    .estimatedCost(dto.getEstimatedCost())
+                    .build());
+        }
+        if (appointment == null) {
+            throw new IllegalArgumentException("Select an appointment or a walk-in customer for the job card");
+        }
+
         JobCard jobCard = JobCard.builder()
+                .billingRequestKey(dto.getBillingRequestKey())
                 .appointment(appointment)
                 .assignedMechanic(mechanic)
                 .assignedBay(bay)

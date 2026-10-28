@@ -237,6 +237,9 @@ interface AppointmentDto {
 }
 
 interface AppointmentRequest {
+  serviceId?: number;
+  optionId?: number;
+  promoCode?: string;
   userId?: number;
   vehicleId?: number;
   serviceType: string;

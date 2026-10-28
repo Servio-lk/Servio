@@ -178,12 +178,16 @@ class AdminApiService {
   }
 
   async recordPayment(appointmentId: number, amount: number, paymentMethod: string) {
-    const response = await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/payments`, {
-      method: 'POST',
-      headers: this.getHeaders(),
-      body: JSON.stringify({ amount, paymentMethod }),
+    const signature=`servio.appointment-payment:${appointmentId}:${amount}:${paymentMethod}`;
+    let requestKey=sessionStorage.getItem(signature);
+    if(!requestKey) { requestKey=globalThis.crypto.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;sessionStorage.setItem(signature,requestKey); }
+    const response=await apiFetch(`${API_BASE_URL}/admin/appointments/${appointmentId}/payments`, {
+      method:'POST',headers:this.getHeaders(),body:JSON.stringify({amount,paymentMethod,requestKey}),
     });
-    return response.json();
+    const data=await response.json();
+    if(!response.ok||data.success===false)throw new Error(data.message||'Failed to record payment');
+    sessionStorage.removeItem(signature);
+    return data;
   }
 
   async updateAppointmentStatus(id: number, status: string) {

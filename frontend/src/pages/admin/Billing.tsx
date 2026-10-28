@@ -1,593 +1,98 @@
-import { useState, useEffect } from 'react';
-import { 
-  ReceiptText, 
-  Search, 
-  Plus, 
-  Trash2, 
-  User as UserIcon, 
-  Calculator,
-  Package,
-  CheckCircle2,
-  X
-} from 'lucide-react';
-import { billingApi } from '@/services/billingApi';
-import type { BillRequest, BillItemRequest } from '@/services/billingApi';
-import { inventoryApi } from '@/services/inventoryApi';
-import type { InventoryItem } from '@/services/inventoryApi';
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
+import { useEffect, useState } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { financeApi, currency } from '@/services/financeApi';
+import type { Job, Charge, Invoice } from '@/services/financeApi';
+import { Field, Panel, Feedback } from './FinanceComponents';
+import { useFinanceAction, inputClass, buttonClass, secondaryClass } from '@/services/financeForm';
 
 export function AdminBilling() {
-  const [billItems, setBillItems] = useState<BillItemRequest[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [customerInfo, setCustomerInfo] = useState({
-    name: '',
-    address: '',
-    phone: '',
-    vehicleType: '',
-    vehicleNo: '',
-    paymentMode: 'CASH',
-    meterReading: '',
-    nextServiceDue: ''
-  });
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showItemSearch, setShowItemSearch] = useState(false);
-  const [isFinalizing, setIsFinalizing] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadInventory();
-  }, []);
-
-  const loadInventory = async () => {
-    try {
-      const res = await inventoryApi.getAllItems();
-      if (res.success) setInventory(res.data);
-    } catch (err) {
-      console.error('Failed to load inventory', err);
-    }
-  };
-
-  const addItemToBill = (item: InventoryItem) => {
-    const existing = billItems.find(i => i.inventoryItemId === item.id);
-    if (existing) {
-      setBillItems(billItems.map(i => 
-        i.inventoryItemId === item.id 
-          ? { ...i, quantity: i.quantity + 1, amount: (i.quantity + 1) * i.rate } 
-          : i
-      ));
-    } else {
-      setBillItems([...billItems, {
-        inventoryItemId: item.id,
-        description: item.name,
-        quantity: 1,
-        rate: item.sellingPricePerUnit,
-        amount: item.sellingPricePerUnit
-      }]);
-    }
-    setShowItemSearch(false);
-  };
-
-  const addManualItem = () => {
-    setBillItems([...billItems, {
-      description: 'Service Charge / Labor',
-      quantity: 1,
-      rate: 0,
-      amount: 0
-    }]);
-  };
-
-  const removeItem = (index: number) => {
-    setBillItems(billItems.filter((_, i) => i !== index));
-  };
-
-  const updateItem = (index: number, field: keyof BillItemRequest, value: any) => {
-    const newItems = [...billItems];
-    const item = { ...newItems[index], [field]: value };
-    item.amount = item.quantity * item.rate;
-    newItems[index] = item;
-    setBillItems(newItems);
-  };
-
-  const subTotal = billItems.reduce((acc, curr) => acc + curr.amount, 0);
-  const [discount, setDiscount] = useState(0);
-  const netTotal = subTotal - discount;
-
-  const handleFinalize = async () => {
-    if (!customerInfo.name || !customerInfo.vehicleNo) {
-      alert("Please enter Customer Name and Vehicle Number");
-      return;
-    }
-    if (billItems.length === 0) {
-      alert("Please add at least one item to the bill");
-      return;
-    }
-
-    setIsFinalizing(true);
-    try {
-      const payload: BillRequest = {
-        ...customerInfo,
-        customerName: customerInfo.name,
-        customerAddress: customerInfo.address,
-        customerPhone: customerInfo.phone,
-        currentMeterReading: customerInfo.meterReading,
-        nextServiceDue: customerInfo.nextServiceDue,
-        subTotal,
-        discount,
-        netTotal,
-        items: billItems
-      };
-
-      const res = await billingApi.createBill(payload);
-      if (res.success) {
-        generatePDF(res.data);
-        setSuccessMessage(`Invoice ${res.data.invoiceNo} created and stock updated!`);
-        resetForm();
-      }
-    } catch (err: any) {
-      console.error("Finalize error:", err);
-      // Try to get specific error message if possible
-      let msg = "Failed to finalize bill. Check stock availability.";
-      if (err.message) msg = err.message;
-      alert(msg);
-    } finally {
-      setIsFinalizing(false);
-    }
-  };
-
-  const resetForm = () => {
-    setBillItems([]);
-    setCustomerInfo({
-      name: '',
-      address: '',
-      phone: '',
-      vehicleType: '',
-      vehicleNo: '',
-      paymentMode: 'CASH',
-      meterReading: '',
-      nextServiceDue: ''
-    });
-    setDiscount(0);
-  };
-
-  const generatePDF = (bill: any) => {
-    const doc = new jsPDF();
-    const brandColor: [number, number, number] = [255, 93, 46]; // #ff5d2e
-
-    // Header
-    doc.setFillColor(250, 250, 250);
-    doc.rect(0, 0, 210, 40, 'F');
-    
-    // Logo / Brand
-    const img = new Image();
-    img.src = '/ServioLogo.png';
-    doc.addImage(img, 'PNG', 15, 10, 30, 15);
-    
-    doc.setTextColor(100);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text("Advanced Auto Care Specialist", 15, 32);
-
-    // Invoice Info
-    doc.setTextColor(0);
-    doc.setFontSize(12);
-    doc.text(`INVOICE: ${bill.invoiceNo}`, 140, 20);
-    doc.setFontSize(10);
-    doc.text(`Date: ${new Date(bill.date).toLocaleDateString()}`, 140, 27);
-    doc.text(`Status: PAID`, 140, 34);
-
-    // Customer & Vehicle Grid
-    doc.setDrawColor(230);
-    doc.line(15, 45, 195, 45);
-
-    doc.setFontSize(10);
-    doc.setTextColor(120);
-    doc.text("CUSTOMER DETAILS", 15, 55);
-    doc.text("VEHICLE DETAILS", 110, 55);
-
-    doc.setTextColor(0);
-    doc.setFont("helvetica", "bold");
-    doc.text(bill.customerName.toUpperCase(), 15, 62);
-    doc.text(bill.vehicleNo.toUpperCase(), 110, 62);
-
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80);
-    doc.text(bill.customerAddress || "N/A", 15, 68);
-    doc.text(bill.customerPhone || "N/A", 15, 74);
-    
-    doc.text(`Type: ${bill.vehicleType || "Car"}`, 110, 68);
-    doc.text(`Meter: ${bill.currentMeterReading || "N/A"}`, 110, 74);
-
-    // Table
-    const tableData = bill.items.map((item: any) => [
-      item.description,
-      parseFloat(item.quantity).toFixed(2),
-      parseFloat(item.rate).toLocaleString('en-LK', { minimumFractionDigits: 2 }),
-      parseFloat(item.amount).toLocaleString('en-LK', { minimumFractionDigits: 2 })
-    ]);
-
-    autoTable(doc, {
-      startY: 85,
-      head: [['Description', 'Qty', 'Rate (Rs.)', 'Amount (Rs.)']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: brandColor, textColor: 255 },
-      styles: { fontSize: 9, cellPadding: 4 },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { halign: 'center' },
-        2: { halign: 'right' },
-        3: { halign: 'right' }
-      }
-    });
-
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
-
-    // Totals
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text("Sub Total:", 140, finalY);
-    doc.text(subTotal.toLocaleString('en-LK', { minimumFractionDigits: 2 }), 195, finalY, { align: 'right' });
-
-    doc.text("Discount:", 140, finalY + 7);
-    doc.text(discount.toLocaleString('en-LK', { minimumFractionDigits: 2 }), 195, finalY + 7, { align: 'right' });
-
-    doc.setFillColor(brandColor[0], brandColor[1], brandColor[2]);
-    doc.rect(135, finalY + 12, 65, 12, 'F');
-    doc.setTextColor(255);
-    doc.setFont("helvetica", "bold");
-    doc.text("NET TOTAL:", 140, finalY + 20);
-    doc.text(`Rs. ${netTotal.toLocaleString('en-LK', { minimumFractionDigits: 2 })}`, 195, finalY + 20, { align: 'right' });
-
-    // Footer
-    doc.setTextColor(150);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text("Thank you for choosing Servio for your vehicle needs.", 105, 280, { align: 'center' });
-    doc.text("Computer generated invoice. No signature required.", 105, 285, { align: 'center' });
-
-    doc.save(`Servio_Invoice_${bill.invoiceNo}.pdf`);
-  };
-
-  return (
-    <div className="flex flex-col gap-6 max-w-[1200px] mx-auto w-full pb-10">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-black flex items-center gap-2">
-            Billing Calculation
-          </h1>
-          <p className="text-sm text-black/60 mt-1">Generate professional invoices and manage checkout</p>
-        </div>
-        <div className="flex gap-2">
-          <button 
-            onClick={resetForm}
-            className="px-4 py-2 text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
-      {successMessage && (
-        <div className="bg-green-50 border border-green-200 p-4 rounded-xl flex items-center justify-between text-green-700 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2 font-medium">
-            <CheckCircle2 className="w-5 h-5" />
-            {successMessage}
-          </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-green-500 hover:text-green-700">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Customer & Vehicle */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm space-y-6 text-left">
-            <div className="flex items-center gap-2 border-b pb-4">
-              <UserIcon className="w-5 h-5 text-[#ff5d2e]" />
-              <h2 className="font-bold text-lg text-black">Customer & Vehicle Details</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Customer Name</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.name}
-                  onChange={e => setCustomerInfo({...customerInfo, name: e.target.value})}
-                  placeholder="e.g. Kamal Perera"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Vehicle Number</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.vehicleNo}
-                  onChange={e => setCustomerInfo({...customerInfo, vehicleNo: e.target.value})}
-                  placeholder="e.g. CAB-1234"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Phone Number</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.phone}
-                  onChange={e => setCustomerInfo({...customerInfo, phone: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Vehicle Type</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.vehicleType}
-                  onChange={e => setCustomerInfo({...customerInfo, vehicleType: e.target.value})}
-                  placeholder="e.g. SUV, Sedan"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Current Odometer</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.meterReading}
-                  onChange={e => setCustomerInfo({...customerInfo, meterReading: e.target.value})}
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase">Next Service Due</label>
-                <input 
-                  type="text" 
-                  className="w-full bg-gray-50 border-none rounded-xl p-3 focus:ring-2 focus:ring-[#ff5d2e] outline-none"
-                  value={customerInfo.nextServiceDue}
-                  onChange={e => setCustomerInfo({...customerInfo, nextServiceDue: e.target.value})}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Line Items Table */}
-          <div className="bg-white rounded-2xl border border-black/5 shadow-sm overflow-hidden flex flex-col">
-            <div className="p-6 border-b flex justify-between items-center bg-gray-50/50">
-              <div className="flex items-center gap-2">
-                <ReceiptText className="w-5 h-5 text-[#ff5d2e]" />
-                <h2 className="font-bold text-lg text-black">Bill Items</h2>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => setShowItemSearch(true)}
-                  className="bg-[#ff5d2e] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" /> Add Part
-                </button>
-                <button 
-                  onClick={addManualItem}
-                  className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" /> Add Charge
-                </button>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto min-h-[300px]">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b bg-gray-50/30">
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider">Item / Description</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Qty</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Rate (Rs)</th>
-                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Amount</th>
-                    <th className="px-6 py-4"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {billItems.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50/30 transition-colors">
-                      <td className="px-6 py-4">
-                        <input 
-                          type="text"
-                          className="w-full bg-transparent border-none p-0 focus:ring-0 text-black font-medium"
-                          value={item.description}
-                          onChange={(e) => updateItem(index, 'description', e.target.value)}
-                        />
-                        {item.inventoryItemId && (
-                          <span className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded font-bold uppercase mt-1 inline-block">Ref Inventory</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <input 
-                          type="number"
-                          className="w-16 bg-gray-100/50 border-none rounded p-1 text-center font-bold"
-                          value={item.quantity}
-                          min="0.01"
-                          step="0.01"
-                          onChange={(e) => updateItem(index, 'quantity', Number(e.target.value))}
-                        />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <input 
-                          type="number"
-                          className="w-24 bg-gray-100/50 border-none rounded p-1 text-right font-bold"
-                          value={item.rate}
-                          onChange={(e) => updateItem(index, 'rate', Number(e.target.value))}
-                        />
-                      </td>
-                      <td className="px-6 py-4 text-right font-bold text-black">
-                        {item.amount.toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button 
-                          onClick={() => removeItem(index)}
-                          className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {billItems.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3 text-gray-400">
-                          <ReceiptText className="w-12 h-12 opacity-20" />
-                          <p>No items added. Start by adding a part or charge.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Checkout Summary */}
-        <div className="flex flex-col gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-black/5 shadow-sm space-y-6 sticky top-[80px]">
-            <div className="flex items-center gap-2 border-b pb-4">
-              < Calculator className="w-5 h-5 text-[#ff5d2e]" />
-              <h2 className="font-bold text-lg text-black">Bill Summary</h2>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Sub-Total</span>
-                <span className="font-bold">Rs. {subTotal.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-gray-600">
-                <span>Discount</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs">Rs.</span>
-                  <input 
-                    type="number"
-                    className="w-24 bg-gray-50 border-none rounded-lg p-2 text-right font-bold"
-                    value={discount}
-                    onChange={(e) => setDiscount(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-              
-              <div className="pt-4 border-t space-y-2">
-                <div className="flex justify-between items-center text-black">
-                  <span className="font-bold text-lg">Net Total</span>
-                  <span className="font-black text-2xl text-[#ff5d2e]">Rs. {netTotal.toLocaleString()}</span>
-                </div>
-              </div>
-
-              <div className="pt-4 space-y-3">
-                <label className="text-xs font-bold text-gray-500 uppercase">Payment Mode</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button 
-                    onClick={() => setCustomerInfo({...customerInfo, paymentMode: 'CASH'})}
-                    className={`p-3 rounded-xl border text-sm font-bold transition-all ${
-                      customerInfo.paymentMode === 'CASH' 
-                      ? 'border-[#ff5d2e] bg-[#ffe7df] text-[#ff5d2e]' 
-                      : 'border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    CASH
-                  </button>
-                  <button 
-                    onClick={() => setCustomerInfo({...customerInfo, paymentMode: 'CARD'})}
-                    className={`p-3 rounded-xl border text-sm font-bold transition-all ${
-                      customerInfo.paymentMode === 'CARD' 
-                      ? 'border-[#ff5d2e] bg-[#ffe7df] text-[#ff5d2e]' 
-                      : 'border-gray-100 bg-gray-50 text-gray-500 hover:bg-gray-100'
-                    }`}
-                  >
-                    CARD
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <button 
-              onClick={handleFinalize}
-              disabled={isFinalizing}
-              className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 font-bold text-white shadow-lg transition-all ${
-                isFinalizing ? 'bg-gray-400' : 'bg-[#ff5d2e] hover:bg-orange-600 hover:shadow-orange-200'
-              }`}
-            >
-              {isFinalizing ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <>
-                  <CheckCircle2 className="w-5 h-5" />
-                  Finalize & Print PDF
-                </>
-              )}
-            </button>
-            <p className="text-[10px] text-center text-gray-400">
-              * Finalizing will permanently decrease stock levels and log the transaction.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Item Search Overlay */}
-      {showItemSearch && (
-        <div className="fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="font-bold text-xl flex items-center gap-2">
-                <Package className="text-[#ff5d2e]" /> Search Inventory
-              </h3>
-              <button onClick={() => setShowItemSearch(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
-            <div className="p-4">
-              <div className="relative mb-4">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input 
-                  type="text"
-                  placeholder="Type part name (e.g. Filter)..."
-                  autoFocus
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-[#ff5d2e] outline-none text-lg"
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2 max-h-[400px] overflow-y-auto px-1 pb-4">
-                {inventory.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase())).map(item => (
-                  <button 
-                    key={item.id}
-                    onClick={() => addItemToBill(item)}
-                    disabled={item.currentStock <= 0}
-                    className="w-full flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors border border-transparent hover:border-black/5 text-left group"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 group-hover:bg-[#ffe7df] group-hover:text-[#ff5d2e] transition-colors">
-                        <Package className="w-6 h-6" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-gray-900">{item.name}</p>
-                        <p className="text-xs text-gray-500">{item.category} • {item.unit}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-black text-black">Rs. {item.sellingPricePerUnit.toLocaleString()}</p>
-                      <p className={`text-[10px] font-bold ${item.currentStock > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {item.currentStock > 0 ? `IN STOCK: ${item.currentStock}` : 'OUT OF STOCK'}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const action=useFinanceAction();
+  const [jobs,setJobs]=useState<Job[]>([]),[jobId,setJobId]=useState(''),[charges,setCharges]=useState<Charge[]>([]);
+  const [inventory,setInventory]=useState<Awaited<ReturnType<typeof financeApi.inventory>>>([]);
+  const [partId,setPartId]=useState(''),[quantity,setQuantity]=useState('1'),[discount,setDiscount]=useState('0');
+  const [invoices,setInvoices]=useState<Invoice[]>([]),[selected,setSelected]=useState<Invoice|null>(null);
+  const [amount,setAmount]=useState(''),[method,setMethod]=useState('CASH'),[reference,setReference]=useState('');
+  const [refundPayment,setRefundPayment]=useState(''),[refundAmount,setRefundAmount]=useState(''),[refundReason,setRefundReason]=useState(''),[refundReference,setRefundReference]=useState('');
+  const [bookingPayments,setBookingPayments]=useState<{id:number;appointment_id:number;amount:number;available_amount:number;customer_name:string;appointment_status:string;payment_method:string}[]>([]);
+  const [advancePayment,setAdvancePayment]=useState(''),[advanceRefundAmount,setAdvanceRefundAmount]=useState(''),[advanceRefundReason,setAdvanceRefundReason]=useState(''),[advanceRefundReference,setAdvanceRefundReference]=useState('');
+  const [appointments,setAppointments]=useState<{id:number;serviceType:string;userName:string|null;estimatedCost:number}[]>([]);
+  const [walkIns,setWalkIns]=useState<{id:number;fullName:string;licensePlate:string}[]>([]);
+  const [services,setServices]=useState<{id:number;name:string;basePrice:number}[]>([]);
+  const [source,setSource]=useState('APPOINTMENT'),[appointmentId,setAppointmentId]=useState(''),[walkInId,setWalkInId]=useState(''),[serviceId,setServiceId]=useState('');
+  const [voidReason,setVoidReason]=useState('');
+  async function refresh() {
+    const [j,i,b,a,w,s]=await Promise.all([financeApi.get<Job[]>('/jobs'),financeApi.inventory(),financeApi.get<Invoice[]>('/invoices'),financeApi.resource<typeof appointments>('/admin/appointments'),financeApi.resource<typeof walkIns>('/admin/walk-in-customers'),financeApi.resource<typeof services>('/services')]);
+    setJobs(j);setInventory(i);setInvoices(b);setAppointments(a);setWalkIns(w);setServices(s);
+    setBookingPayments(await financeApi.get<typeof bookingPayments>('/booking-payments'));
+    if(jobId)setCharges(await financeApi.get<Charge[]>(`/jobs/${jobId}/charges`));
+  }
+  useEffect(()=>{void action.act(refresh,'');},[]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(()=>{
+    let active=true;setCharges([]);
+    if(jobId)void financeApi.get<Charge[]>(`/jobs/${jobId}/charges`).then(c=>{if(active)setCharges(c);}).catch(e=>{void action.act(async()=>{throw e;});});
+    return ()=>{active=false;};
+  },[jobId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const job=jobs.find(j=>j.id===Number(jobId));
+  const subtotal=charges.reduce((sum,c)=>sum+Number(c.amount),0);
+  async function addPart(inventoryItemId:number|null) {
+    await financeApi.post('/charges',{jobCardId:Number(jobId),inventoryItemId,quantity:inventoryItemId===null?1:Number(quantity)});
+    await refresh();
+  }
+  async function selectInvoice(id:number) {
+    const invoice=await financeApi.get<Invoice>(`/invoices/${id}`);setSelected(invoice);setAmount(String(invoice.balance_due));setReference('');
+  }
+  async function updateInvoice(path:string,body:Record<string,unknown>={}) {
+    const invoice=await financeApi.post<Invoice>(path,body);setSelected(invoice);setAmount(String(invoice.balance_due));await refresh();
+  }
+  function pdf(b:Invoice) {
+    const doc=new jsPDF();doc.setFontSize(20);doc.text('SERVIO',14,20);doc.setFontSize(11);
+    doc.text(`${b.status==='DRAFT'?'DRAFT ':''}Invoice ${b.invoice_no}`,14,30);
+    doc.text(`${b.customer_name} | ${b.vehicle_no||'Vehicle not recorded'}`,14,38);
+    doc.text(`Date: ${String(b.date).slice(0,10)} | Status: ${b.status}`,14,46);
+    autoTable(doc,{startY:54,head:[['Description','Qty','Rate (LKR)','Amount (LKR)']],body:(b.items??[]).map(i=>[i.description,i.quantity,Number(i.rate).toFixed(2),Number(i.amount).toFixed(2)])});
+    const y=(doc as jsPDF & {lastAutoTable:{finalY:number}}).lastAutoTable.finalY+12;
+    autoTable(doc,{startY:y,body:[['Subtotal',currency(b.sub_total)],['Discount',currency(b.discount)],['Total',currency(b.net_total)],['Payments less refunds',currency(b.paid_amount)],['Balance due',currency(b.balance_due)]]});
+    if(b.payments?.length)autoTable(doc,{head:[['Payment ID','Method','Allocated (LKR)','Reference']],body:b.payments.map(p=>[p.id,p.payment_method,Number(p.allocated_amount).toFixed(2),p.transaction_id||''])});
+    doc.save(`Servio_${b.invoice_no}.pdf`);
+  }
+  return <div className="mx-auto max-w-7xl p-4 md:p-8 space-y-6">
+    <div><h1 className="text-3xl font-bold">Billing</h1><p className="text-black/60 mt-1">Create job invoices, apply booking advances, and record balance payments.</p></div>
+    <Feedback error={action.error} message={action.message}/>
+    <fieldset disabled={action.busy} className="space-y-6 min-w-0">
+      <Panel title="Create or open a job card">
+        <div className="grid gap-3 md:grid-cols-3 items-end"><Field label="Customer source"><select className={inputClass} value={source} onChange={e=>setSource(e.target.value)}><option value="APPOINTMENT">Appointment</option><option value="WALK_IN">Walk-in customer</option></select></Field>
+        {source==='APPOINTMENT'?<Field label="Appointment"><select className={inputClass} value={appointmentId} onChange={e=>setAppointmentId(e.target.value)}><option value="">Select appointment</option>{appointments.map(a=><option key={a.id} value={a.id}>#{a.id} {a.userName||'Customer'} ? {a.serviceType}</option>)}</select></Field>:<><Field label="Walk-in customer"><select className={inputClass} value={walkInId} onChange={e=>setWalkInId(e.target.value)}><option value="">Select registered walk-in</option>{walkIns.map(w=><option key={w.id} value={w.id}>{w.fullName} ? {w.licensePlate}</option>)}</select></Field><Field label="Service package"><select className={inputClass} value={serviceId} onChange={e=>setServiceId(e.target.value)}><option value="">Select service</option>{services.map(s=><option key={s.id} value={s.id}>{s.name} ? {currency(s.basePrice)}</option>)}</select></Field></>}
+        <button disabled={source==='APPOINTMENT'?!appointmentId:!walkInId||!serviceId} className={buttonClass} onClick={()=>void action.act(async()=>{const j=await financeApi.post<Job>('/jobs',{appointmentId:source==='APPOINTMENT'?Number(appointmentId):null,walkInCustomerId:source==='WALK_IN'?Number(walkInId):null,serviceId:source==='WALK_IN'?Number(serviceId):null});await refresh();setJobId(String(j.id));},'Job card ready for billing')}>Create / open job</button></div>
+        <p className="text-sm text-black/60">Register new walk-in customers in the Walk-in screen before creating their job.</p>
+      </Panel>
+      <Panel title="Job charges">
+        <Field label="Job card"><select className={inputClass} value={jobId} onChange={e=>setJobId(e.target.value)}><option value="">Select a job card</option>{jobs.map(j=><option key={j.id} value={j.id}>{j.job_number} ? {j.service_type}</option>)}</select></Field>
+        {job&&<><div className="flex flex-wrap items-center gap-3"><button className={secondaryClass} onClick={()=>void action.act(()=>addPart(null),'Service package recorded')}>Add job service ({currency(job.actual_cost??job.estimated_cost??0)})</button><span className="text-sm text-black/60">Uses the job card?s recorded service cost.</span></div>
+        <div className="grid gap-3 md:grid-cols-[1fr_140px_auto] items-end"><Field label="Inventory part"><select className={inputClass} value={partId} onChange={e=>setPartId(e.target.value)}><option value="">Select a part</option>{inventory.map(i=><option key={i.id} value={i.id}>{i.name} ? {currency(i.sellingPricePerUnit)} / stock {i.currentStock}</option>)}</select></Field><Field label="Quantity"><input className={inputClass} type="number" min="0.01" step="0.01" value={quantity} onChange={e=>setQuantity(e.target.value)}/></Field><button disabled={!partId||Number(quantity)<=0} className={secondaryClass} onClick={()=>void action.act(()=>addPart(Number(partId)),'Part issued and stock updated')}>Issue part</button></div>
+        <p className="text-sm text-black/60">Stock decreases when you issue parts. Returning a charge restores its stock.</p>
+        <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th><th/></tr></thead><tbody>{charges.map(c=><tr key={c.id} className="border-t"><td className="py-3">{c.description}</td><td>{c.quantity}</td><td>{currency(c.rate)}</td><td>{currency(c.amount)}</td><td><button className={secondaryClass} onClick={()=>void action.act(async()=>{await financeApi.post(`/charges/${c.id}/reverse`);await refresh();},'Charge returned')}>Return / remove</button></td></tr>)}</tbody></table></div>
+        <div className="flex flex-wrap gap-4 items-end"><p className="py-2 font-semibold">Subtotal: {currency(subtotal)}</p><Field label="Invoice discount (LKR)"><input className={inputClass} type="number" min="0" max={subtotal} step="0.01" value={discount} onChange={e=>setDiscount(e.target.value)}/></Field><button disabled={!charges.length||Number(discount)<0||Number(discount)>subtotal} className={buttonClass} onClick={()=>void action.act(async()=>{const b=await financeApi.post<Invoice>('/invoices',{jobCardId:Number(jobId),discount:Number(discount)});setSelected(b);await refresh();},'Draft saved')}>Save draft invoice</button></div></>}
+      </Panel>
+      <Panel title="Booking advances and unapplied money">
+        <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th>Payment</th><th>Customer / appointment</th><th>Method</th><th>Received</th><th>Unapplied</th></tr></thead><tbody>{bookingPayments.filter(p=>p.available_amount>0).map(p=><tr key={p.id} className="border-t"><td className="py-2">#{p.id}</td><td>{p.customer_name} ? #{p.appointment_id} ({p.appointment_status})</td><td>{p.payment_method}</td><td>{currency(p.amount)}</td><td>{currency(p.available_amount)}</td></tr>)}</tbody></table></div>
+        <details className="space-y-3"><summary className="cursor-pointer font-medium">Record a completed advance refund</summary><p className="text-sm text-black/60">Use this for cancelled bookings or excess advance money after returning the money through its payment channel.</p><div className="grid gap-3 md:grid-cols-2"><Field label="Original advance"><select className={inputClass} value={advancePayment} onChange={e=>setAdvancePayment(e.target.value)}><option value="">Select payment</option>{bookingPayments.filter(p=>p.available_amount>0).map(p=><option key={p.id} value={p.id}>#{p.id} {p.customer_name} ? {currency(p.available_amount)}</option>)}</select></Field><Field label="Amount refunded"><input className={inputClass} type="number" min="0.01" step="0.01" value={advanceRefundAmount} onChange={e=>setAdvanceRefundAmount(e.target.value)}/></Field><Field label="Reason"><input className={inputClass} value={advanceRefundReason} onChange={e=>setAdvanceRefundReason(e.target.value)}/></Field><Field label="Refund reference"><input className={inputClass} value={advanceRefundReference} onChange={e=>setAdvanceRefundReference(e.target.value)}/></Field></div><button disabled={!advancePayment||Number(advanceRefundAmount)<=0||!advanceRefundReason.trim()||!advanceRefundReference.trim()} className={secondaryClass} onClick={()=>void action.act(async()=>{await financeApi.post(`/booking-payments/${advancePayment}/refunds`,{paymentId:Number(advancePayment),amount:Number(advanceRefundAmount),reason:advanceRefundReason,reference:advanceRefundReference});setAdvancePayment('');setAdvanceRefundAmount('');await refresh();},'Advance refund recorded')}>Record completed advance refund</button></details>
+      </Panel>
+      <Panel title="Invoices"><div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr><th>Invoice</th><th>Customer</th><th>Status</th><th>Total</th><th>Paid</th><th>Balance</th></tr></thead><tbody>{invoices.map(b=><tr className="border-t" key={b.id}><td className="py-3"><button className="text-[#ff5d2e] font-semibold" onClick={()=>void action.act(()=>selectInvoice(b.id),'')}>{b.invoice_no}</button></td><td>{b.customer_name}</td><td>{b.status}</td><td>{currency(b.net_total)}</td><td>{currency(b.paid_amount)}</td><td>{b.status==='VOID'?'?':currency(b.balance_due)}</td></tr>)}</tbody></table>{!invoices.length&&<p className="py-4 text-black/60">No invoices yet.</p>}</div></Panel>
+      {selected&&<Panel title={selected.invoice_no}>
+        <p>{selected.customer_name} ? {selected.status} ? {selected.settlement_status}</p>
+        <div className="overflow-x-auto"><table className="w-full text-sm text-left"><tbody>{selected.items?.map(i=><tr key={i.id} className="border-t"><td className="py-2">{i.description}</td><td>{i.quantity} ? {currency(i.rate)}</td><td>{currency(i.amount)}</td></tr>)}</tbody></table></div>
+        <p className="font-semibold">Total {currency(selected.net_total)} ? Paid {currency(selected.paid_amount)} ? Balance {currency(selected.balance_due)}</p>
+        <div className="flex flex-wrap gap-3"><button className={secondaryClass} onClick={()=>pdf(selected)}>Download invoice / payment history</button>{selected.status==='DRAFT'&&<button className={buttonClass} onClick={()=>void action.act(()=>updateInvoice(`/invoices/${selected.id}/issue`),'Invoice issued and advances applied')}>Issue invoice</button>}{selected.status==='ISSUED'&&<button className={secondaryClass} onClick={()=>void action.act(()=>updateInvoice(`/invoices/${selected.id}/allocate`),'Available advances applied')}>Apply available advances</button>}</div>
+        {selected.status==='ISSUED'&&<>
+          <div className="grid gap-3 md:grid-cols-4 items-end"><Field label="Amount received (LKR)"><input className={inputClass} type="number" min="0.01" max={selected.balance_due} step="0.01" value={amount} onChange={e=>setAmount(e.target.value)}/></Field><Field label="Method"><select className={inputClass} value={method} onChange={e=>setMethod(e.target.value)}><option>CASH</option><option>CARD</option><option>BANK_TRANSFER</option></select></Field><Field label="Receipt / terminal reference"><input className={inputClass} value={reference} onChange={e=>setReference(e.target.value)}/></Field><button disabled={Number(amount)<=0||Number(amount)>selected.balance_due||!reference.trim()} className={buttonClass} onClick={()=>void action.act(()=>updateInvoice(`/invoices/${selected.id}/payments`,{amount:Number(amount),method,reference}),'Payment recorded')}>Record received payment</button></div>
+          <p className="text-sm text-black/60">Record cash, card-terminal, or bank payments after receiving them. Online booking payments arrive through PayHere.</p>
+          {!!selected.payments?.length&&<details className="space-y-3"><summary className="cursor-pointer font-medium">Record money already refunded</summary><div className="grid gap-3 md:grid-cols-2"><Field label="Original payment"><select className={inputClass} value={refundPayment} onChange={e=>setRefundPayment(e.target.value)}><option value="">Select payment</option>{selected.payments.map(p=><option key={p.id} value={p.id}>#{p.id} {p.payment_method} ? {currency(p.allocated_amount)}</option>)}</select></Field><Field label="Refund amount"><input className={inputClass} type="number" min="0.01" step="0.01" value={refundAmount} onChange={e=>setRefundAmount(e.target.value)}/></Field><Field label="Reason"><input className={inputClass} value={refundReason} onChange={e=>setRefundReason(e.target.value)}/></Field><Field label="Refund receipt / gateway reference"><input className={inputClass} value={refundReference} onChange={e=>setRefundReference(e.target.value)}/></Field></div><button disabled={!refundPayment||Number(refundAmount)<=0||!refundReason.trim()||!refundReference.trim()} className={secondaryClass} onClick={()=>void action.act(()=>updateInvoice(`/invoices/${selected.id}/refunds`,{paymentId:Number(refundPayment),amount:Number(refundAmount),reason:refundReason,reference:refundReference}),'Refund recorded')}>Record completed refund</button></details>}
+          {selected.refunds?.map(r=><p key={r.id} className="text-sm">Refund {currency(r.amount)} ? {r.reason} ({r.reference})</p>)}
+        </>}
+        {selected.status!=='VOID'&&<div className="flex flex-wrap gap-3 items-end"><Field label="Reason to void invoice"><input className={inputClass} value={voidReason} onChange={e=>setVoidReason(e.target.value)}/></Field><button disabled={!voidReason.trim()||selected.paid_amount>0} className={secondaryClass} onClick={()=>void action.act(()=>updateInvoice(`/invoices/${selected.id}/void`,{reason:voidReason}),'Invoice voided')}>Void invoice</button></div>}
+      </Panel>}
+    </fieldset>
+  </div>;
 }
-
 export default AdminBilling;
-

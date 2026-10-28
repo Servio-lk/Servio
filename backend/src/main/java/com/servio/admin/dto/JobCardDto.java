@@ -20,6 +20,7 @@ public class JobCardDto {
     private String bayNumber;
     private Long walkInCustomerId;
     private String customerName;
+    private String billingRequestKey;
     private String jobNumber;
     private String serviceType;
     private String description;

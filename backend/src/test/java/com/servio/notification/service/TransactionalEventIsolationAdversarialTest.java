@@ -114,10 +114,13 @@ public class TransactionalEventIsolationAdversarialTest {
                 applicationEventPublisher
         );
 
+        var attempts = mock(com.servio.finance.PaymentAttemptService.class);
+        lenient().when(attempts.validate(anyString(),anyString(),anyString())).thenReturn(java.util.Map.of("appointment_id",999L,"status","PENDING"));
         payHereService = new PayHereService(
                 appointmentRepository,
                 paymentRepository,
-                applicationEventPublisher
+                applicationEventPublisher,
+                attempts
         );
         ReflectionTestUtils.setField(payHereService, "merchantId", "123456");
         ReflectionTestUtils.setField(payHereService, "merchantSecret", "secret_xyz");

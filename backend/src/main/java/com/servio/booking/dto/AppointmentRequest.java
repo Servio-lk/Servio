@@ -16,6 +16,9 @@ import java.util.UUID;
 public class AppointmentRequest {
     private UUID userId; // Optional - if null, uses authenticated user
     private Long vehicleId;
+    private Long serviceId;
+    private Long optionId;
+    private String promoCode;
     private String serviceType;
     private LocalDateTime appointmentDate;
     private String location;

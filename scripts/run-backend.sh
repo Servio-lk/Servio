@@ -45,7 +45,12 @@ fi
 
 if [ -n "$ENV_FILE" ]; then
   while IFS='=' read -r key value; do
-    # Skip blank lines and comments
+    # Normalize lines from .env files created on Windows.
+    key="${key%$'\r'}"
+    value="${value%$'\r'}"
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+    # Skip blank lines and comments.
     [[ -z "$key" || "$key" == \#* ]] && continue
     # Strip inline comments
     value="${value%%#*}"

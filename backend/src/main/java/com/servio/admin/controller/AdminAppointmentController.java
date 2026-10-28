@@ -31,6 +31,7 @@ import java.util.stream.Collectors;
 public class AdminAppointmentController {
 
     private final AdminAppointmentService adminAppointmentService;
+    private final com.servio.finance.InvoiceService invoiceService;
     private final AppointmentService appointmentService;
     private final PaymentRepository paymentRepository;
     private final RepairChatService repairChatService;
@@ -72,8 +73,9 @@ public class AdminAppointmentController {
     @PreAuthorize("hasAuthority('ADMIN')")
     public ResponseEntity<ApiResponse<AppointmentDto>> recordPayment(
             @PathVariable Long id,
-            @Valid @RequestBody PaymentCollectionRequest request) {
-        adminAppointmentService.recordPayment(id, request);
+            @Valid @RequestBody PaymentCollectionRequest request,
+            org.springframework.security.core.Authentication authentication) {
+        invoiceService.appointmentPayment(id,request,authentication.getName());
         Appointment appointment = adminAppointmentService.getAppointmentById(id);
         AppointmentDto appointmentDto = convertToDto(appointment);
         return ResponseEntity.ok(ApiResponse.success("Payment recorded successfully", appointmentDto));

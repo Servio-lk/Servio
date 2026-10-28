@@ -10,6 +10,10 @@ import java.util.List;
 
 @Repository
 public interface InventoryRepository extends JpaRepository<InventoryItem, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT i FROM InventoryItem i WHERE i.id = :id")
+    java.util.Optional<InventoryItem> findLockedById(@org.springframework.data.repository.query.Param("id") Long id);
+
     List<InventoryItem> findByCategory(String category);
 
     @Query("SELECT i FROM InventoryItem i WHERE i.currentStock < i.minimumStock")

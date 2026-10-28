@@ -38,6 +38,9 @@ class PayHereServicePaymentEventTest {
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
 
+    @Mock
+    private com.servio.finance.PaymentAttemptService paymentAttempts;
+
     @InjectMocks
     private PayHereService payHereService;
 
@@ -64,6 +67,8 @@ class PayHereServicePaymentEventTest {
                 .fullName("Paying Customer")
                 .role(Role.USER)
                 .build();
+
+        lenient().when(paymentAttempts.validate(anyString(),anyString(),anyString())).thenReturn(java.util.Map.of("appointment_id",45L,"status","PENDING"));
 
         appointment = Appointment.builder()
                 .id(appointmentId)
