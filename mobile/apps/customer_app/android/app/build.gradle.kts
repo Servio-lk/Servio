@@ -51,3 +51,14 @@ flutter {
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
+
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    doLast {
+        val buildDir = layout.buildDirectory.get().asFile
+        val src = File(buildDir, "outputs/apk/release/app-release.apk")
+        val destDir = File(buildDir, "outputs/flutter-apk")
+        if (src.exists()) {
+            src.copyTo(File(destDir, "customer-app.apk"), overwrite = true)
+        }
+    }
+}

@@ -128,7 +128,8 @@ export default function ResetPassword() {
       if (role === 'ADMIN') {
         const host = window.location.hostname;
         const port = window.location.port;
-        const isCustomerPortOnEc2 = (port === '80' || port === '') && host !== 'localhost' && host !== '127.0.0.1';
+        const isIpAddress = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host);
+        const isCustomerPortOnEc2 = isIpAddress && (port === '80' || port === '');
         
         if (isCustomerPortOnEc2) {
           window.location.href = `${window.location.protocol}//${host}:8081/login`;

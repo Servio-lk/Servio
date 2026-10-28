@@ -123,6 +123,7 @@ class SupabaseService {
       await client.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'io.supabase.servio://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
       return true;
     } catch (e) {
@@ -137,6 +138,7 @@ class SupabaseService {
       await client.auth.signInWithOAuth(
         OAuthProvider.facebook,
         redirectTo: 'io.supabase.servio://login-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
       );
       return true;
     } catch (e) {
